@@ -16,6 +16,11 @@ app.register(cors, {
 
 app.register(routes, { prefix: '/api/v1' });
 
+// Health check for Render
+app.get('/', async () => {
+    return { status: 'ok' }
+});
+
 
 /**
  * Run the server!
@@ -23,7 +28,10 @@ app.register(routes, { prefix: '/api/v1' });
 export const start = async () => {
     try {
         await connectDatabase();
-        await app.listen({ port: Number(process.env.PORT) || 3000 })
+        await app.listen({
+            port: Number(process.env.PORT) || 3000,
+            host: '0.0.0.0'
+        })
     } catch (err) {
         app.log.error(err)
         process.exit(1)
