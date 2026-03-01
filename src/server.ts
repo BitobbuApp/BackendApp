@@ -1,5 +1,6 @@
 import fastify from 'fastify'
 import { routes } from './routes'
+import { connectDatabase } from './shared/infrastructure/database'
 
 
 const app = fastify({
@@ -14,6 +15,7 @@ app.register(routes, { prefix: '/api/v1' });
  */
 export const start = async () => {
     try {
+        await connectDatabase();
         await app.listen({ port: 3000 })
     } catch (err) {
         app.log.error(err)
