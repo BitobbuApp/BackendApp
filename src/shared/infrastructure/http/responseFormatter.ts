@@ -8,4 +8,12 @@ export class ApiResponse {
             data
         });
     }
+
+    static error(reply: FastifyReply, message: string = "Error", statusCode: number = 400, errors?: any) {
+        return reply.status(statusCode).send({
+            success: false,
+            message,
+            errors
+        });
+    }
 }

@@ -1,7 +1,10 @@
 import Joi from 'joi';
 
-// Defines the safe public fields returned after a successful login.
-// password, salt, and other internals are intentionally excluded.
+export const loginUserDtoRequestSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required(),
+});
+
 export const loginUserDtoResponseSchema = Joi.object({
     id: Joi.string().required(),
     first_name: Joi.string().required(),

@@ -1,6 +1,10 @@
-import { UserRepository } from '../domain/userRepository';
-import { InvalidCredentialsError, UserNotFoundError } from '../domain/userErrors';
+import { UserRepository } from '../domain/repositories/user.repository';
+import { InvalidCredentialsError, UserNotFoundError } from '../domain/errors/user.errors';
 import bcrypt from 'bcrypt';
+import { UseCase } from '../../../shared/application/useCase';
+import { loginUserDtoRequestSchema, loginUserDtoResponseSchema } from './dtos/login.dto';
+import Joi from 'joi';
+import { JwtService } from '../../../shared/application/services/jwtService';
 
 interface LoginDto {
     email: string;
@@ -8,21 +12,26 @@ interface LoginDto {
 }
 
 interface LoginResult {
-    user: {
-        id: string;
-        first_name: string;
-        last_name: string;
-        email: string;
-        is_active: boolean | null;
-        last_access: Date | null;
-    };
-    token: string; // JWT placeholder — replace with real JWT generation later
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    is_active: boolean;
+    last_access: Date;
+    token: string;
 }
 
-export class LoginUserUseCase {
-    constructor(private readonly userRepository: UserRepository) { }
+export class LoginUserUseCase extends UseCase<LoginDto, LoginResult> {
+    protected inputSchema: Joi.Schema = loginUserDtoRequestSchema;
+    protected outputSchema: Joi.Schema = loginUserDtoResponseSchema;
+    private readonly jwtService: JwtService;
 
-    async execute(dto: LoginDto): Promise<LoginResult> {
+    constructor(private readonly userRepository: UserRepository) {
+        super();
+        this.jwtService = new JwtService();
+    }
+
+    protected async implementation(dto: LoginDto): Promise<LoginResult> {
         // 1. Find the user by email
         const user = await this.userRepository.findByEmail(dto.email);
         if (!user) throw new UserNotFoundError(dto.email);
@@ -37,23 +46,24 @@ export class LoginUserUseCase {
         if (!isPasswordValid) throw new InvalidCredentialsError();
 
         // 4. Update last_access timestamp
-        await this.userRepository.update({
+        const updatedUser = await this.userRepository.update({
             ...user,
             last_access: new Date(),
         });
 
-        // 5. TODO: Replace this with a real JWT generated from a JwtService
-        const token = `token-placeholder-for-${user.id}`;
+        // 5. Generate a real JWT
+        const token = this.jwtService.generateToken({
+            userId: user.id,
+            email: user.email
+        });
 
         return {
-            user: {
-                id: user.id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                email: user.email,
-                is_active: user.is_active,
-                last_access: user.last_access,
-            },
+            id: updatedUser.id,
+            first_name: updatedUser.first_name,
+            last_name: updatedUser.last_name,
+            email: updatedUser.email,
+            is_active: updatedUser.is_active ?? true,
+            last_access: updatedUser.last_access!,
             token,
         };
     }

@@ -13,3 +13,12 @@ export const registerUserDtoRequestSchema = Joi.object({
             'string.min': 'La contraseña debe tener al menos 6 caracteres'
         })
 });
+
+export const registerUserDtoResponseSchema = Joi.object({
+    id: Joi.string().required(),
+    first_name: Joi.string().required(),
+    last_name: Joi.string().required(),
+    email: Joi.string().email().required(),
+}).options({
+    stripUnknown: true
+});
