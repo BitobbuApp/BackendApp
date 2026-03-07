@@ -13,7 +13,7 @@ export class JwtService {
     }
 
     generateToken(payload: TokenPayload): string {
-        return jwt.sign(payload, this.secret, { expiresIn: '8h' });
+        return jwt.sign(payload, this.secret, { expiresIn: '1h' });
     }
 
     verifyToken(token: string): TokenPayload | null {

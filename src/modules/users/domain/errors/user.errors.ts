@@ -1,6 +1,6 @@
 // src/modules/domain/userErrors.ts
 
-import { ApplicationError } from "../../../shared/domain/error";
+import { ApplicationError } from "../../../../shared/domain/error";
 
 export class UserNotFoundError extends ApplicationError {
     constructor(email: string) {
