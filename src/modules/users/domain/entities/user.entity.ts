@@ -3,6 +3,7 @@
 export class User {
     constructor(
         public id: string,
+        public company_id: string | null,
         public first_name: string,
         public last_name: string,
         public email: string,
@@ -14,6 +15,7 @@ export class User {
         public updated_at: Date | null
     ) {
         this.id = id;
+        this.company_id = company_id;
         this.first_name = first_name;
         this.last_name = last_name;
         this.email = email;

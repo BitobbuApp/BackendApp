@@ -19,6 +19,8 @@ interface LoginResult {
     is_active: boolean;
     last_access: Date;
     token: string;
+    has_company: boolean;
+    company_id: string | null;
 }
 
 export class LoginUserUseCase extends UseCase<LoginDto, LoginResult> {
@@ -65,6 +67,8 @@ export class LoginUserUseCase extends UseCase<LoginDto, LoginResult> {
             is_active: updatedUser.is_active ?? true,
             last_access: updatedUser.last_access!,
             token,
+            has_company: !!updatedUser.company_id,
+            company_id: updatedUser.company_id,
         };
     }
 }

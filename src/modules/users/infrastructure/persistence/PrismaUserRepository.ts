@@ -17,7 +17,7 @@ export class PrismaUserRepository implements UserRepository {
         });
 
         return new User(
-            created.id, created.first_name, created.last_name,
+            created.id, created.company_id, created.first_name, created.last_name,
             created.email, created.password, created.salt,
             created.is_active, created.last_access,
             created.created_at, created.updated_at
@@ -25,10 +25,14 @@ export class PrismaUserRepository implements UserRepository {
     }
 
     async findByEmail(email: string): Promise<User | null> {
-        const found = await prisma.user.findUnique({ where: { email } });
+        const found = await prisma.user.findUnique({
+            where: { email },
+            include: { company: { select: { id: true } } },
+            relationLoadStrategy: 'join',
+        });
         if (!found) return null;
         return new User(
-            found.id, found.first_name, found.last_name,
+            found.id, found.company?.id || null, found.first_name, found.last_name,
             found.email, found.password, found.salt,
             found.is_active, found.last_access,
             found.created_at, found.updated_at
@@ -36,10 +40,14 @@ export class PrismaUserRepository implements UserRepository {
     }
 
     async findById(id: string): Promise<User | null> {
-        const found = await prisma.user.findUnique({ where: { id } });
+        const found = await prisma.user.findUnique({
+            where: { id },
+            include: { company: { select: { id: true } } },
+            relationLoadStrategy: 'join'
+        });
         if (!found) return null;
         return new User(
-            found.id, found.first_name, found.last_name,
+            found.id, found.company?.id || null, found.first_name, found.last_name,
             found.email, found.password, found.salt,
             found.is_active, found.last_access,
             found.created_at, found.updated_at
@@ -60,7 +68,7 @@ export class PrismaUserRepository implements UserRepository {
             }
         });
         return new User(
-            updated.id, updated.first_name, updated.last_name,
+            updated.id, updated.company_id, updated.first_name, updated.last_name,
             updated.email, updated.password, updated.salt,
             updated.is_active, updated.last_access,
             updated.created_at, updated.updated_at
