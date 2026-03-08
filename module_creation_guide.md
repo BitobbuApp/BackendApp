@@ -1,34 +1,34 @@
-# Guía: Cómo Crear un Nuevo Módulo en Bitobbu Backend
+# Guide: How to Create a New Module in Bitobbu Backend
 
-Esta guía documenta paso a paso cómo crear un módulo nuevo siguiendo la arquitectura establecida del proyecto.
+This guide documents step by step how to create a new module following the project's established architecture.
 
 ---
 
-## Arquitectura General
+## General Architecture
 
-Cada módulo sigue la estructura **Dominio → Aplicación → Infraestructura**:
+Each module follows the **Domain → Application → Infrastructure** structure:
 
 ```
 src/modules/{moduleName}/
-├── domain/                     # Reglas de negocio puras
-│   ├── entities/               # Clases de entidad
-│   ├── repositories/           # Interfaces (contratos)
-│   └── errors/                 # Errores de dominio
-├── application/                # Casos de uso
-│   └── dtos/                   # Esquemas Joi (Request/Response)
-└── infrastructure/             # Implementaciones concretas
-    ├── persistence/            # Repositorios Prisma
-    └── http/                   # Rutas Fastify
+├── domain/                     # Pure business rules
+│   ├── entities/               # Entity classes
+│   ├── repositories/           # Interfaces (contracts)
+│   └── errors/                 # Domain errors
+├── application/                # Use cases
+│   └── dtos/                   # Joi schemas (Request/Response)
+└── infrastructure/             # Concrete implementations
+    ├── persistence/            # Prisma repositories
+    └── http/                   # Fastify routes
 ```
 
 > [!IMPORTANT]
-> Los casos de uso instancian sus propias dependencias internamente (repositorios Prisma y otros use cases). **NO se inyectan** desde las rutas.
+> Use cases instantiate their own dependencies internally (Prisma repositories and other use cases). They are **NOT injected** from the routing layer.
 
 ---
 
-## Paso 1: Definir el Modelo en Prisma
+## Step 1: Define the Model in Prisma
 
-Editar [prisma/schema.prisma](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/prisma/schema.prisma) y agregar el modelo correspondiente.
+Edit `prisma/schema.prisma` and add the corresponding model.
 
 ```prisma
 model Product {
@@ -47,21 +47,21 @@ model Product {
 }
 ```
 
-Luego generar el cliente Prisma:
+Then generate the Prisma client:
 
 ```bash
 npx prisma generate
-npx prisma db push   # o npx prisma migrate dev --name add_products
+npx prisma db push   # or npx prisma migrate dev --name add_products
 ```
 
 > [!CAUTION]
-> Los nombres de los campos en Prisma (`snake_case`) deben coincidir **exactamente** con los que uses en los repositorios de persistencia. Verifica siempre el schema antes de escribir el repositorio.
+> Field names in Prisma (`snake_case`) must match **exactly** with those used in the persistence repositories. Always verify the schema before writing the repository.
 
 ---
 
-## Paso 2: Crear la Entidad de Dominio
+## Step 2: Create the Domain Entity
 
-Archivo: `src/modules/{moduleName}/domain/entities/{entity}.entity.ts`
+File: `src/modules/{moduleName}/domain/entities/{entity}.entity.ts`
 
 ```typescript
 // src/modules/products/domain/entities/product.entity.ts
@@ -80,16 +80,16 @@ export class Product {
 }
 ```
 
-**Reglas:**
-- Usar [constructor](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/shared/application/services/jwtService.ts#11-14) con propiedades públicas
-- Los campos opcionales/nullable deben tener valores por defecto (`null`, `false`, etc.)
-- Los nombres de campos deben corresponder a la tabla de Prisma
+**Rules:**
+- Use `constructor` with public properties
+- Optional/nullable fields must have default values (`null`, `false`, etc.)
+- Field names must correspond to the Prisma table
 
 ---
 
-## Paso 3: Crear la Interfaz del Repositorio
+## Step 3: Create the Repository Interface
 
-Archivo: `src/modules/{moduleName}/domain/repositories/{entity}.repository.ts`
+File: `src/modules/{moduleName}/domain/repositories/{entity}.repository.ts`
 
 ```typescript
 // src/modules/products/domain/repositories/product.repository.ts
@@ -104,16 +104,16 @@ export interface ProductRepository {
 }
 ```
 
-**Reglas:**
-- El import de la entidad apunta a `../entities/{entity}.entity`
-- Definir solo los métodos que realmente se necesitan
-- Usar `Partial<Entity>` para create/update
+**Rules:**
+- The entity import points to `../entities/{entity}.entity`
+- Define only the methods that are actually needed
+- Use `Partial<Entity>` for create/update
 
 ---
 
-## Paso 4: Crear los Errores de Dominio
+## Step 4: Create Domain Errors
 
-Archivo: `src/modules/{moduleName}/domain/errors/{module}.errors.ts`
+File: `src/modules/{moduleName}/domain/errors/{module}.errors.ts`
 
 ```typescript
 // src/modules/products/domain/errors/product.errors.ts
@@ -132,15 +132,15 @@ export class DuplicateProductError extends ApplicationError {
 }
 ```
 
-**Reglas:**
-- Extender siempre de [ApplicationError](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/shared/domain/error.ts#3-9)
-- Usar códigos HTTP apropiados: `404` (not found), `409` (conflict), `403` (forbidden)
+**Rules:**
+- Always extend from `ApplicationError`
+- Use appropriate HTTP codes: `404` (not found), `409` (conflict), `403` (forbidden)
 
 ---
 
-## Paso 5: Implementar el Repositorio Prisma
+## Step 5: Implement the Prisma Repository
 
-Archivo: `src/modules/{moduleName}/infrastructure/persistence/Prisma{Entity}Repository.ts`
+File: `src/modules/{moduleName}/infrastructure/persistence/Prisma{Entity}Repository.ts`
 
 ```typescript
 // src/modules/products/infrastructure/persistence/PrismaProductRepository.ts
@@ -179,8 +179,8 @@ export class PrismaProductRepository implements ProductRepository {
         const updated = await prisma.product.update({
             where: { id },
             data: {
-                // Usar conditional spreading para evitar errores de
-                // exactOptionalPropertyTypes
+                // Use conditional spreading to avoid
+                // exactOptionalPropertyTypes errors
                 ...(product.name !== undefined && { name: product.name }),
                 ...(product.description !== undefined
                     && { description: product.description }),
@@ -212,25 +212,25 @@ export class PrismaProductRepository implements ProductRepository {
 ```
 
 > [!WARNING]
-> **Regla crítica de campos:** Los nombres usados en el objeto `data` de Prisma deben ser **exactamente** los del [schema.prisma](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/prisma/schema.prisma), NO los de la entidad de dominio. Si la entidad dice `state` pero Prisma dice `location_state`, usa `location_state` en el repositorio.
+> **Critical field rule:** The names used in Prisma's `data` object must be **exactly** those from `schema.prisma`, NOT those from the domain entity. If the entity says `state` but Prisma says `location_state`, use `location_state` in the repository.
 
-**Reglas:**
-- Importar [prisma](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/prisma/schema.prisma) desde `shared/infrastructure/database`
-- Usar [mapToEntity()](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/modules/companies/infrastructure/persistence/PrismaLocationRepository.ts#56-67) para convertir registros DB a entidades de dominio
-- En [create](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/modules/companies/domain/repositories/company.repository.ts#5-6): usar `??` (nullish coalescing) para valores por defecto
-- En [update](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/modules/companies/infrastructure/persistence/PrismaContactRepository.ts#31-44): usar **conditional spreading** (`...(field !== undefined && { field })`) para evitar pasar `undefined` a Prisma
+**Rules:**
+- Import `prisma` from `shared/infrastructure/database`
+- Use `mapToEntity()` to convert DB records to domain entities
+- In `create`: use `??` (nullish coalescing) for default values
+- In `update`: use **conditional spreading** (`...(field !== undefined && { field })`) to avoid passing `undefined` to Prisma
 
 ---
 
-## Paso 6: Crear los DTOs (Esquemas Joi)
+## Step 6: Create DTOs (Joi Schemas)
 
-Archivo: `src/modules/{moduleName}/application/dtos/{entity}.dto.ts`
+File: `src/modules/{moduleName}/application/dtos/{entity}.dto.ts`
 
 ```typescript
 // src/modules/products/application/dtos/product.dto.ts
 import Joi from "joi";
 
-// --- Schemas de Request ---
+// --- Request Schemas ---
 export const createProductDtoRequestSchema = Joi.object({
     company_id: Joi.string().uuid().required(),
     name: Joi.string().min(2).max(200).required(),
@@ -247,7 +247,7 @@ export const updateProductDtoRequestSchema = Joi.object({
     is_active: Joi.boolean().optional(),
 });
 
-// --- Schemas de Response ---
+// --- Response Schemas ---
 export const productDtoResponseSchema = Joi.object({
     id: Joi.string().required(),
     company_id: Joi.string().required(),
@@ -261,24 +261,24 @@ export const productListDtoResponseSchema = Joi.array()
     .items(productDtoResponseSchema);
 ```
 
-**Reglas:**
-- Separar schemas de **Request** y **Response**
-- Response schemas: siempre usar `.options({ stripUnknown: true })` para sanitizar
-- Campos opcionales: usar `.allow(null, '').optional()`
-- Campos UUID: usar `Joi.string().uuid()`
+**Rules:**
+- Separate **Request** and **Response** schemas
+- Response schemas: always use `.options({ stripUnknown: true })` for sanitization
+- Optional fields: use `.allow(null, '').optional()`
+- UUID fields: use `Joi.string().uuid()`
 
 ---
 
-## Paso 7: Crear los Casos de Uso
+## Step 7: Create Use Cases
 
-Cada caso de uso extiende `UseCase<TInput, TOutput>` y define:
-- `inputSchema`: validación Joi de entrada
-- `outputSchema`: validación Joi de salida
-- [implementation()](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/modules/companies/application/getCompanyByIdUseCase.ts#42-49): lógica de negocio
+Each use case extends `UseCase<TInput, TOutput>` and defines:
+- `inputSchema`: Joi input validation
+- `outputSchema`: Joi output validation
+- `implementation()`: business logic
 
-### Ejemplo: Crear
+### Example: Create
 
-Archivo: `src/modules/{moduleName}/application/create{Entity}UseCase.ts`
+File: `src/modules/{moduleName}/application/create{Entity}UseCase.ts`
 
 ```typescript
 // src/modules/products/application/createProductUseCase.ts
@@ -334,7 +334,7 @@ export class CreateProductUseCase
 }
 ```
 
-### Ejemplo: Obtener por ID
+### Example: Get by ID
 
 ```typescript
 // src/modules/products/application/getProductByIdUseCase.ts
@@ -365,12 +365,12 @@ export class GetProductByIdUseCase extends UseCase<string, any> {
 }
 ```
 
-### Ejemplo: Usar otro caso de uso internamente
+### Example: Using Another Use Case Internally
 
-Si un caso de uso necesita funcionalidad de **otro módulo**, se importa el caso de uso directamente:
+If a use case needs functionality from **another module**, import the use case directly:
 
 ```typescript
-// Ejemplo: CreateOrderUseCase necesita verificar que el producto existe
+// Example: CreateOrderUseCase needs to verify that the product exists
 import { GetProductByIdUseCase }
     from "../../products/application/getProductByIdUseCase";
 
@@ -385,21 +385,21 @@ export class CreateOrderUseCase extends UseCase<CreateOrderDto, OrderResult> {
     }
 
     protected async implementation(data: CreateOrderDto): Promise<OrderResult> {
-        // Verificar que el producto existe
+        // Verify that the product exists
         const product = await this.getProductUseCase.execute(data.product_id);
-        // ... lógica del pedido
+        // ... order logic
     }
 }
 ```
 
 > [!IMPORTANT]
-> **Nunca importes un repositorio de otro módulo directamente.** Si necesitas datos de otro módulo, importa su **caso de uso**.
+> **Never import a repository from another module directly.** If you need data from another module, import its **use case**.
 
 ---
 
-## Paso 8: Crear las Rutas HTTP
+## Step 8: Create HTTP Routes
 
-Archivo: `src/modules/{moduleName}/infrastructure/http/{module}Routes.ts`
+File: `src/modules/{moduleName}/infrastructure/http/{module}Routes.ts`
 
 ```typescript
 // src/modules/products/infrastructure/http/productRoutes.ts
@@ -415,7 +415,7 @@ import { GetProductByIdUseCase }
 
 export async function productRoutes(app: FastifyInstance) {
 
-    // POST /products (protegida con JWT)
+    // POST /products (JWT protected)
     app.post('/',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
@@ -423,7 +423,7 @@ export async function productRoutes(app: FastifyInstance) {
             const result = await useCase.execute({
                 ...request.body,
                 company_id: request.user.companyId
-                // ^ Si necesitas info del JWT
+                // ^ If you need JWT info
             });
             return ApiResponse.success(
                 reply, result, "Product created", 201
@@ -431,7 +431,7 @@ export async function productRoutes(app: FastifyInstance) {
         }
     );
 
-    // GET /products/:id (pública o protegida)
+    // GET /products/:id (public or protected)
     app.get('/:id',
         async (
             request: FastifyRequest<{ Params: { id: string } }>,
@@ -443,7 +443,7 @@ export async function productRoutes(app: FastifyInstance) {
         }
     );
 
-    // PATCH /products/:id (protegida con JWT)
+    // PATCH /products/:id (JWT protected)
     app.patch('/:id',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
@@ -456,7 +456,7 @@ export async function productRoutes(app: FastifyInstance) {
         }
     );
 
-    // DELETE /products/:id (protegida con JWT)
+    // DELETE /products/:id (JWT protected)
     app.delete('/:id',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
@@ -468,18 +468,18 @@ export async function productRoutes(app: FastifyInstance) {
 }
 ```
 
-**Reglas de rutas:**
-- **JWT obligatorio**: Toda ruta que modifique datos (`POST`, `PATCH`, `DELETE`) debe usar `{ preHandler: [authMiddleware] }`
-- Rutas GET públicas: pueden omitir el middleware
-- Los use cases se instancian con `new UseCase()` sin argumentos
-- Usar `ApiResponse.success()` y `ApiResponse.error()` del `responseFormatter`
-- Acceso a datos del JWT: `request.user.userId`, `request.user.email`
+**Route rules:**
+- **JWT required**: Every route that modifies data (`POST`, `PATCH`, `DELETE`) must use `{ preHandler: [authMiddleware] }`
+- Public GET routes: can omit the middleware
+- Use cases are instantiated with `new UseCase()` without arguments
+- Use `ApiResponse.success()` and `ApiResponse.error()` from `responseFormatter`
+- Access JWT data: `request.user.userId`, `request.user.email`
 
 ---
 
-## Paso 9: Registrar las Rutas
+## Step 9: Register the Routes
 
-Editar [src/routes.ts](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/routes.ts):
+Edit `src/routes.ts`:
 
 ```typescript
 import { FastifyInstance } from "fastify";
@@ -487,56 +487,56 @@ import { userRoutes } from "./modules/users/infrastructure/http/userRoutes";
 import { companyRoutes }
     from "./modules/companies/infrastructure/http/companyRoutes";
 import { productRoutes }
-    from "./modules/products/infrastructure/http/productRoutes";  // NUEVO
+    from "./modules/products/infrastructure/http/productRoutes";  // NEW
 
 export async function routes(app: FastifyInstance) {
     app.register(userRoutes, { prefix: '/users' });
     app.register(companyRoutes, { prefix: '/companies' });
-    app.register(productRoutes, { prefix: '/products' });  // NUEVO
+    app.register(productRoutes, { prefix: '/products' });  // NEW
 }
 ```
 
-Las rutas quedarán disponibles bajo `/api/v1/products/...`
+Routes will be available under `/api/v1/products/...`
 
 ---
 
-## Paso 10: Verificar
+## Step 10: Verify
 
 ```bash
-# 1. Generar cliente Prisma
+# 1. Generate Prisma client
 npx prisma generate
 
-# 2. Compilar TypeScript
+# 2. Compile TypeScript
 npx tsc --noEmit
 
-# 3. Ejecutar servidor
+# 3. Run server
 npm run dev
 ```
 
 ---
 
-## Checklist Rápido
+## Quick Checklist
 
-| # | Paso | Archivo |
-|---|------|---------|
-| 1 | Modelo Prisma | [prisma/schema.prisma](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/prisma/schema.prisma) |
-| 2 | Entidad de dominio | `domain/entities/{entity}.entity.ts` |
-| 3 | Interfaz repositorio | `domain/repositories/{entity}.repository.ts` |
-| 4 | Errores de dominio | `domain/errors/{module}.errors.ts` |
-| 5 | Repositorio Prisma | `infrastructure/persistence/Prisma{Entity}Repository.ts` |
+| # | Step | File |
+|---|------|------|
+| 1 | Prisma Model | `prisma/schema.prisma` |
+| 2 | Domain Entity | `domain/entities/{entity}.entity.ts` |
+| 3 | Repository Interface | `domain/repositories/{entity}.repository.ts` |
+| 4 | Domain Errors | `domain/errors/{module}.errors.ts` |
+| 5 | Prisma Repository | `infrastructure/persistence/Prisma{Entity}Repository.ts` |
 | 6 | DTOs (Joi schemas) | `application/dtos/{entity}.dto.ts` |
-| 7 | Casos de uso | `application/{action}{Entity}UseCase.ts` |
-| 8 | Rutas HTTP | `infrastructure/http/{module}Routes.ts` |
-| 9 | Registrar rutas | [src/routes.ts](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/routes.ts) |
-| 10 | Verificar | `npx tsc --noEmit` |
+| 7 | Use Cases | `application/{action}{Entity}UseCase.ts` |
+| 8 | HTTP Routes | `infrastructure/http/{module}Routes.ts` |
+| 9 | Register Routes | `src/routes.ts` |
+| 10 | Verify | `npx tsc --noEmit` |
 
 ---
 
-## Errores Comunes a Evitar
+## Common Mistakes to Avoid
 
-1. **Importar repositorio de otro módulo**: Importa el **caso de uso**, no el repositorio
-2. **Nombres de campos Prisma ≠ Entidad**: Siempre verifica [schema.prisma](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/prisma/schema.prisma) antes de escribir el repositorio
-3. **Pasar `undefined` a Prisma**: Usa conditional spreading o `??` para valores por defecto
-4. **Olvidar [authMiddleware](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/shared/infrastructure/http/middlewares/authMiddleware.ts#16-41)**: Toda ruta que modifique datos debe tener JWT
-5. **No usar `stripUnknown`** en response schemas: Los DTOs de respuesta siempre llevan `.options({ stripUnknown: true })`
-6. **Olvidar registrar en [routes.ts](file:///c:/proyectos/personal/bitobbu/backend-bitobbu/src/routes.ts)**: Sin esto, las rutas no son accesibles
+1. **Importing a repository from another module**: Import the **use case**, not the repository
+2. **Prisma field names ≠ Entity field names**: Always verify `schema.prisma` before writing the repository
+3. **Passing `undefined` to Prisma**: Use conditional spreading or `??` for default values
+4. **Forgetting `authMiddleware`**: Every route that modifies data must have JWT
+5. **Not using `stripUnknown`** in response schemas: Response DTOs must always include `.options({ stripUnknown: true })`
+6. **Forgetting to register in `routes.ts`**: Without this, routes are not accessible
