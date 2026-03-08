@@ -1,8 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
+import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
 import { PrismaUserRepository } from '../persistence/PrismaUserRepository';
 import { RegisterUserUseCase } from '../../application/registerUserUseCase';
 import { LoginUserUseCase } from '../../application/loginUserUseCase';
+import { UpdateUserUseCase } from '../../application/updateUserUseCase';
 
 
 export async function userRoutes(app: FastifyInstance) {
@@ -25,5 +27,17 @@ export async function userRoutes(app: FastifyInstance) {
         const outputValue = await useCase.execute(request.body);
 
         return ApiResponse.success(reply, outputValue, "Login successful");
+    });
+
+    // ==========================================
+    // PATCH /users/profile
+    // ==========================================
+    app.patch('/profile', { preHandler: [authMiddleware] } as any, async (request: any, reply: FastifyReply) => {
+        const useCase = new UpdateUserUseCase(new PrismaUserRepository());
+        const result = await useCase.execute({
+            ...request.body,
+            id: request.user.userId
+        });
+        return ApiResponse.success(reply, result, "Profile updated successfully");
     });
 }

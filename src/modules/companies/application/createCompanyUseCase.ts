@@ -1,5 +1,6 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { CompanyRepository } from "../domain/repositories/company.repository";
+import { UpdateUserUseCase } from "../../users/application/updateUserUseCase";
 import { createCompanyDtoRequestSchema, createCompanyDtoResponseSchema } from "./dtos/company.dto";
 import Joi from "joi";
 import { CompanyAlreadyExistsError } from "../domain/errors/company.errors";
@@ -15,6 +16,27 @@ interface CreateCompanyInput {
     company_type?: any;
     interest?: any;
     approximate_volume?: any;
+
+    location_state?: string;
+    location_city?: string;
+    tax_address?: string;
+    national_coverage?: boolean;
+
+    contact_person?: string;
+    contact_role?: string;
+    whatsapp?: string;
+    corporate_email?: string;
+
+    retention_agent?: boolean;
+    works_with_credit?: boolean;
+
+    email_notifications?: boolean;
+    web_notifications?: boolean;
+    whatsapp_notifications?: boolean;
+
+    payment_methods?: string[];
+    interest_categories?: string[];
+    creatorId: string;
 }
 
 interface CreateCompanyOutput {
@@ -31,7 +53,10 @@ export class CreateCompanyUseCase extends UseCase<CreateCompanyInput, CreateComp
     protected inputSchema: Joi.Schema = createCompanyDtoRequestSchema;
     protected outputSchema: Joi.Schema = createCompanyDtoResponseSchema;
 
-    constructor(private readonly companyRepository: CompanyRepository) {
+    constructor(
+        private readonly companyRepository: CompanyRepository,
+        private readonly updateUserUseCase: UpdateUserUseCase
+    ) {
         super();
     }
 
@@ -45,6 +70,12 @@ export class CreateCompanyUseCase extends UseCase<CreateCompanyInput, CreateComp
         }
 
         const company = await this.companyRepository.create(data);
+
+        // Associate company with user using the UpdateUserUseCase
+        await this.updateUserUseCase.execute({
+            id: data.creatorId,
+            company_id: company.id
+        });
 
         return {
             id: company.id,

@@ -65,6 +65,7 @@ export class PrismaUserRepository implements UserRepository {
                 salt: user.salt ?? 10,
                 is_active: user.is_active ?? true,
                 last_access: user.last_access,
+                company_id: user.company_id
             }
         });
         return new User(

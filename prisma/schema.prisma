@@ -45,41 +45,41 @@ model User {
 // ==========================================
 
 enum CompanyInterest {
-  Buy
-  Sell
-  Both
+  Comprar
+  Vender
+  Ambos
 }
 
 enum CompanyType {
-  Manufacturer
-  Wholesaler
-  Distributor
-  Service_Provider @map("Service Provider")
-  Retailer
+  Fabricante
+  Mayorista
+  Distribuidor
+  Prestador_de_Servicios @map("Prestador de Servicios")
+  Minorista
 }
 
 enum CompanyVolume {
-  Small
-  Medium
-  Large
+  Pequeno @map("Pequeño")
+  Medio
+  Grande
 }
 
 enum CategoryType {
-  Food
-  Hardware
-  Health
+  Alimentos
+  Ferreteria    @map("Ferretería")
+  Salud
   IT
-  Automotive
-  Packaging
-  Chemicals
-  Office
-  Textile
-  Logistics
-  Maintenance
-  Security
+  Automotriz
+  Embalaje
+  Quimicos      @map("Químicos")
+  Oficina
+  Textil
+  Logistica     @map("Logística")
+  Mantenimiento
+  Seguridad
   Marketing
   Legal
-  HR
+  RRHH
 }
 
 enum VenezuelaState {
@@ -122,12 +122,12 @@ enum PlanType {
 }
 
 enum PaymentMethod {
-  Transfer
-  Cash
-  Credit_Card    @map("Credit Card")
-  Debit_Card     @map("Debit Card")
-  Cryptocurrency
-  Mobile_Payment @map("Mobile Payment")
+  Transferencia
+  Efectivo
+  Tarjeta_de_Credito @map("Tarjeta de Crédito")
+  Tarjeta_de_Debito  @map("Tarjeta de Débito")
+  Criptomoneda
+  Pago_Movil         @map("Pago Móvil")
   Zelle
 }
 
@@ -204,8 +204,8 @@ model Company {
 
   sector             CategoryType?
   company_type       CompanyType?
-  interest           CompanyInterest @default(Both)
-  approximate_volume CompanyVolume?  @default(Medium)
+  interest           CompanyInterest @default(Ambos)
+  approximate_volume CompanyVolume?  @default(Medio)
 
   average_rating    Decimal? @default(0.00) @db.Decimal(3, 2)
   transaction_count Int      @default(0)

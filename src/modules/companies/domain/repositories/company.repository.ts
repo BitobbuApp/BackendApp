@@ -1,5 +1,5 @@
 // src/modules/companies/domain/companyRepository.ts
-import { Company } from "./companyEntity";
+import { Company } from "../entities/company.entity";
 
 export interface CompanyRepository {
     create(company: Partial<Company>): Promise<Company>;

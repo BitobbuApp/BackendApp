@@ -2,7 +2,9 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
 import { PrismaCompanyRepository } from '../persistence/PrismaCompanyRepository';
+import { PrismaUserRepository } from '../../../users/infrastructure/persistence/PrismaUserRepository';
 import { CreateCompanyUseCase } from '../../application/createCompanyUseCase';
+import { UpdateUserUseCase } from '../../../users/application/updateUserUseCase';
 import { GetCompanyByIdUseCase } from '../../application/getCompanyByIdUseCase';
 import { UpdateCompanyUseCase } from '../../application/updateCompanyUseCase';
 import { ListCompaniesUseCase } from '../../application/listCompaniesUseCase';
@@ -37,8 +39,10 @@ export async function companyRoutes(app: FastifyInstance) {
     // ==========================================
 
     app.post('/', { preHandler: [authMiddleware] } as any, async (request: any, reply: any) => {
-        const useCase = new CreateCompanyUseCase(new PrismaCompanyRepository());
-        const result = await useCase.execute(request.body);
+        const userRepository = new PrismaUserRepository();
+        const updateUserUseCase = new UpdateUserUseCase(userRepository);
+        const useCase = new CreateCompanyUseCase(new PrismaCompanyRepository(), updateUserUseCase);
+        const result = await useCase.execute({ ...request.body, creatorId: request.user.userId });
         return ApiResponse.success(reply, result, "Company successfully created", 201);
     });
 

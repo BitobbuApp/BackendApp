@@ -3,8 +3,8 @@
 import { ApplicationError } from "../../../../shared/domain/error";
 
 export class UserNotFoundError extends ApplicationError {
-    constructor(email: string) {
-        super(404, `User with email ${email} not found`);
+    constructor(identifier: string) {
+        super(404, `User ${identifier} not found`);
     }
 }
 

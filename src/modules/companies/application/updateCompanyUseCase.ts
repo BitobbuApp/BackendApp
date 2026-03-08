@@ -17,6 +17,26 @@ interface UpdateCompanyInput {
     company_type?: any;
     interest?: any;
     approximate_volume?: any;
+
+    location_state?: string;
+    location_city?: string;
+    tax_address?: string;
+    national_coverage?: boolean;
+
+    contact_person?: string;
+    contact_role?: string;
+    whatsapp?: string;
+    corporate_email?: string;
+
+    retention_agent?: boolean;
+    works_with_credit?: boolean;
+
+    email_notifications?: boolean;
+    web_notifications?: boolean;
+    whatsapp_notifications?: boolean;
+
+    payment_methods?: string[];
+    interest_categories?: string[];
 }
 
 export class UpdateCompanyUseCase extends UseCase<UpdateCompanyInput, any> {

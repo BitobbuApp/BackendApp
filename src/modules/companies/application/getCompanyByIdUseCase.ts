@@ -9,10 +9,10 @@ export class GetCompanyByIdUseCase extends UseCase<string, any> {
     protected outputSchema: Joi.Schema = Joi.object({
         id: Joi.string().required(),
         trade_name: Joi.string().required(),
-        legal_name: Joi.string().allow(null),
-        tax_id: Joi.string().allow(null),
-        bio: Joi.string().allow(null),
-        logo_url: Joi.string().allow(null),
+        legal_name: Joi.string().allow(null, ''),
+        tax_id: Joi.string().allow(null, ''),
+        bio: Joi.string().allow(null, ''),
+        logo_url: Joi.string().allow(null, ''),
         sector: Joi.string().allow(null),
         company_type: Joi.string().allow(null),
         interest: Joi.string().required(),
@@ -20,7 +20,14 @@ export class GetCompanyByIdUseCase extends UseCase<string, any> {
         average_rating: Joi.number().required(),
         transaction_count: Joi.number().required(),
         review_count: Joi.number().required(),
-        created_at: Joi.date().required()
+        created_at: Joi.date().required(),
+        // Joined fields
+        locations: Joi.array().items(Joi.any()).optional(),
+        contacts: Joi.array().items(Joi.any()).optional(),
+        commercial_profile: Joi.any().optional(),
+        settings: Joi.any().optional(),
+        payment_methods: Joi.array().items(Joi.any()).optional(),
+        categories_of_interest: Joi.array().items(Joi.any()).optional()
     }).options({ stripUnknown: true });
 
     constructor(private readonly companyRepository: CompanyRepository) {
