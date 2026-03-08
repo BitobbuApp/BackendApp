@@ -1,10 +1,10 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { CompanyRepository } from "../domain/repositories/company.repository";
+import { PrismaCompanyRepository } from "../infrastructure/persistence/PrismaCompanyRepository";
 import { updateCompanyDtoRequestSchema, createCompanyDtoResponseSchema } from "./dtos/company.dto";
 import Joi from "joi";
 import { CompanyNotFoundError } from "../domain/errors/company.errors";
 import { Company } from "../domain/entities/company.entity";
-
 interface UpdateCompanyInput {
     id: string;
     trade_name?: string;
@@ -44,9 +44,11 @@ export class UpdateCompanyUseCase extends UseCase<UpdateCompanyInput, any> {
         id: Joi.string().uuid().required()
     });
     protected outputSchema: Joi.Schema = createCompanyDtoResponseSchema;
+    private readonly companyRepository: CompanyRepository;
 
-    constructor(private readonly companyRepository: CompanyRepository) {
+    constructor() {
         super();
+        this.companyRepository = new PrismaCompanyRepository();
     }
 
     protected async implementation(data: UpdateCompanyInput): Promise<any> {

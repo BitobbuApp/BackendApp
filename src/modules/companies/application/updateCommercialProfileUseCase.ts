@@ -10,12 +10,16 @@ interface UpdateCommercialProfileInput {
     works_with_credit?: boolean;
 }
 
+import { PrismaCommercialProfileRepository } from "../infrastructure/persistence/PrismaCommercialProfileRepository";
+
 export class UpdateCommercialProfileUseCase extends UseCase<UpdateCommercialProfileInput, CommercialProfile> {
     protected inputSchema: Joi.Schema = updateCommercialProfileDtoRequestSchema;
     protected outputSchema: Joi.Schema = commercialProfileDtoResponseSchema;
+    private readonly commercialProfileRepository: CommercialProfileRepository;
 
-    constructor(private readonly commercialProfileRepository: CommercialProfileRepository) {
+    constructor() {
         super();
+        this.commercialProfileRepository = new PrismaCommercialProfileRepository();
     }
 
     protected async implementation(data: UpdateCommercialProfileInput): Promise<CommercialProfile> {

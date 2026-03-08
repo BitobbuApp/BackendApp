@@ -2,18 +2,19 @@ import { UseCase } from "../../../shared/application/useCase";
 import { LocationRepository } from "../domain/repositories/location.repository";
 import Joi from "joi";
 import { LocationNotFoundError } from "../domain/errors/company.errors";
+import { PrismaLocationRepository } from "../infrastructure/persistence/PrismaLocationRepository";
 
-export class RemoveLocationUseCase extends UseCase<string, { success: boolean }> {
+export class RemoveLocationUseCase extends UseCase<string, boolean> {
     protected inputSchema: Joi.Schema = Joi.string().uuid().required();
-    protected outputSchema: Joi.Schema = Joi.object({
-        success: Joi.boolean().required()
-    });
+    protected outputSchema: Joi.Schema = Joi.boolean();
+    private readonly locationRepository: LocationRepository;
 
-    constructor(private readonly locationRepository: LocationRepository) {
+    constructor() {
         super();
+        this.locationRepository = new PrismaLocationRepository();
     }
 
-    protected async implementation(id: string): Promise<{ success: boolean }> {
+    protected async implementation(id: string): Promise<boolean> {
         const existing = await this.locationRepository.findById(id);
         if (!existing) throw new LocationNotFoundError(id);
 
@@ -26,6 +27,6 @@ export class RemoveLocationUseCase extends UseCase<string, { success: boolean }>
         }
 
         await this.locationRepository.delete(id);
-        return { success: true };
+        return true;
     }
 }

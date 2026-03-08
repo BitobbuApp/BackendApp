@@ -1,5 +1,6 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { SettingsRepository } from "../domain/repositories/settings.repository";
+import { PrismaSettingsRepository } from "../infrastructure/persistence/PrismaSettingsRepository";
 import { updateSettingsDtoRequestSchema, settingsDtoResponseSchema } from "./dtos/settings.dto";
 import Joi from "joi";
 import { CompanySettings } from "../domain/entities/settings.entity";
@@ -7,15 +8,18 @@ import { CompanySettings } from "../domain/entities/settings.entity";
 interface UpdateSettingsInput {
     company_id: string;
     receive_email_notifications?: boolean;
+    receive_whatsapp_notifications?: boolean;
     receive_web_notifications?: boolean;
 }
 
 export class UpdateSettingsUseCase extends UseCase<UpdateSettingsInput, CompanySettings> {
     protected inputSchema: Joi.Schema = updateSettingsDtoRequestSchema;
     protected outputSchema: Joi.Schema = settingsDtoResponseSchema;
+    private readonly settingsRepository: SettingsRepository;
 
-    constructor(private readonly settingsRepository: SettingsRepository) {
+    constructor() {
         super();
+        this.settingsRepository = new PrismaSettingsRepository();
     }
 
     protected async implementation(data: UpdateSettingsInput): Promise<CompanySettings> {

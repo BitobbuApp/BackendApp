@@ -4,12 +4,16 @@ import { contactDtoResponseSchema } from "./dtos/contact.dto";
 import Joi from "joi";
 import { CompanyContact } from "../domain/entities/contact.entity";
 
-export class GetContactsByCompanyUseCase extends UseCase<string, CompanyContact[]> {
+import { PrismaContactRepository } from "../infrastructure/persistence/PrismaContactRepository";
+
+export class GetContactsByCompanyUseCase extends UseCase<string, any[]> {
     protected inputSchema: Joi.Schema = Joi.string().uuid().required();
     protected outputSchema: Joi.Schema = Joi.array().items(contactDtoResponseSchema);
+    private readonly contactRepository: ContactRepository;
 
-    constructor(private readonly contactRepository: ContactRepository) {
+    constructor() {
         super();
+        this.contactRepository = new PrismaContactRepository();
     }
 
     protected async implementation(companyId: string): Promise<CompanyContact[]> {

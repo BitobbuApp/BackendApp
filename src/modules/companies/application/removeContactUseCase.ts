@@ -3,17 +3,19 @@ import { ContactRepository } from "../domain/repositories/contact.repository";
 import Joi from "joi";
 import { ContactNotFoundError } from "../domain/errors/company.errors";
 
-export class RemoveContactUseCase extends UseCase<string, { success: boolean }> {
-    protected inputSchema: Joi.Schema = Joi.string().uuid().required();
-    protected outputSchema: Joi.Schema = Joi.object({
-        success: Joi.boolean().required()
-    });
+import { PrismaContactRepository } from "../infrastructure/persistence/PrismaContactRepository";
 
-    constructor(private readonly contactRepository: ContactRepository) {
+export class RemoveContactUseCase extends UseCase<string, boolean> {
+    protected inputSchema: Joi.Schema = Joi.string().uuid().required();
+    protected outputSchema: Joi.Schema = Joi.boolean();
+    private readonly contactRepository: ContactRepository;
+
+    constructor() {
         super();
+        this.contactRepository = new PrismaContactRepository();
     }
 
-    protected async implementation(id: string): Promise<{ success: boolean }> {
+    protected async implementation(id: string): Promise<boolean> {
         const existing = await this.contactRepository.findById(id);
         if (!existing) throw new ContactNotFoundError(id);
 
@@ -25,6 +27,6 @@ export class RemoveContactUseCase extends UseCase<string, { success: boolean }> 
         }
 
         await this.contactRepository.delete(id);
-        return { success: true };
+        return true;
     }
 }

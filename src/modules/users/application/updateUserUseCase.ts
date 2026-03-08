@@ -1,5 +1,5 @@
 import { UseCase } from "../../../shared/application/useCase";
-import { UserRepository } from "../domain/repositories/user.repository";
+import { PrismaUserRepository } from '../infrastructure/persistence/PrismaUserRepository';
 import { updateUserDtoRequestSchema, updateUserDtoResponseSchema } from "./dtos/user.dto";
 import Joi from "joi";
 import { UserNotFoundError } from "../domain/errors/user.errors";
@@ -27,9 +27,11 @@ export class UpdateUserUseCase extends UseCase<UpdateUserInput, UpdateUserOutput
         id: Joi.string().uuid().required()
     });
     protected outputSchema: Joi.Schema = updateUserDtoResponseSchema;
+    private readonly userRepository: PrismaUserRepository;
 
-    constructor(private readonly userRepository: UserRepository) {
+    constructor() {
         super();
+        this.userRepository = new PrismaUserRepository();
     }
 
     protected async implementation(data: UpdateUserInput): Promise<UpdateUserOutput> {

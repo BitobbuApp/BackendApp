@@ -1,6 +1,7 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { CompanyRepository } from "../domain/repositories/company.repository";
 import { UpdateUserUseCase } from "../../users/application/updateUserUseCase";
+import { PrismaCompanyRepository } from "../infrastructure/persistence/PrismaCompanyRepository";
 import { createCompanyDtoRequestSchema, createCompanyDtoResponseSchema } from "./dtos/company.dto";
 import Joi from "joi";
 import { CompanyAlreadyExistsError } from "../domain/errors/company.errors";
@@ -52,12 +53,13 @@ interface CreateCompanyOutput {
 export class CreateCompanyUseCase extends UseCase<CreateCompanyInput, CreateCompanyOutput> {
     protected inputSchema: Joi.Schema = createCompanyDtoRequestSchema;
     protected outputSchema: Joi.Schema = createCompanyDtoResponseSchema;
+    private readonly companyRepository: CompanyRepository;
+    private readonly updateUserUseCase: UpdateUserUseCase;
 
-    constructor(
-        private readonly companyRepository: CompanyRepository,
-        private readonly updateUserUseCase: UpdateUserUseCase
-    ) {
+    constructor() {
         super();
+        this.companyRepository = new PrismaCompanyRepository();
+        this.updateUserUseCase = new UpdateUserUseCase();
     }
 
     protected async implementation(data: CreateCompanyInput): Promise<CreateCompanyOutput> {

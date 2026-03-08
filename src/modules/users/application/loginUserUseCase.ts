@@ -1,3 +1,4 @@
+import { PrismaUserRepository } from '../infrastructure/persistence/PrismaUserRepository';
 import { UserRepository } from '../domain/repositories/user.repository';
 import { InvalidCredentialsError, UserNotFoundError } from '../domain/errors/user.errors';
 import bcrypt from 'bcrypt';
@@ -26,10 +27,12 @@ interface LoginResult {
 export class LoginUserUseCase extends UseCase<LoginDto, LoginResult> {
     protected inputSchema: Joi.Schema = loginUserDtoRequestSchema;
     protected outputSchema: Joi.Schema = loginUserDtoResponseSchema;
+    private readonly userRepository: UserRepository;
     private readonly jwtService: JwtService;
 
-    constructor(private readonly userRepository: UserRepository) {
+    constructor() {
         super();
+        this.userRepository = new PrismaUserRepository();
         this.jwtService = new JwtService();
     }
 

@@ -1,5 +1,6 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { ContactRepository } from "../domain/repositories/contact.repository";
+import { PrismaContactRepository } from "../infrastructure/persistence/PrismaContactRepository";
 import { addContactDtoRequestSchema, contactDtoResponseSchema } from "./dtos/contact.dto";
 import Joi from "joi";
 import { CompanyContact } from "../domain/entities/contact.entity";
@@ -16,9 +17,11 @@ interface AddContactInput {
 export class AddContactUseCase extends UseCase<AddContactInput, CompanyContact> {
     protected inputSchema: Joi.Schema = addContactDtoRequestSchema;
     protected outputSchema: Joi.Schema = contactDtoResponseSchema;
+    private readonly contactRepository: ContactRepository;
 
-    constructor(private readonly contactRepository: ContactRepository) {
+    constructor() {
         super();
+        this.contactRepository = new PrismaContactRepository();
     }
 
     protected async implementation(data: AddContactInput): Promise<CompanyContact> {

@@ -10,12 +10,16 @@ interface SubmitDocumentInput {
     file_url: string;
 }
 
+import { PrismaVerificationRepository } from "../infrastructure/persistence/PrismaVerificationRepository";
+
 export class SubmitVerificationDocumentUseCase extends UseCase<SubmitDocumentInput, VerificationDocument> {
     protected inputSchema: Joi.Schema = submitDocumentDtoRequestSchema;
     protected outputSchema: Joi.Schema = documentDtoResponseSchema;
+    private readonly verificationRepository: VerificationRepository;
 
-    constructor(private readonly verificationRepository: VerificationRepository) {
+    constructor() {
         super();
+        this.verificationRepository = new PrismaVerificationRepository();
     }
 
     protected async implementation(data: SubmitDocumentInput): Promise<VerificationDocument> {

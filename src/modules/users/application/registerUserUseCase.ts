@@ -1,4 +1,5 @@
 import { UserRepository } from '../domain/repositories/user.repository';
+import { PrismaUserRepository } from "../infrastructure/persistence/PrismaUserRepository";
 import { UserAlreadyExistsError } from '../domain/errors/user.errors';
 import bcrypt from 'bcrypt';
 import { UseCase } from '../../../shared/application/useCase';
@@ -19,12 +20,16 @@ interface RegisterResult {
     email: string;
 }
 
+// ... RegisterDto and RegisterResult interfaces remain same
+
 export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     protected inputSchema: Joi.Schema = registerUserDtoRequestSchema;
     protected outputSchema: Joi.Schema = registerUserDtoResponseSchema;
+    private readonly userRepository: UserRepository;
 
-    constructor(private readonly userRepository: UserRepository) {
+    constructor() {
         super();
+        this.userRepository = new PrismaUserRepository();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {

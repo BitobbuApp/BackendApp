@@ -1,6 +1,7 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { ContactRepository } from "../domain/repositories/contact.repository";
-import { contactDtoResponseSchema } from "./dtos/contact.dto";
+import { PrismaContactRepository } from "../infrastructure/persistence/PrismaContactRepository";
+import { addContactDtoRequestSchema, contactDtoResponseSchema } from "./dtos/contact.dto";
 import Joi from "joi";
 import { CompanyContact } from "../domain/entities/contact.entity";
 import { ContactNotFoundError } from "../domain/errors/company.errors";
@@ -25,8 +26,11 @@ export class UpdateContactUseCase extends UseCase<UpdateContactInput, CompanyCon
     });
     protected outputSchema: Joi.Schema = contactDtoResponseSchema;
 
-    constructor(private readonly contactRepository: ContactRepository) {
+    private readonly contactRepository: ContactRepository;
+
+    constructor() {
         super();
+        this.contactRepository = new PrismaContactRepository();
     }
 
     protected async implementation(data: UpdateContactInput): Promise<CompanyContact> {

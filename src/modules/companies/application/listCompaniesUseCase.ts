@@ -1,5 +1,6 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { CompanyRepository } from "../domain/repositories/company.repository";
+import { PrismaCompanyRepository } from "../infrastructure/persistence/PrismaCompanyRepository";
 import { listCompaniesDtoResponseSchema } from "./dtos/company.dto";
 import Joi from "joi";
 
@@ -9,9 +10,11 @@ export class ListCompaniesUseCase extends UseCase<any, any[]> {
         interest: Joi.string().optional()
     }).optional();
     protected outputSchema: Joi.Schema = listCompaniesDtoResponseSchema;
+    private readonly companyRepository: CompanyRepository;
 
-    constructor(private readonly companyRepository: CompanyRepository) {
+    constructor() {
         super();
+        this.companyRepository = new PrismaCompanyRepository();
     }
 
     protected async implementation(filters: any): Promise<any[]> {

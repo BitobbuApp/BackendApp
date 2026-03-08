@@ -1,5 +1,6 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { LocationRepository } from "../domain/repositories/location.repository";
+import { PrismaLocationRepository } from "../infrastructure/persistence/PrismaLocationRepository";
 import { locationDtoResponseSchema } from "./dtos/location.dto";
 import Joi from "joi";
 import { CompanyLocation, VenezuelaState } from "../domain/entities/location.entity";
@@ -28,9 +29,11 @@ export class UpdateLocationUseCase extends UseCase<UpdateLocationInput, CompanyL
         is_main_headquarters: Joi.boolean()
     });
     protected outputSchema: Joi.Schema = locationDtoResponseSchema;
+    private readonly locationRepository: LocationRepository;
 
-    constructor(private readonly locationRepository: LocationRepository) {
+    constructor() {
         super();
+        this.locationRepository = new PrismaLocationRepository();
     }
 
     protected async implementation(data: UpdateLocationInput): Promise<CompanyLocation> {

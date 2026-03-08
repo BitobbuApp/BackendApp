@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
-import { PrismaUserRepository } from '../persistence/PrismaUserRepository';
 import { RegisterUserUseCase } from '../../application/registerUserUseCase';
 import { LoginUserUseCase } from '../../application/loginUserUseCase';
 import { UpdateUserUseCase } from '../../application/updateUserUseCase';
@@ -13,7 +12,7 @@ export async function userRoutes(app: FastifyInstance) {
     // POST /users/register
     // ==========================================
     app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
-        const useCase = new RegisterUserUseCase(new PrismaUserRepository());
+        const useCase = new RegisterUserUseCase();
         const outputValue = await useCase.execute(request.body);
 
         return ApiResponse.success(reply, outputValue, "User successfully registered", 201);
@@ -23,7 +22,7 @@ export async function userRoutes(app: FastifyInstance) {
     // POST /users/login
     // ==========================================
     app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
-        const useCase = new LoginUserUseCase(new PrismaUserRepository());
+        const useCase = new LoginUserUseCase();
         const outputValue = await useCase.execute(request.body);
 
         return ApiResponse.success(reply, outputValue, "Login successful");
@@ -33,7 +32,7 @@ export async function userRoutes(app: FastifyInstance) {
     // PATCH /users/profile
     // ==========================================
     app.patch('/profile', { preHandler: [authMiddleware] } as any, async (request: any, reply: FastifyReply) => {
-        const useCase = new UpdateUserUseCase(new PrismaUserRepository());
+        const useCase = new UpdateUserUseCase();
         const result = await useCase.execute({
             ...request.body,
             id: request.user.userId
