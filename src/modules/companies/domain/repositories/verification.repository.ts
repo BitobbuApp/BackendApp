@@ -1,5 +1,5 @@
 // src/modules/companies/domain/verificationRepository.ts
-import { CompanyVerification, VerificationDocument } from "./verificationEntity";
+import { CompanyVerification, VerificationDocument } from "../entities/verification.entity";
 
 export interface VerificationRepository {
     getVerification(companyId: string): Promise<CompanyVerification | null>;

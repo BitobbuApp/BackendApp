@@ -1,5 +1,5 @@
 // src/modules/companies/domain/settingsRepository.ts
-import { CompanySettings } from "./settingsEntity";
+import { CompanySettings } from "../entities/settings.entity";
 
 export interface SettingsRepository {
     findByCompanyId(companyId: string): Promise<CompanySettings | null>;

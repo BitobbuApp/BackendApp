@@ -1,5 +1,5 @@
 // src/modules/companies/domain/locationRepository.ts
-import { CompanyLocation } from "./locationEntity";
+import { CompanyLocation } from "../entities/location.entity";
 
 export interface LocationRepository {
     create(location: Partial<CompanyLocation>): Promise<CompanyLocation>;

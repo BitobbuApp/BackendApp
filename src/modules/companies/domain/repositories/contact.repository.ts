@@ -1,5 +1,5 @@
 // src/modules/companies/domain/contactRepository.ts
-import { CompanyContact } from "./contactEntity";
+import { CompanyContact } from "../entities/contact.entity";
 
 export interface ContactRepository {
     create(contact: Partial<CompanyContact>): Promise<CompanyContact>;

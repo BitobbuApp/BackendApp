@@ -7,11 +7,11 @@ export class PrismaContactRepository implements ContactRepository {
         const created = await prisma.companyContact.create({
             data: {
                 company_id: contact.company_id!,
-                full_name: contact.full_name!,
-                position: contact.position,
-                whatsapp: contact.whatsapp,
-                email: contact.email,
-                is_primary: contact.is_primary,
+                contact_person: contact.full_name ?? null,
+                position: contact.position ?? null,
+                whatsapp: contact.whatsapp ?? null,
+                corporate_email: contact.email ?? null,
+                is_primary: contact.is_primary ?? false,
             }
         });
         return this.mapToEntity(created);
@@ -32,11 +32,11 @@ export class PrismaContactRepository implements ContactRepository {
         const updated = await prisma.companyContact.update({
             where: { id },
             data: {
-                full_name: contact.full_name,
-                position: contact.position,
-                whatsapp: contact.whatsapp,
-                email: contact.email,
-                is_primary: contact.is_primary,
+                ...(contact.full_name !== undefined && { contact_person: contact.full_name }),
+                ...(contact.position !== undefined && { position: contact.position }),
+                ...(contact.whatsapp !== undefined && { whatsapp: contact.whatsapp }),
+                ...(contact.email !== undefined && { corporate_email: contact.email }),
+                ...(contact.is_primary !== undefined && { is_primary: contact.is_primary }),
             }
         });
         return this.mapToEntity(updated);
@@ -57,10 +57,10 @@ export class PrismaContactRepository implements ContactRepository {
         return new CompanyContact(
             db.id,
             db.company_id,
-            db.full_name,
+            db.contact_person,
             db.position,
             db.whatsapp,
-            db.email,
+            db.corporate_email,
             db.is_primary
         );
     }

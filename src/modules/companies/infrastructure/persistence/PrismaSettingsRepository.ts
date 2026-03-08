@@ -13,13 +13,13 @@ export class PrismaSettingsRepository implements SettingsRepository {
         const updated = await prisma.companySettings.upsert({
             where: { company_id: companyId },
             update: {
-                receive_email_notifications: settings.receive_email_notifications,
-                receive_web_notifications: settings.receive_web_notifications,
+                ...(settings.receive_email_notifications !== undefined && { email_notifications: settings.receive_email_notifications }),
+                ...(settings.receive_web_notifications !== undefined && { web_notifications: settings.receive_web_notifications }),
             },
             create: {
                 company_id: companyId,
-                receive_email_notifications: settings.receive_email_notifications ?? true,
-                receive_web_notifications: settings.receive_web_notifications ?? true,
+                email_notifications: settings.receive_email_notifications ?? true,
+                web_notifications: settings.receive_web_notifications ?? true,
             }
         });
         return this.mapToEntity(updated);
@@ -28,8 +28,8 @@ export class PrismaSettingsRepository implements SettingsRepository {
     private mapToEntity(db: any): CompanySettings {
         return new CompanySettings(
             db.company_id,
-            db.receive_email_notifications,
-            db.receive_web_notifications
+            db.email_notifications,
+            db.web_notifications
         );
     }
 }

@@ -14,15 +14,12 @@ export class PrismaVerificationRepository implements VerificationRepository {
             where: { company_id: verification.company_id! },
             update: {
                 status: verification.status as any,
-                last_submission_at: verification.last_submission_at,
-                verified_at: verification.verified_at,
-                rejected_at: verification.rejected_at,
-                rejection_reason: verification.rejection_reason,
+                ...(verification.verified_at !== undefined && { verified_at: verification.verified_at }),
+                ...(verification.rejection_reason !== undefined && { rejection_reason: verification.rejection_reason }),
             },
             create: {
                 company_id: verification.company_id!,
                 status: verification.status as any || 'Pending',
-                last_submission_at: verification.last_submission_at,
             }
         });
         return this.mapVerificationToEntity(updated);
@@ -33,7 +30,7 @@ export class PrismaVerificationRepository implements VerificationRepository {
             data: {
                 company_id: doc.company_id!,
                 type: doc.type as any,
-                file_url: doc.file_url!,
+                url: doc.file_url!,
                 status: 'Pending',
             }
         });
@@ -55,10 +52,10 @@ export class PrismaVerificationRepository implements VerificationRepository {
         const updated = await prisma.verificationDocument.update({
             where: { id },
             data: {
-                status: doc.status as any,
-                feedback: doc.feedback,
-                reviewed_by: doc.reviewed_by,
-                updated_at: new Date()
+                ...(doc.status !== undefined && { status: doc.status as any }),
+                ...(doc.feedback !== undefined && { notes: doc.feedback }),
+                ...(doc.reviewed_by !== undefined && { reviewed_by: doc.reviewed_by }),
+                reviewed_at: new Date()
             }
         });
         return this.mapDocumentToEntity(updated);
@@ -68,9 +65,9 @@ export class PrismaVerificationRepository implements VerificationRepository {
         return new CompanyVerification(
             db.company_id,
             db.status,
-            db.last_submission_at,
+            null, // last_submission_at not in Prisma schema
             db.verified_at,
-            db.rejected_at,
+            null, // rejected_at not in Prisma schema
             db.rejection_reason
         );
     }
@@ -80,12 +77,12 @@ export class PrismaVerificationRepository implements VerificationRepository {
             db.id,
             db.company_id,
             db.type,
-            db.file_url,
+            db.url,
             db.status,
-            db.feedback,
+            db.notes,
             db.reviewed_by,
             db.created_at,
-            db.updated_at
+            db.reviewed_at
         );
     }
 }

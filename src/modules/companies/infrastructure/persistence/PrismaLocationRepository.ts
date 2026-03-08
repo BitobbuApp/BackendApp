@@ -7,11 +7,11 @@ export class PrismaLocationRepository implements LocationRepository {
         const created = await prisma.companyLocation.create({
             data: {
                 company_id: location.company_id!,
-                state: location.state as any,
-                city: location.city!,
-                tax_address: location.tax_address,
-                national_coverage: location.national_coverage,
-                is_main_headquarters: location.is_main_headquarters,
+                location_state: location.state as any,
+                location_city: location.city!,
+                tax_address: location.tax_address ?? null,
+                national_coverage: location.national_coverage ?? false,
+                is_main_headquarters: location.is_main_headquarters ?? true,
             }
         });
         return this.mapToEntity(created);
@@ -32,11 +32,11 @@ export class PrismaLocationRepository implements LocationRepository {
         const updated = await prisma.companyLocation.update({
             where: { id },
             data: {
-                state: location.state as any,
-                city: location.city,
-                tax_address: location.tax_address,
-                national_coverage: location.national_coverage,
-                is_main_headquarters: location.is_main_headquarters,
+                ...(location.state !== undefined && { location_state: location.state as any }),
+                ...(location.city !== undefined && { location_city: location.city }),
+                ...(location.tax_address !== undefined && { tax_address: location.tax_address }),
+                ...(location.national_coverage !== undefined && { national_coverage: location.national_coverage }),
+                ...(location.is_main_headquarters !== undefined && { is_main_headquarters: location.is_main_headquarters }),
             }
         });
         return this.mapToEntity(updated);
@@ -57,8 +57,8 @@ export class PrismaLocationRepository implements LocationRepository {
         return new CompanyLocation(
             db.id,
             db.company_id,
-            db.state,
-            db.city,
+            db.location_state,
+            db.location_city,
             db.tax_address,
             db.national_coverage,
             db.is_main_headquarters

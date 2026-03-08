@@ -13,12 +13,12 @@ export class PrismaCommercialProfileRepository implements CommercialProfileRepos
         const updated = await prisma.companyCommercialProfile.upsert({
             where: { company_id: companyId },
             update: {
-                is_withholding_agent: profile.is_withholding_agent,
-                works_with_credit: profile.works_with_credit,
+                ...(profile.is_withholding_agent !== undefined && { retention_agent: profile.is_withholding_agent }),
+                ...(profile.works_with_credit !== undefined && { works_with_credit: profile.works_with_credit }),
             },
             create: {
                 company_id: companyId,
-                is_withholding_agent: profile.is_withholding_agent ?? false,
+                retention_agent: profile.is_withholding_agent ?? false,
                 works_with_credit: profile.works_with_credit ?? false,
             }
         });
@@ -28,7 +28,7 @@ export class PrismaCommercialProfileRepository implements CommercialProfileRepos
     private mapToEntity(db: any): CommercialProfile {
         return new CommercialProfile(
             db.company_id,
-            db.is_withholding_agent,
+            db.retention_agent,
             db.works_with_credit
         );
     }
