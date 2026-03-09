@@ -8,6 +8,7 @@ declare module 'fastify' {
     interface FastifyRequest {
         user?: {
             userId: string;
+            companyId: string | null;
             email: string;
         }
     }

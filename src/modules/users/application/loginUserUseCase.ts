@@ -59,7 +59,8 @@ export class LoginUserUseCase extends UseCase<LoginDto, LoginResult> {
         // 5. Generate a real JWT
         const token = this.jwtService.generateToken({
             userId: user.id,
-            email: user.email
+            companyId: user?.company_id ?? null,
+            email: user.email,
         });
 
         return {

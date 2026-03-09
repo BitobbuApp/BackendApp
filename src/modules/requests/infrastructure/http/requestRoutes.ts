@@ -25,15 +25,20 @@ export async function requestRoutes(app: FastifyInstance) {
 
     // GET /requests/company/:companyId (JWT protected, requires user to belong to company?)
     // Actually the prompt says "add a functionality to list the Request for a compnay with pagiantion to, that will be important"
-    app.get('/company/:companyId',
+    app.get('/company',
         { preHandler: [authMiddleware] } as any,
         async (
-            request: FastifyRequest<{ Params: { companyId: string }, Querystring: { page?: string, limit?: string } }>,
+            request: FastifyRequest<{ Querystring: { page?: string, limit?: string } }>,
             reply: FastifyReply
         ) => {
             const useCase = new GetRequestsByCompanyIdUseCase();
+            console.log({
+                company_id: request.user?.companyId,
+                page: request.query.page ? parseInt(request.query.page, 10) : 1,
+                limit: request.query.limit ? parseInt(request.query.limit, 10) : 10
+            })
             const result = await useCase.execute({
-                company_id: request.params.companyId,
+                company_id: request.user?.companyId,
                 page: request.query.page ? parseInt(request.query.page, 10) : 1,
                 limit: request.query.limit ? parseInt(request.query.limit, 10) : 10
             });
@@ -42,7 +47,7 @@ export async function requestRoutes(app: FastifyInstance) {
     );
 
     // GET /requests/:id (JWT protected)
-    app.get('/:id',
+    app.get('/info/:id',
         { preHandler: [authMiddleware] } as any,
         async (
             request: FastifyRequest<{ Params: { id: string } }>,
