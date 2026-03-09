@@ -37,7 +37,7 @@ export async function companyRoutes(app: FastifyInstance) {
         return ApiResponse.success(reply, result, "Company successfully created", 201);
     });
 
-    app.get('/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    app.get('/:id', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
         const useCase = new GetCompanyByIdUseCase();
         const result = await useCase.execute(request.params.id);
         return ApiResponse.success(reply, result, "Company found");
