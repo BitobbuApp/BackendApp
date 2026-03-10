@@ -63,6 +63,44 @@ export class PrismaRequestRepository implements RequestRepository {
         };
     }
 
+    async findExcludingCompany(excludeCompanyId: string, page: number, limit: number): Promise<RequestListResult> {
+        const skip = (page - 1) * limit;
+        const where = {
+            company_id: { not: excludeCompanyId },
+            status: 'Active' as any,
+        };
+
+        const [total, data] = await Promise.all([
+            prisma.request.count({ where }),
+            prisma.request.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    files: true,
+                    company: {
+                        select: {
+                            id: true,
+                            trade_name: true,
+                            logo_url: true,
+                            sector: true,
+                            average_rating: true,
+                        }
+                    }
+                }
+            })
+        ]);
+
+        return {
+            data: data.map((item: any) => this.mapToEntity(item)),
+            total,
+            page,
+            limit,
+            _raw: data
+        };
+    }
+
     async update(id: string, request: Partial<RequestEntity>): Promise<RequestEntity> {
         const updated = await prisma.request.update({
             where: { id },
