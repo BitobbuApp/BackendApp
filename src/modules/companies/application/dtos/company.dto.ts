@@ -103,4 +103,54 @@ export const updateCompanyDtoRequestSchema = Joi.object({
     interest_categories: Joi.array().items(Joi.string())
 }).min(1);
 
-export const listCompaniesDtoResponseSchema = Joi.array().items(createCompanyDtoResponseSchema);
+const companyWithRelationsSchema = Joi.object({
+    id: Joi.string().required(),
+    trade_name: Joi.string().required(),
+    legal_name: Joi.string().allow(null, ''),
+    tax_id: Joi.string().allow(null, ''),
+    sector: Joi.string().allow(null, ''),
+    company_type: Joi.string().allow(null, ''),
+    interest: Joi.string().allow(null, ''),
+    approximate_volume: Joi.string().allow(null, ''),
+    logo_url: Joi.string().allow(null, ''),
+    bio: Joi.string().allow(null, ''),
+    founding_year: Joi.number().allow(null),
+    average_rating: Joi.number().allow(null),
+    transaction_count: Joi.number(),
+    review_count: Joi.number(),
+    locations: Joi.array().items(Joi.object({
+        id: Joi.string().required(),
+        location_state: Joi.string().allow(null, ''),
+        location_city: Joi.string().allow(null, ''),
+        tax_address: Joi.string().allow(null, ''),
+        national_coverage: Joi.boolean(),
+        is_main_headquarters: Joi.boolean(),
+    })).optional(),
+    contacts: Joi.array().items(Joi.object({
+        id: Joi.string().required(),
+        contact_person: Joi.string().allow(null, ''),
+        position: Joi.string().allow(null, ''),
+        whatsapp: Joi.string().allow(null, ''),
+        corporate_email: Joi.string().allow(null, ''),
+        is_primary: Joi.boolean(),
+    })).optional(),
+    commercial_profile: Joi.object({
+        retention_agent: Joi.boolean(),
+        works_with_credit: Joi.boolean(),
+    }).allow(null).optional(),
+    settings: Joi.object({
+        email_notifications: Joi.boolean(),
+        web_notifications: Joi.boolean(),
+    }).allow(null).optional(),
+    payment_methods: Joi.array().items(Joi.string()).optional(),
+    categories_of_interest: Joi.array().items(Joi.string()).optional(),
+    created_at: Joi.date().required(),
+    updated_at: Joi.date().allow(null),
+}).options({ stripUnknown: true });
+
+export const listCompaniesDtoResponseSchema = Joi.object({
+    data: Joi.array().items(companyWithRelationsSchema).required(),
+    total: Joi.number().integer().min(0).required(),
+    page: Joi.number().integer().min(1).required(),
+    limit: Joi.number().integer().min(1).required(),
+}).options({ stripUnknown: true });

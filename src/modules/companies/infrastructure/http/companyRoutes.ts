@@ -49,9 +49,14 @@ export async function companyRoutes(app: FastifyInstance) {
         return ApiResponse.success(reply, result, "Company updated");
     });
 
-    app.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    app.get('/', { preHandler: [authMiddleware] } as any, async (request: any, reply: any) => {
         const useCase = new ListCompaniesUseCase();
-        const result = await useCase.execute(request.query);
+        const query = request.query || {};
+        const result = await useCase.execute({
+            ...query,
+            page: query.page ? parseInt(query.page, 10) : 1,
+            limit: query.limit ? parseInt(query.limit, 10) : 10
+        });
         return ApiResponse.success(reply, result, "Companies listed");
     });
 

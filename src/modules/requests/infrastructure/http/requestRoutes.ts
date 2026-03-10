@@ -6,8 +6,25 @@ import { GetRequestByIdUseCase } from '../../application/getRequestByIdUseCase';
 import { GetRequestsByCompanyIdUseCase } from '../../application/getRequestsByCompanyIdUseCase';
 import { UpdateRequestUseCase } from '../../application/updateRequestUseCase';
 import { DeleteRequestUseCase } from '../../application/deleteRequestUseCase';
+import { ListMarketplaceRequestsUseCase } from '../../application/listMarketplaceRequestsUseCase';
 
 export async function requestRoutes(app: FastifyInstance) {
+
+    // GET /requests/marketplace (JWT protected — lists requests from OTHER companies)
+    app.get('/marketplace',
+        { preHandler: [authMiddleware] } as any,
+        async (request: any, reply: any) => {
+            const query = request.query || {};
+            const useCase = new ListMarketplaceRequestsUseCase();
+            const result = await useCase.execute({
+                exclude_company_id: request.user.companyId,
+                page: query.page ? parseInt(query.page, 10) : 1,
+                limit: query.limit ? parseInt(query.limit, 10) : 10
+            });
+            return ApiResponse.success(reply, result, "Marketplace requests found");
+        }
+    );
+
 
     // POST /requests (JWT protected)
     app.post('/',
