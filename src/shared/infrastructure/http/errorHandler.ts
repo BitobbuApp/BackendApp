@@ -2,7 +2,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ApplicationError, ValidationError } from '../../domain/error';
 
-export function errorHandler(app: FastifyInstance) {
+export function errorHandler(app: any) {
     app.setErrorHandler((error: Error, request: FastifyRequest, reply: FastifyReply) => {
         // Handle custom application errors
         if (error instanceof ApplicationError) {

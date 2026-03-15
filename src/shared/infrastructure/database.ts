@@ -11,7 +11,23 @@ const adapter = new PrismaPg(pool);
 
 export const prisma = new PrismaClient({
     adapter,
-    log: ['query', 'info', 'warn', 'error'],
+    log: [
+        { emit: 'event', level: 'query' }, // Uncomment this to log every SQL query
+        { emit: 'event', level: 'error' },
+        { emit: 'event', level: 'warn' },
+    ],
+});
+
+prisma.$on('error', (e) => {
+    logger.error(e, '❌ Prisma Database Error');
+});
+
+prisma.$on('warn', (e) => {
+    logger.warn(e, '⚠️ Prisma Database Warning');
+});
+
+prisma.$on('query', (e) => {
+    logger.info({ query: e.query, params: e.params, duration: e.duration }, '🔍 Prisma Database Query');
 });
 
 export async function connectDatabase() {
