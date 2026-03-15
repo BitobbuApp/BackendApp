@@ -7,21 +7,33 @@ import { DuplicateQuoteResponseError } from "../../domain/errors/quote_response.
 export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     async create(response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         try {
-            const created = await prisma.quoteResponse.create({
-                data: {
-                    request_id: response.request_id!,
-                    supplier_id: response.supplier_id!,
-                    company_offer_id: response.company_offer_id ?? null,
-                    unit_price: new Prisma.Decimal(response.unit_price!),
-                    quantity: new Prisma.Decimal(response.quantity!),
-                    payment_conditions: response.payment_conditions ?? null,
-                    delivery_time: response.delivery_time ?? null,
-                    notes: response.notes ?? null,
-                    status: (response.status as ResponseStatus) ?? 'Pending',
-                    rejection_reason: response.rejection_reason ?? null,
-                    total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!), // total_amount could be computed here if Prisma requires a value, though comment in schema says Computed in DB... it also says Prisma supports reading. I will provide a value to be safe.
-                }
+            const created = await prisma.$transaction(async (tx) => {
+                // 1. Create the quote response
+                const newResponse = await tx.quoteResponse.create({
+                    data: {
+                        request_id: response.request_id!,
+                        supplier_id: response.supplier_id!,
+                        company_offer_id: response.company_offer_id ?? null,
+                        unit_price: new Prisma.Decimal(response.unit_price!),
+                        quantity: new Prisma.Decimal(response.quantity!),
+                        payment_conditions: response.payment_conditions ?? null,
+                        delivery_time: response.delivery_time ?? null,
+                        notes: response.notes ?? null,
+                        status: (response.status as ResponseStatus) ?? 'Pending',
+                        rejection_reason: response.rejection_reason ?? null,
+                        total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!),
+                    }
+                });
+
+                // 2. Atomically increment response_count on the parent Request
+                await tx.request.update({
+                    where: { id: response.request_id! },
+                    data: { response_count: { increment: 1 } }
+                });
+
+                return newResponse;
             });
+
             return this.mapToEntity(created);
         } catch (error: any) {
             // Check for Prisma unique constraint violation code
