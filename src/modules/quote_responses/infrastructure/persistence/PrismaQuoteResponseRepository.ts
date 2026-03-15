@@ -2,30 +2,43 @@ import { QuoteResponseRepository, PaginatedResult } from "../../domain/repositor
 import { QuoteResponse, ResponseStatus } from "../../domain/entities/quote_response.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 import { Prisma } from "@prisma/client";
+import { DuplicateQuoteResponseError } from "../../domain/errors/quote_response.errors";
 
 export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     async create(response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         try {
-            const created = await prisma.quoteResponse.create({
-                data: {
-                    request_id: response.request_id!,
-                    supplier_id: response.supplier_id!,
-                    company_offer_id: response.company_offer_id ?? null,
-                    unit_price: new Prisma.Decimal(response.unit_price!),
-                    quantity: new Prisma.Decimal(response.quantity!),
-                    payment_conditions: response.payment_conditions ?? null,
-                    delivery_time: response.delivery_time ?? null,
-                    notes: response.notes ?? null,
-                    status: (response.status as any) ?? 'Pending',
-                    rejection_reason: response.rejection_reason ?? null,
-                    total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!), // total_amount could be computed here if Prisma requires a value, though comment in schema says Computed in DB... it also says Prisma supports reading. I will provide a value to be safe.
-                }
+            const created = await prisma.$transaction(async (tx) => {
+                // 1. Create the quote response
+                const newResponse = await tx.quoteResponse.create({
+                    data: {
+                        request_id: response.request_id!,
+                        supplier_id: response.supplier_id!,
+                        company_offer_id: response.company_offer_id ?? null,
+                        unit_price: new Prisma.Decimal(response.unit_price!),
+                        quantity: new Prisma.Decimal(response.quantity!),
+                        payment_conditions: response.payment_conditions ?? null,
+                        delivery_time: response.delivery_time ?? null,
+                        notes: response.notes ?? null,
+                        status: (response.status as ResponseStatus) ?? 'Pending',
+                        rejection_reason: response.rejection_reason ?? null,
+                        total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!),
+                    }
+                });
+
+                // 2. Atomically increment response_count on the parent Request
+                await tx.request.update({
+                    where: { id: response.request_id! },
+                    data: { response_count: { increment: 1 } }
+                });
+
+                return newResponse;
             });
+
             return this.mapToEntity(created);
         } catch (error: any) {
             // Check for Prisma unique constraint violation code
             if (error.code === 'P2002') {
-                throw new Error('DuplicateQuoteResponseError'); // Will map in usecase or create directly if needed
+                throw new DuplicateQuoteResponseError(response.request_id!, response.supplier_id!);
             }
             throw error;
         }
@@ -51,7 +64,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         ]);
 
         return {
-            items: items.map((item: any) => this.mapToEntity(item)),
+            items: items.map((item: Prisma.QuoteResponseGetPayload<{}>) => this.mapToEntity(item)),
             total,
             page,
             limit,
@@ -67,17 +80,24 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             ...(response.payment_conditions !== undefined && { payment_conditions: response.payment_conditions }),
             ...(response.delivery_time !== undefined && { delivery_time: response.delivery_time }),
             ...(response.notes !== undefined && { notes: response.notes }),
-            ...(response.status !== undefined && { status: response.status as any }),
+            ...(response.status !== undefined && { status: response.status as ResponseStatus }),
             ...(response.rejection_reason !== undefined && { rejection_reason: response.rejection_reason }),
         };
 
         if (response.unit_price !== undefined || response.quantity !== undefined) {
-             const existing = await prisma.quoteResponse.findUnique({ where: { id }, select: { unit_price: true, quantity: true } });
-             if (existing) {
-                 const newUnitPrice = response.unit_price !== undefined ? new Prisma.Decimal(response.unit_price) : existing.unit_price;
-                 const newQuantity = response.quantity !== undefined ? new Prisma.Decimal(response.quantity) : existing.quantity;
-                 dataToUpdate.total_amount = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
-             }
+             return prisma.$transaction(async (tx) => {
+                 const existing = await tx.quoteResponse.findUnique({ where: { id }, select: { unit_price: true, quantity: true } });
+                 if (existing) {
+                     const newUnitPrice = response.unit_price !== undefined ? new Prisma.Decimal(response.unit_price) : existing.unit_price;
+                     const newQuantity = response.quantity !== undefined ? new Prisma.Decimal(response.quantity) : existing.quantity;
+                     dataToUpdate.total_amount = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
+                 }
+                 const updated = await tx.quoteResponse.update({
+                     where: { id },
+                     data: dataToUpdate
+                 });
+                 return this.mapToEntity(updated);
+             });
         }
 
         const updated = await prisma.quoteResponse.update({
@@ -91,7 +111,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         await prisma.quoteResponse.delete({ where: { id } });
     }
 
-    private mapToEntity(db: any): QuoteResponse {
+    private mapToEntity(db: Prisma.QuoteResponseGetPayload<{}>): QuoteResponse {
         return new QuoteResponse(
             db.id,
             db.request_id,

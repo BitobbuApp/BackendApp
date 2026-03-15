@@ -30,14 +30,7 @@ export class CreateQuoteResponseUseCase extends UseCase<CreateQuoteResponseDto, 
     }
 
     protected async implementation(data: CreateQuoteResponseDto): Promise<any> {
-        try {
-            const created = await this.quoteResponseRepository.create(data);
-            return created;
-        } catch (error: any) {
-            if (error.message === 'DuplicateQuoteResponseError') {
-                throw new DuplicateQuoteResponseError(data.request_id, data.supplier_id);
-            }
-            throw error;
-        }
+        const created = await this.quoteResponseRepository.create(data);
+        return created;
     }
 }
