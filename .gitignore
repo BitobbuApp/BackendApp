@@ -132,3 +132,6 @@ dist
 Thumbs.db
 
 /src/generated/prisma
+
+# Local dev TODO notes
+todo/
