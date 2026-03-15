@@ -2,10 +2,11 @@ import fastify from 'fastify'
 import cors from '@fastify/cors'
 import { routes } from './routes'
 import { connectDatabase } from './shared/infrastructure/database'
+import logger from './shared/infrastructure/logger'
 
 
 const app = fastify({
-    logger: true,
+    logger: logger,
 });
 
 // Allow requests from the frontend dev server (and production URL when deployed)
