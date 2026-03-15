@@ -1,6 +1,5 @@
 import Joi from 'joi';
 import { ValidationError } from '../domain/error';
-import logger from '../infrastructure/logger';
 
 // --- shared/application/UseCase.ts ---
 export abstract class UseCase<TInput, TOutput> {
@@ -24,7 +23,7 @@ export abstract class UseCase<TInput, TOutput> {
         // 3. Validar/Sanitizar Salida
         const { error: outErr, value: validatedOut } = this.outputSchema.validate(result, { abortEarly: false });
         if (outErr) {
-            logger.error({ details: outErr.details }, 'Output validation error');
+            console.error('Output validation error:', outErr.details);
             throw new ValidationError(['Internal server error during data sanitization']);
         }
 

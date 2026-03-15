@@ -1,7 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtService } from '../../../application/services/jwtService';
 import { ApiResponse } from '../responseFormatter';
-import logger from '../../logger';
 
 const jwtService = new JwtService();
 
@@ -36,7 +35,7 @@ export const authMiddleware = async (request: FastifyRequest, reply: FastifyRepl
 
         request.user = decoded;
     } catch (error) {
-        logger.error(error, 'Auth Error');
+        console.error('Auth Error:', error);
         return ApiResponse.error(reply, "Internal authentication error", 500);
     }
 };
