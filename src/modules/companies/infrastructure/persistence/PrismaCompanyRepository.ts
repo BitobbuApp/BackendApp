@@ -1,5 +1,5 @@
 // src/modules/companies/infrastructure/persistence/PrismaCompanyRepository.ts
-import { CompanyRepository } from "../../domain/repositories/company.repository";
+import { CompanyRepository, CompanyListResult } from "../../domain/repositories/company.repository";
 import { Company } from "../../domain/entities/company.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 
@@ -193,11 +193,35 @@ export class PrismaCompanyRepository implements CompanyRepository {
         return this.mapToEntity(updated);
     }
 
-    async list(filters?: any): Promise<Company[]> {
-        const list = await prisma.company.findMany({
-            where: filters,
-        });
-        return list.map((item: any) => this.mapToEntity(item));
+    async list(filters?: any, page: number = 1, limit: number = 10): Promise<CompanyListResult> {
+        const skip = (page - 1) * limit;
+        const where = filters || {};
+
+        const [total, data] = await Promise.all([
+            prisma.company.count({ where }),
+            prisma.company.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    locations: true,
+                    contacts: true,
+                    commercial_profile: true,
+                    settings: true,
+                    payment_methods: true,
+                    categories_of_interest: true,
+                }
+            })
+        ]);
+
+        return {
+            data: data.map((item: any) => this.mapToEntity(item)),
+            total,
+            page,
+            limit,
+            _raw: data
+        };
     }
 
     private mapToEntity(db: any): Company {

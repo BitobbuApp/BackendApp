@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 
-export interface TokenPayload {
+export interface TokenUserPayload {
     userId: string;
+    companyId: string | null;
     email: string;
 }
 
@@ -12,13 +13,13 @@ export class JwtService {
         this.secret = process.env.JWT_SECRET || 'fallback_secret';
     }
 
-    generateToken(payload: TokenPayload): string {
+    generateToken(payload: TokenUserPayload): string {
         return jwt.sign(payload, this.secret, { expiresIn: '1h' });
     }
 
-    verifyToken(token: string): TokenPayload | null {
+    verifyToken(token: string): TokenUserPayload | null {
         try {
-            return jwt.verify(token, this.secret) as TokenPayload;
+            return jwt.verify(token, this.secret) as TokenUserPayload;
         } catch (error) {
             return null;
         }
