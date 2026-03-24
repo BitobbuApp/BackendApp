@@ -4,6 +4,7 @@ import { authMiddleware } from '../../../../shared/infrastructure/http/middlewar
 import { CreateQuoteResponseUseCase } from '../../application/createQuoteResponseUseCase';
 import { GetQuoteResponseByIdUseCase } from '../../application/getQuoteResponseByIdUseCase';
 import { ListQuoteResponsesByCompanyUseCase } from '../../application/listQuoteResponsesByCompanyUseCase';
+import { ListReceivedQuoteResponsesUseCase } from '../../application/listReceivedQuoteResponsesUseCase';
 import { UpdateQuoteResponseUseCase } from '../../application/updateQuoteResponseUseCase';
 import { DeleteQuoteResponseUseCase } from '../../application/deleteQuoteResponseUseCase';
 
@@ -34,6 +35,21 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
                 limit: limit ? parseInt(limit, 10) : 10
             });
             return ApiResponse.success(reply, result, "Quote responses list retrieved");
+        }
+    );
+
+    // GET /quote-responses/received (JWT protected — offers others have made for MY requests)
+    app.get('/received',
+        { preHandler: [authMiddleware] } as any,
+        async (request: any, reply: any) => {
+            const { page, limit } = request.query as { page?: string, limit?: string };
+            const useCase = new ListReceivedQuoteResponsesUseCase();
+            const result = await useCase.execute({
+                company_id: request.user.companyId,
+                page: page ? parseInt(page, 10) : 1,
+                limit: limit ? parseInt(limit, 10) : 10
+            });
+            return ApiResponse.success(reply, result, "Received quote responses retrieved");
         }
     );
 
