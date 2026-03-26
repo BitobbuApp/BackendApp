@@ -72,6 +72,64 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         };
     }
 
+    async findByRequestOwnerId(companyId: string, page: number, limit: number): Promise<PaginatedResult<any>> {
+        const skip = (page - 1) * limit;
+        const where = {
+            request: { company_id: companyId }
+        };
+
+        const [total, items] = await Promise.all([
+            prisma.quoteResponse.count({ where }),
+            prisma.quoteResponse.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    supplier: {
+                        select: {
+                            id: true,
+                            trade_name: true,
+                            logo_url: true,
+                            company_type: true,
+                            sector: true,
+                            average_rating: true,
+                        }
+                    },
+                    request: {
+                        select: { id: true, product_service: true, status: true }
+                    }
+                }
+            })
+        ]);
+
+        return {
+            items: items.map((item: any) => ({
+                id: item.id,
+                request_id: item.request_id,
+                supplier_id: item.supplier_id,
+                unit_price: Number(item.unit_price),
+                quantity: Number(item.quantity),
+                total_amount: Number(item.total_amount),
+                payment_conditions: item.payment_conditions,
+                delivery_time: item.delivery_time,
+                notes: item.notes,
+                status: item.status,
+                created_at: item.created_at,
+                updated_at: item.updated_at,
+                supplier: {
+                    ...item.supplier,
+                    average_rating: item.supplier?.average_rating ? Number(item.supplier.average_rating) : 0,
+                },
+                request: item.request,
+            })),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
     async update(id: string, response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         const dataToUpdate: any = {
             ...(response.company_offer_id !== undefined && { company_offer_id: response.company_offer_id }),
