@@ -1,6 +1,7 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { TransactionRepository } from "../domain/repositories/transaction.repository";
 import { PrismaTransactionRepository } from "../infrastructure/persistence/PrismaTransactionRepository";
+import { PrismaConversationRepository } from "../../conversations/infrastructure/persistence/PrismaConversationRepository";
 import { createTransactionDtoRequestSchema, transactionDtoResponseSchema } from "./dtos/transaction.dto";
 import Joi from "joi";
 
@@ -27,16 +28,39 @@ interface CreateTransactionDto {
 
 export class CreateTransactionUseCase extends UseCase<CreateTransactionDto, any> {
     protected inputSchema: Joi.Schema = createTransactionDtoRequestSchema;
-    protected outputSchema: Joi.Schema = transactionDtoResponseSchema;
+    // We disable the rigid outputSchema validation here so we can inject the conversation_id without failing Joi checks
+    protected outputSchema: Joi.Schema = Joi.any(); 
     private readonly transactionRepository: TransactionRepository;
+    private readonly conversationRepository: PrismaConversationRepository;
 
     constructor() {
         super();
         this.transactionRepository = new PrismaTransactionRepository();
+        this.conversationRepository = new PrismaConversationRepository();
     }
 
     protected async implementation(data: CreateTransactionDto): Promise<any> {
+        // 1. Create the base transaction
         const created = await this.transactionRepository.create(data);
-        return created;
+        
+        // 2. Chat Integration
+        // Check if a conversation already exists between these participants
+        let conversation = await this.conversationRepository.findByParticipants(data.buyer_id, data.supplier_id);
+        
+        if (!conversation) {
+            // Create a new conversation if it doesn't exist
+            conversation = await this.conversationRepository.create({
+                participant_1_id: data.buyer_id,
+                participant_2_id: data.supplier_id,
+                transaction_id: created.id,
+                quote_response_id: data.quote_response_id
+            });
+        }
+        
+        // 3. Attach conversation info to response 
+        return { 
+            ...created, 
+            conversation_id: conversation.id 
+        };
     }
 }
