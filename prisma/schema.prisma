@@ -519,6 +519,7 @@ model Transaction {
   buyer          Company       @relation("BuyerTransactions", fields: [buyer_id], references: [id], onDelete: Restrict)
   supplier       Company       @relation("SupplierTransactions", fields: [supplier_id], references: [id], onDelete: Restrict)
   reviews        Review[]
+  conversation   Conversation?
 
   @@map("transactions")
 }
@@ -581,6 +582,7 @@ model Conversation {
   participant_2_id  String    @db.Uuid
   request_id        String?   @db.Uuid
   quote_response_id String?   @db.Uuid
+  transaction_id    String?   @unique @db.Uuid
   last_message      String?
   last_message_date DateTime? @db.Timestamptz
   unread_count_1    Int       @default(0)
@@ -593,6 +595,7 @@ model Conversation {
   participant_2  Company        @relation("ConversationP2", fields: [participant_2_id], references: [id], onDelete: Restrict)
   request        Request?       @relation(fields: [request_id], references: [id], onDelete: SetNull)
   quote_response QuoteResponse? @relation(fields: [quote_response_id], references: [id], onDelete: SetNull)
+  transaction    Transaction?   @relation(fields: [transaction_id], references: [id], onDelete: SetNull)
   messages       Message[]
 
   @@unique([participant_1_id, participant_2_id], name: "uq_conversation")
@@ -603,6 +606,7 @@ model Message {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   conversation_id String    @db.Uuid
   sender_id       String    @db.Uuid
+  client_msg_id   String?   @unique @db.VarChar(100)
   content         String?
   file_url        String?
   file_name       String?   @db.VarChar(200)

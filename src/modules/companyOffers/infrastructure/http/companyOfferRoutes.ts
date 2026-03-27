@@ -27,9 +27,10 @@ export async function companyOfferRoutes(app: FastifyInstance) {
         }
     );
 
-    // GET /company-offers (public or protected)
+    // GET /company-offers (JWT protected)
     app.get('/',
-        async (request: FastifyRequest<{ Querystring: { page?: string, limit?: string } }>, reply: FastifyReply) => {
+        { preHandler: [authMiddleware] } as any,
+        async (request: any, reply: any) => {
             const useCase = new ListCompanyOffersUseCase();
             const page = parseInt(request.query.page || '1', 10);
             const limit = parseInt(request.query.limit || '10', 10);
@@ -38,18 +39,20 @@ export async function companyOfferRoutes(app: FastifyInstance) {
         }
     );
 
-    // GET /company-offers/:id (public or protected)
+    // GET /company-offers/:id (JWT protected)
     app.get('/:id',
-        async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+        { preHandler: [authMiddleware] } as any,
+        async (request: any, reply: any) => {
             const useCase = new GetCompanyOfferByIdUseCase();
             const result = await useCase.execute(request.params.id);
             return ApiResponse.success(reply, result, "Company offer found");
         }
     );
 
-    // GET /company-offers/company/:companyId (public or protected)
+    // GET /company-offers/company/:companyId (JWT protected)
     app.get('/company/:companyId',
-        async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
+        { preHandler: [authMiddleware] } as any,
+        async (request: any, reply: any) => {
             const useCase = new ListCompanyOffersByCompanyUseCase();
             const result = await useCase.execute(request.params.companyId);
             return ApiResponse.success(reply, result, "Company offers found");

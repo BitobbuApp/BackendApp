@@ -26,6 +26,8 @@ app.get('/', async () => {
     return { status: 'ok' }
 });
 
+// Import the socket initialization function
+import { initializeSocket } from './shared/infrastructure/socket';
 
 /**
  * Run the server!
@@ -33,6 +35,10 @@ app.get('/', async () => {
 export const start = async () => {
     try {
         await connectDatabase();
+        
+        // Initialize Socket.io attached to Fastify's native node server
+        initializeSocket(app);
+
         await app.listen({
             port: Number(process.env.PORT) || 3000,
             host: '0.0.0.0'
@@ -41,4 +47,4 @@ export const start = async () => {
         app.log.error(err)
         process.exit(1)
     }
-}
+}
