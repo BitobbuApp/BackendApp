@@ -5,8 +5,12 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:local": "tsx watch src/index.ts",
+    "dev:prod": "tsx watch --env-file=.env.prod src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:prod": "node --env-file=.env.prod dist/index.js",
+    "prisma:prod": "dotenv -e .env.prod -- npx prisma",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -32,6 +36,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.3.5",
     "@types/pg": "^8.18.0",
+    "dotenv-cli": "^11.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
