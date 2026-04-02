@@ -13,6 +13,7 @@ export async function userRoutes(app: FastifyInstance) {
     // ==========================================
     app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
         const useCase = new RegisterUserUseCase();
+        console.log(request.body);
         const outputValue = await useCase.execute(request.body);
 
         return ApiResponse.success(reply, outputValue, "User successfully registered", 201);

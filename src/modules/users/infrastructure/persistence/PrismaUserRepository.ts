@@ -5,23 +5,64 @@ import { prisma } from '../../../../shared/infrastructure/database';
 export class PrismaUserRepository implements UserRepository {
 
     async create(user: User): Promise<User> {
-        // id is intentionally omitted — the DB generates it via @default(uuid())
-        const created = await prisma.user.create({
-            data: {
-                first_name: user.first_name,
-                last_name: user.last_name,
-                email: user.email,
-                password: user.password,
-                salt: user.salt ?? 10,
+        try {
+            // id is intentionally omitted — the DB generates it via @default(uuid())
+        const createdUser = await prisma.$transaction(async (tx) => {
+            const newUser = await tx.user.create({
+                data: {
+                    first_name: user.first_name,
+                    last_name: user.last_name,
+                    email: user.email,
+                    password: user.password,
+                    salt: user.salt ?? 10,
+                }
+            });
+            if (    
+                user.trade_name &&
+                user.founding_year
+            ) {
+                const companyCreated = await tx.company.create({
+                    data: {
+                        trade_name: user.trade_name,
+                        founding_year: user.founding_year,
+                    }
+                });
+                await tx.companyLocation.create({
+                    data: {
+                        company_id: companyCreated.id,
+                        country_id: user.country_id,
+                        state_id: user.state_id,
+                        is_main_headquarters: true,
+                    }
+                });
+                if(companyCreated)
+                    await tx.user.update({
+                        where: { id: newUser.id },
+                        data: { company_id: companyCreated.id }
+                    });
             }
+            return newUser;
         });
-
         return new User(
-            created.id, created.company_id, created.first_name, created.last_name,
-            created.email, created.password, created.salt,
-            created.is_active, created.last_access,
-            created.created_at, created.updated_at
-        );
+            createdUser.id, 
+            createdUser.company_id, 
+            createdUser.first_name, 
+            createdUser.last_name,
+            createdUser.email, 
+            createdUser.password, 
+            createdUser.salt, 
+            null, 
+            null,
+            null,
+            null,
+            createdUser.is_active, 
+            createdUser.last_access,
+            createdUser.created_at, 
+            createdUser.updated_at
+        );    
+        } catch (error) {
+            throw error;
+        }
     }
 
     async findByEmail(email: string): Promise<User | null> {
@@ -32,10 +73,21 @@ export class PrismaUserRepository implements UserRepository {
         });
         if (!found) return null;
         return new User(
-            found.id, found.company?.id || null, found.first_name, found.last_name,
-            found.email, found.password, found.salt,
-            found.is_active, found.last_access,
-            found.created_at, found.updated_at
+            found.id, 
+            found.company?.id || null, 
+            found.first_name, 
+            found.last_name,
+            found.email, 
+            found.password, 
+            found.salt, 
+            null, 
+            null,
+            null,
+            null,
+            found.is_active, 
+            found.last_access,
+            found.created_at, 
+            found.updated_at
         );
     }
 
@@ -47,10 +99,21 @@ export class PrismaUserRepository implements UserRepository {
         });
         if (!found) return null;
         return new User(
-            found.id, found.company?.id || null, found.first_name, found.last_name,
-            found.email, found.password, found.salt,
-            found.is_active, found.last_access,
-            found.created_at, found.updated_at
+            found.id, 
+            found.company?.id || null, 
+            found.first_name, 
+            found.last_name,
+            found.email, 
+            found.password, 
+            found.salt, 
+            null, 
+            null,
+            null,
+            null,
+            found.is_active, 
+            found.last_access,
+            found.created_at, 
+            found.updated_at
         );
     }
 
@@ -69,10 +132,21 @@ export class PrismaUserRepository implements UserRepository {
             }
         });
         return new User(
-            updated.id, updated.company_id, updated.first_name, updated.last_name,
-            updated.email, updated.password, updated.salt,
-            updated.is_active, updated.last_access,
-            updated.created_at, updated.updated_at
+            updated.id, 
+            updated.company_id, 
+            updated.first_name, 
+            updated.last_name,
+            updated.email, 
+            updated.password, 
+            updated.salt, 
+            null, 
+            null,
+            null,
+            null,
+            updated.is_active, 
+            updated.last_access,
+            updated.created_at, 
+            updated.updated_at
         );
     }
 

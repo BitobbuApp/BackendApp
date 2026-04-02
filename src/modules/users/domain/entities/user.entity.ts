@@ -9,6 +9,10 @@ export class User {
         public email: string,
         public password: string,
         public salt: number | null,
+        public trade_name: string | null,
+        public founding_year: number | null,
+        public country_id: number | null,
+        public state_id: number | null,
         public is_active: boolean | null,
         public last_access: Date | null,
         public created_at: Date | null,
@@ -21,6 +25,10 @@ export class User {
         this.email = email;
         this.password = password;
         this.salt = salt;
+        this.trade_name = trade_name;
+        this.founding_year = founding_year;
+        this.country_id = country_id;
+        this.state_id = state_id;
         this.is_active = is_active;
         this.last_access = last_access;
         this.created_at = created_at;
