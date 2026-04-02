@@ -1,7 +1,7 @@
 import { TransactionRepository, PaginatedTransactions } from "../../domain/repositories/transaction.repository";
 import { Transaction } from "../../domain/entities/transaction.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
-import { PaymentMethod, TransactionStatus } from "@prisma/client";
+import { TransactionStatus } from "@prisma/client";
 
 export class PrismaTransactionRepository implements TransactionRepository {
     async create(transaction: Partial<Transaction>): Promise<Transaction> {
@@ -14,10 +14,10 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 unit_price: transaction.unit_price!,
                 quantity: transaction.quantity!,
                 total_amount: transaction.total_amount!,
-                payment_method: transaction.payment_method ? (transaction.payment_method as PaymentMethod) : null,
+                ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
                 payment_conditions: transaction.payment_conditions ?? null,
                 delivery_time: transaction.delivery_time ?? null,
-                status: transaction.status ? (transaction.status.replace(' ', '_') as TransactionStatus) : TransactionStatus.In_Process,
+                status: (transaction.status as TransactionStatus) ?? TransactionStatus.In_Process,
                 estimated_delivery_date: transaction.estimated_delivery_date ?? null,
                 actual_delivery_date: transaction.actual_delivery_date ?? null,
                 cancellation_reason: transaction.cancellation_reason ?? null,
@@ -25,13 +25,13 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 supplier_confirmed: transaction.supplier_confirmed ?? false,
                 buyer_confirmed_at: transaction.buyer_confirmed_at ?? null,
                 supplier_confirmed_at: transaction.supplier_confirmed_at ?? null,
-            }
+            } as any
         });
         return this.mapToEntity(created);
     }
 
     async findById(id: string): Promise<Transaction | null> {
-        const found = await prisma.transaction.findUnique({ where: { id } });
+        const found = await prisma.transaction.findUnique({ where: { id }, include: { payment_method: true } });
         if (!found) return null;
         return this.mapToEntity(found);
     }
@@ -49,7 +49,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 },
                 skip: offset,
                 take: limit,
-                orderBy: { created_at: 'desc' }
+                orderBy: { created_at: 'desc' },
+                include: { payment_method: true }
             }),
             prisma.transaction.count({
                 where: {
@@ -78,10 +79,10 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 ...(transaction.unit_price !== undefined && { unit_price: transaction.unit_price }),
                 ...(transaction.quantity !== undefined && { quantity: transaction.quantity }),
                 ...(transaction.total_amount !== undefined && { total_amount: transaction.total_amount }),
-                ...(transaction.payment_method !== undefined && { payment_method: transaction.payment_method as PaymentMethod }),
+                ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
                 ...(transaction.payment_conditions !== undefined && { payment_conditions: transaction.payment_conditions }),
                 ...(transaction.delivery_time !== undefined && { delivery_time: transaction.delivery_time }),
-                ...(transaction.status !== undefined && { status: transaction.status.replace(' ', '_') as TransactionStatus }),
+                ...(transaction.status !== undefined && { status: transaction.status as TransactionStatus }),
                 ...(transaction.estimated_delivery_date !== undefined && { estimated_delivery_date: transaction.estimated_delivery_date }),
                 ...(transaction.actual_delivery_date !== undefined && { actual_delivery_date: transaction.actual_delivery_date }),
                 ...(transaction.cancellation_reason !== undefined && { cancellation_reason: transaction.cancellation_reason }),
@@ -89,7 +90,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 ...(transaction.supplier_confirmed !== undefined && { supplier_confirmed: transaction.supplier_confirmed }),
                 ...(transaction.buyer_confirmed_at !== undefined && { buyer_confirmed_at: transaction.buyer_confirmed_at }),
                 ...(transaction.supplier_confirmed_at !== undefined && { supplier_confirmed_at: transaction.supplier_confirmed_at }),
-            }
+            } as any,
+            include: { payment_method: true }
         });
         return this.mapToEntity(updated);
     }
@@ -108,7 +110,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
             Number(db.unit_price),
             Number(db.quantity),
             Number(db.total_amount),
-            db.payment_method,
+            db.payment_method_id,
+            db.payment_method?.name_es ?? null,
             db.payment_conditions,
             db.delivery_time,
             db.status,

@@ -1,50 +1,49 @@
 import { IMessageRepository } from '../domain/repositories/message.repository.interface';
 import { IConversationRepository } from '../../conversations/domain/repositories/conversation.repository.interface';
+import { PrismaConversationRepository } from '../../conversations/infrastructure/persistence/PrismaConversationRepository';
+import { PrismaMessageRepository } from '../infrastructure/persistence/PrismaMessageRepository';
 import { Message } from '../domain/entities/message.entity';
 import { UseCase } from '../../../shared/application/useCase';
 import Joi from 'joi';
+import { listMessagesDtoRequestSchema, messageListDtoResponseSchema } from './dtos/message.dto';
+import { ConversationAccessDeniedError, ConversationNotFoundError } from '../../conversations/domain/errors/conversation.errors';
 
 interface ListMessagesDto {
-    conversationId: string;
-    userId: string;
+    conversation_id: string;
+    requester_company_id: string;
     limit: number;
     offset: number;
 }
 
 export class ListMessagesUseCase extends UseCase<ListMessagesDto, Message[]> {
-    protected inputSchema: Joi.Schema = Joi.object({
-        conversationId: Joi.string().uuid().required(),
-        userId: Joi.string().uuid().required(),
-        limit: Joi.number().integer().min(1).max(200).default(50),
-        offset: Joi.number().integer().min(0).default(0)
-    });
-    
-    protected outputSchema: Joi.Schema = Joi.any(); 
+    protected inputSchema: Joi.Schema = listMessagesDtoRequestSchema;
+    protected outputSchema: Joi.Schema = messageListDtoResponseSchema;
+    private readonly messageRepository: IMessageRepository;
+    private readonly conversationRepository: IConversationRepository;
 
     constructor(
-        private readonly messageRepository: IMessageRepository,
-        private readonly conversationRepository: IConversationRepository
+        messageRepository?: IMessageRepository,
+        conversationRepository?: IConversationRepository
     ) {
         super();
+        this.messageRepository = messageRepository ?? new PrismaMessageRepository();
+        this.conversationRepository = conversationRepository ?? new PrismaConversationRepository();
     }
 
     protected async implementation(data: ListMessagesDto): Promise<Message[]> {
-        // Optional: Validate that the user belongs to this conversation
-        const conversation = await this.conversationRepository.findById(data.conversationId);
+        const conversation = await this.conversationRepository.findById(data.conversation_id);
         if (!conversation) {
-            throw new Error('Conversation not found');
+            throw new ConversationNotFoundError(data.conversation_id);
         }
         
-        if (conversation.participant_1_id !== data.userId && conversation.participant_2_id !== data.userId) {
-            throw new Error('Forbidden: User does not belong to this conversation');
+        if (conversation.participant_1_id !== data.requester_company_id && conversation.participant_2_id !== data.requester_company_id) {
+            throw new ConversationAccessDeniedError(data.conversation_id);
         }
 
-        // Mark unread messages as read
-        await this.messageRepository.markAsRead(data.conversationId, data.userId);
-        await this.conversationRepository.resetUnreadCount(data.conversationId, data.userId);
+        await this.messageRepository.markAsRead(data.conversation_id, data.requester_company_id);
+        await this.conversationRepository.resetUnreadCount(data.conversation_id, data.requester_company_id);
 
-        // Fetch history
-        const messages = await this.messageRepository.listByConversation(data.conversationId, data.limit, data.offset);
+        const messages = await this.messageRepository.listByConversation(data.conversation_id, data.limit, data.offset);
         return messages;
     }
 }

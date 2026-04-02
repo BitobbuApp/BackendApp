@@ -20,17 +20,17 @@ datasource db {
 // ==========================================
 
 model User {
-  id          String    @id @default(uuid())
+  id          String    @id @default(uuid()) @db.Uuid
   company_id  String?   @db.Uuid
   first_name  String
   last_name   String
-  email       String    @unique
+  email       String    @unique @db.Text
   password    String
   salt        Int
   is_active   Boolean   @default(true)
-  last_access DateTime?
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
+  last_access DateTime? @db.Timestamptz
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
 
   company       Company?               @relation(fields: [company_id], references: [id], onDelete: Restrict)
   reviewed_docs VerificationDocument[] @relation("DocReviewer")
@@ -44,74 +44,15 @@ model User {
 // ENUMS FROM SQL
 // ==========================================
 
-enum CompanyInterest {
-  Comprar
-  Vender
-  Ambos
-}
-
-enum CompanyType {
-  Fabricante
-  Mayorista
-  Distribuidor
-  Prestador_de_Servicios @map("Prestador de Servicios")
-  Minorista
-}
-
 enum CompanyVolume {
-  Pequeno @map("Pequeño")
-  Medio
-  Grande
-}
-
-enum CategoryType {
-  Alimentos
-  Ferreteria    @map("Ferretería")
-  Salud
-  IT
-  Automotriz
-  Embalaje
-  Quimicos      @map("Químicos")
-  Oficina
-  Textil
-  Logistica     @map("Logística")
-  Mantenimiento
-  Seguridad
-  Marketing
-  Legal
-  RRHH
-}
-
-enum VenezuelaState {
-  Amazonas
-  Anzoategui       @map("Anzoátegui")
-  Apure
-  Aragua
-  Barinas
-  Bolivar          @map("Bolívar")
-  Carabobo
-  Cojedes
-  Delta_Amacuro    @map("Delta Amacuro")
-  Distrito_Capital @map("Distrito Capital")
-  Falcon           @map("Falcón")
-  Guarico          @map("Guárico")
-  Lara
-  Merida           @map("Mérida")
-  Miranda
-  Monagas
-  Nueva_Esparta    @map("Nueva Esparta")
-  Portuguesa
-  Sucre
-  Tachira          @map("Táchira")
-  Trujillo
-  Vargas
-  Yaracuy
-  Zulia
+  Small
+  Medium
+  Large
 }
 
 enum VerificationStatus {
   Pending
-  Under_Review @map("Under Review")
+  Under_Review
   Verified
   Rejected
 }
@@ -121,34 +62,13 @@ enum PlanType {
   Premium
 }
 
-enum PaymentMethod {
-  Transferencia
-  Efectivo
-  Tarjeta_de_Credito @map("Tarjeta de Crédito")
-  Tarjeta_de_Debito  @map("Tarjeta de Débito")
-  Criptomoneda
-  Pago_Movil         @map("Pago Móvil")
-  Zelle
-}
-
 enum RequestStatus {
   Active
   Paused
   Expired
   Completed
-  Expiring_Soon @map("Expiring Soon")
+  Expiring_Soon
   Closed
-}
-
-enum UnitOfMeasure {
-  Units
-  Kg
-  Liters
-  Meters
-  Boxes
-  Pallets
-  Tons
-  Gallons
 }
 
 enum ResponseStatus {
@@ -160,27 +80,10 @@ enum ResponseStatus {
 }
 
 enum TransactionStatus {
-  In_Process @map("In Process")
+  In_Process
   Completed
   Canceled
-  In_Dispute @map("In Dispute")
-}
-
-enum NotificationType {
-  offer
-  message
-  request
-  system
-  transaction
-  verification
-}
-
-enum VerifDocType {
-  tax_id
-  rep_id
-  local_photo
-  articles_of_inc
-  other
+  In_Dispute
 }
 
 enum VerifDocStatus {
@@ -202,10 +105,11 @@ model Company {
   bio           String?
   logo_url      String?
 
-  sector             CategoryType?
-  company_type       CompanyType?
-  interest           CompanyInterest @default(Ambos)
-  approximate_volume CompanyVolume?  @default(Medio)
+  sector_id          Int?     @db.SmallInt
+  company_type_id    Int?     @db.SmallInt
+  can_buy            Boolean  @default(false)
+  can_sell           Boolean  @default(false)
+  approximate_volume CompanyVolume?  @default(Medium)
 
   average_rating    Decimal? @default(0.00) @db.Decimal(3, 2)
   transaction_count Int      @default(0)
@@ -235,45 +139,158 @@ model Company {
   conversations_p1       Conversation[]              @relation("ConversationP1")
   conversations_p2       Conversation[]              @relation("ConversationP2")
   messages               Message[]
+  sector_ref             Category?                   @relation("CompanySector", fields: [sector_id], references: [id])
+  company_type_ref       CompanyTypeDict?            @relation("CompanyCompanyType", fields: [company_type_id], references: [id])
 
   @@map("companies")
+}
+
+model Country {
+  id         Int               @id @default(autoincrement()) @db.SmallInt
+  name_es    String            @db.VarChar(100)
+  name_en    String            @db.VarChar(100)
+  iso_code   String            @unique @db.Char(2)
+  phone_code String?           @db.VarChar(10)
+  is_active  Boolean           @default(true)
+  states     State[]
+  locations  CompanyLocation[]
+
+  @@map("countries")
+}
+
+model State {
+  id         Int               @id @default(autoincrement()) @db.SmallInt
+  country_id Int               @db.SmallInt
+  name       String            @db.VarChar(100)
+  code       String?           @db.VarChar(10)
+  country    Country           @relation(fields: [country_id], references: [id])
+  cities     City[]
+  locations  CompanyLocation[]
+
+  @@unique([country_id, name])
+  @@map("states")
+}
+
+model City {
+  id        Int               @id @default(autoincrement())
+  state_id  Int               @db.SmallInt
+  name      String            @db.VarChar(100)
+  state     State             @relation(fields: [state_id], references: [id])
+  locations CompanyLocation[]
+
+  @@unique([state_id, name])
+  @@map("cities")
+}
+
+model Category {
+  id                     Int                         @id @default(autoincrement()) @db.SmallInt
+  name_en                String                      @db.VarChar(100)
+  name_es                String                      @db.VarChar(100)
+  slug                   String                      @unique @db.VarChar(100)
+  icon                   String?                     @db.VarChar(100)
+  is_active              Boolean                     @default(true)
+  companies              Company[]                   @relation("CompanySector")
+  offers                 CompanyOffer[]              @relation("OfferCategory")
+  requests               Request[]                   @relation("RequestCategory")
+  categories_of_interest CompanyCategoryOfInterest[]
+
+  @@map("categories")
+}
+
+model CompanyTypeDict {
+  id          Int            @id @default(autoincrement()) @db.SmallInt
+  name_en     String         @db.VarChar(100)
+  name_es     String         @db.VarChar(100)
+  description String?
+  companies   Company[]      @relation("CompanyCompanyType")
+  offers      CompanyOffer[] @relation("OfferCompanyType")
+
+  @@map("company_types")
+}
+
+model PaymentMethodDict {
+  id                      Int                    @id @default(autoincrement()) @db.SmallInt
+  name_en                 String                 @db.VarChar(100)
+  name_es                 String                 @db.VarChar(100)
+  is_active               Boolean                @default(true)
+  company_payment_methods CompanyPaymentMethod[]
+  subscriptions           Subscription[]
+  transactions            Transaction[]
+
+  @@map("payment_methods")
+}
+
+model UnitOfMeasureDict {
+  id           Int            @id @default(autoincrement()) @db.SmallInt
+  name         String         @db.VarChar(100)
+  abbreviation String         @db.VarChar(20)
+  offers       CompanyOffer[]
+  requests     Request[]
+
+  @@map("units_of_measure")
+}
+
+model NotificationTypeDict {
+  id            Int            @id @default(autoincrement()) @db.SmallInt
+  name          String         @db.VarChar(100)
+  icon          String?        @db.VarChar(100)
+  notifications Notification[]
+
+  @@map("notification_types")
+}
+
+model VerifDocTypeDict {
+  id                     Int                    @id @default(autoincrement()) @db.SmallInt
+  name                   String                 @db.VarChar(100)
+  instructions           String?
+  verification_documents VerificationDocument[]
+
+  @@map("verif_doc_types")
 }
 
 model CompanyPaymentMethod {
   id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   company_id String        @db.Uuid
-  method     PaymentMethod
-
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@unique([company_id, method], name: "uq_company_method")
-  @@map("company_payment_methods")
-}
-
-model CompanyCategoryOfInterest {
-  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String       @db.Uuid
-  category   CategoryType
-
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@unique([company_id, category], name: "uq_company_category")
-  @@map("company_categories_of_interest")
-}
-
-model CompanyLocation {
-  id                   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id           String          @db.Uuid
-  is_main_headquarters Boolean         @default(true)
-  location_state       VenezuelaState?
-  location_city        String?         @db.VarChar(100)
-  tax_address          String?
-  national_coverage    Boolean         @default(false)
+  method_id  Int           @db.SmallInt
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  company Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  method  PaymentMethodDict @relation(fields: [method_id], references: [id])
+
+  @@unique([company_id, method_id], name: "uq_company_method")
+  @@map("company_payment_methods")
+}
+
+model CompanyCategoryOfInterest {
+  company_id  String   @db.Uuid
+  category_id Int      @db.SmallInt
+
+  company  Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [category_id], references: [id])
+
+  @@id([company_id, category_id])
+  @@map("company_categories_of_interest")
+}
+
+model CompanyLocation {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String   @db.Uuid
+  is_main_headquarters Boolean  @default(true)
+  country_id           Int?     @db.SmallInt
+  state_id             Int?     @db.SmallInt
+  city_id              Int?
+  tax_address          String?
+  national_coverage    Boolean  @default(false)
+
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @db.Timestamptz
+
+  company Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  country Country? @relation(fields: [country_id], references: [id])
+  state   State?   @relation(fields: [state_id], references: [id])
+  city    City?    @relation(fields: [city_id], references: [id])
 
   @@map("company_locations")
 }
@@ -300,6 +317,7 @@ model CompanyCommercialProfile {
   retention_agent   Boolean @default(false)
   works_with_credit Boolean @default(false)
 
+  created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
   company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
@@ -313,6 +331,7 @@ model CompanyVerification {
   rejection_reason String?
   verified_at      DateTime?          @db.Timestamptz
 
+  created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
   company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
@@ -326,6 +345,7 @@ model CompanySettings {
   web_notifications      Boolean @default(true)
   whatsapp_notifications Boolean @default(false)
 
+  created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
   company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
@@ -339,7 +359,7 @@ model Subscription {
   plan              PlanType
   founder_badge     Boolean        @default(false)
   amount_usd        Decimal        @default(0.00) @db.Decimal(8, 2)
-  payment_method    PaymentMethod?
+  payment_method_id Int?           @db.SmallInt
   payment_reference String?        @db.VarChar(100)
   starts_at         DateTime       @default(now()) @db.Timestamptz
   expires_at        DateTime?      @db.Timestamptz
@@ -348,7 +368,8 @@ model Subscription {
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  company Company @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  company        Company            @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  payment_method PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
 
   @@map("subscriptions")
 }
@@ -360,16 +381,17 @@ model Subscription {
 model VerificationDocument {
   id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   company_id  String         @db.Uuid
-  type        VerifDocType
+  type_id     Int            @db.SmallInt
   url         String
   status      VerifDocStatus @default(Pending)
   notes       String?
   reviewed_at DateTime?      @db.Timestamptz
-  reviewed_by String?
+  reviewed_by String?        @db.Uuid
   created_at  DateTime       @default(now()) @db.Timestamptz
 
-  company  Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  reviewer User?   @relation("DocReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
+  company  Company          @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  reviewer User?            @relation("DocReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
+  type     VerifDocTypeDict @relation(fields: [type_id], references: [id])
 
   @@map("verification_documents")
 }
@@ -381,12 +403,12 @@ model VerificationDocument {
 model Request {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   company_id      String        @db.Uuid
-  user_id         String?
+  user_id         String?        @db.Uuid
   product_service String        @db.VarChar(200)
   quantity        Decimal       @db.Decimal(12, 2)
-  unit_of_measure UnitOfMeasure @default(Units)
+  unit_id         Int           @default(1) @db.SmallInt
   description     String?
-  category        CategoryType?
+  category_id     Int?          @db.SmallInt
   status          RequestStatus @default(Active)
   expiration_date DateTime?     @db.Date
   response_count  Int           @default(0)
@@ -396,6 +418,8 @@ model Request {
 
   company         Company         @relation(fields: [company_id], references: [id], onDelete: Restrict)
   user            User?           @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  unit_of_measure UnitOfMeasureDict @relation(fields: [unit_id], references: [id])
+  category        Category?       @relation("RequestCategory", fields: [category_id], references: [id])
   files           RequestFile[]
   quote_responses QuoteResponse[]
   conversations   Conversation[]
@@ -424,10 +448,10 @@ model CompanyOffer {
   company_id        String         @db.Uuid
   name              String         @db.VarChar(200)
   description       String?
-  category          CategoryType?
-  supplier_type     CompanyType?
+  category_id       Int?           @db.SmallInt
+  supplier_type_id  Int?           @db.SmallInt
   base_price        Decimal?       @db.Decimal(12, 2)
-  unit_of_measure   UnitOfMeasure? @default(Units)
+  unit_id           Int?           @db.SmallInt
   moq               Int?           @default(1)
   std_delivery_time String?        @db.VarChar(100)
   video_url         String?
@@ -438,6 +462,9 @@ model CompanyOffer {
   updated_at DateTime @default(now()) @db.Timestamptz
 
   company         Company             @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  category        Category?           @relation("OfferCategory", fields: [category_id], references: [id])
+  supplier_type   CompanyTypeDict?    @relation("OfferCompanyType", fields: [supplier_type_id], references: [id])
+  unit_of_measure UnitOfMeasureDict?  @relation(fields: [unit_id], references: [id])
   photos          CompanyOfferPhoto[]
   quote_responses QuoteResponse[]
 
@@ -500,7 +527,7 @@ model Transaction {
   unit_price              Decimal           @db.Decimal(12, 2)
   quantity                Decimal           @db.Decimal(12, 2)
   total_amount            Decimal           @db.Decimal(14, 2)
-  payment_method          PaymentMethod?
+  payment_method_id       Int?              @db.SmallInt
   payment_conditions      String?           @db.VarChar(200)
   delivery_time           String?           @db.VarChar(100)
   status                  TransactionStatus @default(In_Process)
@@ -518,6 +545,7 @@ model Transaction {
   quote_response QuoteResponse @relation(fields: [quote_response_id], references: [id], onDelete: Restrict)
   buyer          Company       @relation("BuyerTransactions", fields: [buyer_id], references: [id], onDelete: Restrict)
   supplier       Company       @relation("SupplierTransactions", fields: [supplier_id], references: [id], onDelete: Restrict)
+  payment_method PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
   reviews        Review[]
   conversation   Conversation?
 
@@ -554,8 +582,8 @@ model Review {
 model Notification {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   company_id  String           @db.Uuid
-  user_id     String?
-  type        NotificationType
+  user_id     String?          @db.Uuid
+  type_id     Int              @db.SmallInt
   title       String           @db.VarChar(200)
   message     String
   link        String?
@@ -566,8 +594,9 @@ model Notification {
 
   created_at DateTime @default(now()) @db.Timestamptz
 
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  user    User?   @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  company Company              @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  user    User?                @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  type    NotificationTypeDict @relation(fields: [type_id], references: [id])
 
   @@map("notifications")
 }

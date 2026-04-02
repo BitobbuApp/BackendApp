@@ -1,9 +1,6 @@
 // src/modules/companies/domain/companyEntity.ts
 
-export type CompanyInterest = 'Comprar' | 'Vender' | 'Ambos';
-export type CompanyVolume = 'Pequeño' | 'Medio' | 'Grande';
-export type CompanyType = 'Fabricante' | 'Mayorista' | 'Distribuidor' | 'Prestador de Servicios' | 'Minorista';
-export type CategoryType = 'Alimentos' | 'Ferretería' | 'Salud' | 'IT' | 'Automotriz' | 'Embalaje' | 'Químicos' | 'Oficina' | 'Textil' | 'Logística' | 'Mantenimiento' | 'Seguridad' | 'Marketing' | 'Legal' | 'RRHH';
+export type CompanyVolume = 'Small' | 'Medium' | 'Large';
 
 export class Company {
     constructor(
@@ -14,10 +11,11 @@ export class Company {
         public founding_year: number | null = null,
         public bio: string | null = null,
         public logo_url: string | null = null,
-        public sector: CategoryType | null = null,
-        public company_type: CompanyType | null = null,
-        public interest: CompanyInterest = 'Ambos',
-        public approximate_volume: CompanyVolume | null = 'Medio',
+        public sector: string | null = null,
+        public company_type: string | null = null,
+        public can_buy: boolean = false,
+        public can_sell: boolean = false,
+        public approximate_volume: CompanyVolume | null = 'Medium',
         public average_rating: number = 0,
         public transaction_count: number = 0,
         public review_count: number = 0,

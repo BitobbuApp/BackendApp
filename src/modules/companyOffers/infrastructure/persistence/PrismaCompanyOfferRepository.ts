@@ -2,7 +2,6 @@
 import { CompanyOfferRepository } from "../../domain/repositories/companyOffer.repository";
 import { CompanyOffer, CompanyOfferPhoto } from "../../domain/entities/companyOffer.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
-import { CategoryType, CompanyType, UnitOfMeasure } from "@prisma/client";
 
 export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     async create(offer: Partial<CompanyOffer>): Promise<CompanyOffer> {
@@ -10,10 +9,16 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             company_id: offer.company_id!,
             name: offer.name!,
             description: offer.description ?? null,
-            category: offer.category as CategoryType | null,
-            supplier_type: offer.supplier_type as CompanyType | null,
+            ...(offer.category_id !== undefined && {
+                category: offer.category_id === null ? undefined : { connect: { id: offer.category_id } }
+            }),
+            ...(offer.supplier_type_id !== undefined && {
+                supplier_type: offer.supplier_type_id === null ? undefined : { connect: { id: offer.supplier_type_id } }
+            }),
             base_price: offer.base_price ?? null,
-            unit_of_measure: (offer.unit_of_measure as UnitOfMeasure) ?? 'Units',
+            ...(offer.unit_id !== undefined && {
+                unit_of_measure: offer.unit_id === null ? undefined : { connect: { id: offer.unit_id } }
+            }),
             moq: offer.moq ?? 1,
             std_delivery_time: offer.std_delivery_time ?? null,
             video_url: offer.video_url ?? null,
@@ -33,7 +38,10 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
         const created = await prisma.companyOffer.create({
             data: dataToCreate,
             include: {
-                photos: true
+                photos: true,
+                category: true,
+                supplier_type: true,
+                unit_of_measure: true,
             }
         });
         return this.mapToEntity(created);
@@ -42,7 +50,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     async findById(id: string): Promise<CompanyOffer | null> {
         const found = await prisma.companyOffer.findUnique({
             where: { id },
-            include: { photos: true }
+            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
         });
         if (!found) return null;
         return this.mapToEntity(found);
@@ -51,7 +59,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     async findByCompanyId(companyId: string): Promise<CompanyOffer[]> {
         const list = await prisma.companyOffer.findMany({
             where: { company_id: companyId },
-            include: { photos: true }
+            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
         });
         return list.map((item: any) => this.mapToEntity(item));
     }
@@ -63,7 +71,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             prisma.companyOffer.findMany({
                 skip,
                 take: limit,
-                include: { photos: true },
+                include: { photos: true, category: true, supplier_type: true, unit_of_measure: true },
                 orderBy: { created_at: 'desc' }
             })
         ]);
@@ -78,10 +86,16 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
         const dataToUpdate: any = {
             ...(offer.name !== undefined && { name: offer.name }),
             ...(offer.description !== undefined && { description: offer.description }),
-            ...(offer.category !== undefined && { category: offer.category as CategoryType | null }),
-            ...(offer.supplier_type !== undefined && { supplier_type: offer.supplier_type as CompanyType | null }),
+            ...(offer.category_id !== undefined && {
+                category: offer.category_id === null ? { disconnect: true } : { connect: { id: offer.category_id } }
+            }),
+            ...(offer.supplier_type_id !== undefined && {
+                supplier_type: offer.supplier_type_id === null ? { disconnect: true } : { connect: { id: offer.supplier_type_id } }
+            }),
             ...(offer.base_price !== undefined && { base_price: offer.base_price }),
-            ...(offer.unit_of_measure !== undefined && { unit_of_measure: offer.unit_of_measure as UnitOfMeasure | null }),
+            ...(offer.unit_id !== undefined && {
+                unit_of_measure: offer.unit_id === null ? { disconnect: true } : { connect: { id: offer.unit_id } }
+            }),
             ...(offer.moq !== undefined && { moq: offer.moq }),
             ...(offer.std_delivery_time !== undefined && { std_delivery_time: offer.std_delivery_time }),
             ...(offer.video_url !== undefined && { video_url: offer.video_url }),
@@ -103,7 +117,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
         const updated = await prisma.companyOffer.update({
             where: { id },
             data: dataToUpdate,
-            include: { photos: true }
+            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
         });
         return this.mapToEntity(updated);
     }
@@ -122,10 +136,13 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             db.company_id,
             db.name,
             db.description,
-            db.category,
-            db.supplier_type,
+            db.category_id,
+            db.category?.name_es ?? null,
+            db.supplier_type_id,
+            db.supplier_type?.name_es ?? null,
             db.base_price ? Number(db.base_price) : null,
-            db.unit_of_measure,
+            db.unit_id,
+            db.unit_of_measure?.name ?? null,
             db.moq,
             db.std_delivery_time,
             db.video_url,

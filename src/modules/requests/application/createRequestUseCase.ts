@@ -9,9 +9,9 @@ interface CreateRequestDto {
     product_service: string;
     quantity: number;
     user_id?: string | null;
-    unit_of_measure?: string;
+    unit_id?: number;
     description?: string | null;
-    category?: string | null;
+    category_id?: number | null;
     status?: string;
     expiration_date?: Date | null;
     files?: Array<{ url: string; file_name?: string | null }>;
@@ -29,11 +29,13 @@ interface RequestResult {
     id: string;
     company_id: string;
     user_id: string | null;
+    unit_id: number;
     product_service: string;
     quantity: number;
     unit_of_measure: string;
     description: string | null;
     category: string | null;
+    category_id: number | null;
     status: string;
     expiration_date: Date | null;
     response_count: number;
@@ -58,11 +60,13 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
             id: created.id,
             company_id: created.company_id,
             user_id: created.user_id,
+            unit_id: (created as any).unit_id,
             product_service: created.product_service,
             quantity: created.quantity,
             unit_of_measure: created.unit_of_measure,
             description: created.description,
             category: created.category,
+            category_id: (created as any).category_id ?? null,
             status: created.status,
             expiration_date: created.expiration_date,
             response_count: created.response_count,

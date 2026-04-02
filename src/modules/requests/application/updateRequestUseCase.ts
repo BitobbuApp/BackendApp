@@ -10,9 +10,9 @@ interface UpdateRequestDto {
     product_service?: string;
     quantity?: number;
     user_id?: string | null;
-    unit_of_measure?: string;
+    unit_id?: number;
     description?: string | null;
-    category?: string | null;
+    category_id?: number | null;
     status?: string;
     expiration_date?: Date | null;
 }
@@ -38,11 +38,13 @@ export class UpdateRequestUseCase extends UseCase<UpdateRequestDto, any> {
             id: updated.id,
             company_id: updated.company_id,
             user_id: updated.user_id,
+            unit_id: (updated as any).unit_id,
             product_service: updated.product_service,
             quantity: updated.quantity,
             unit_of_measure: updated.unit_of_measure,
             description: updated.description,
             category: updated.category,
+            category_id: (updated as any).category_id ?? null,
             status: updated.status,
             expiration_date: updated.expiration_date,
             response_count: updated.response_count,

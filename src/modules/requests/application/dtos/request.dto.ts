@@ -7,15 +7,9 @@ export const createRequestDtoRequestSchema = Joi.object({
     user_id: Joi.string().uuid().allow(null).optional(),
     product_service: Joi.string().max(200).required(),
     quantity: Joi.number().precision(2).positive().required(),
-    unit_of_measure: Joi.string().valid(
-        'Units', 'Kg', 'Liters', 'Meters', 'Boxes', 'Pallets', 'Tons', 'Gallons'
-    ).default('Units'),
+    unit_id: Joi.number().integer().min(1).default(1),
     description: Joi.string().allow(null, '').optional(),
-    category: Joi.string().valid(
-        'Alimentos', 'Ferreteria', 'Salud', 'IT', 'Automotriz', 'Embalaje',
-        'Quimicos', 'Oficina', 'Textil', 'Logistica', 'Mantenimiento',
-        'Seguridad', 'Marketing', 'Legal', 'RRHH'
-    ).allow(null).optional(),
+    category_id: Joi.number().integer().min(1).allow(null).optional(),
     status: Joi.string().valid(
         'Active', 'Paused', 'Expired', 'Completed', 'Expiring_Soon', 'Closed'
     ).default('Active'),
@@ -33,15 +27,9 @@ export const updateRequestDtoRequestSchema = Joi.object({
     user_id: Joi.string().uuid().allow(null).optional(),
     product_service: Joi.string().max(200).optional(),
     quantity: Joi.number().precision(2).positive().optional(),
-    unit_of_measure: Joi.string().valid(
-        'Units', 'Kg', 'Liters', 'Meters', 'Boxes', 'Pallets', 'Tons', 'Gallons'
-    ).optional(),
+    unit_id: Joi.number().integer().min(1).optional(),
     description: Joi.string().allow(null, '').optional(),
-    category: Joi.string().valid(
-        'Alimentos', 'Ferreteria', 'Salud', 'IT', 'Automotriz', 'Embalaje',
-        'Quimicos', 'Oficina', 'Textil', 'Logistica', 'Mantenimiento',
-        'Seguridad', 'Marketing', 'Legal', 'RRHH'
-    ).allow(null).optional(),
+    category_id: Joi.number().integer().min(1).allow(null).optional(),
     status: Joi.string().valid(
         'Active', 'Paused', 'Expired', 'Completed', 'Expiring_Soon', 'Closed'
     ).optional(),
@@ -63,8 +51,10 @@ export const requestDtoResponseSchema = Joi.object({
     product_service: Joi.string().required(),
     quantity: Joi.number().required(),
     unit_of_measure: Joi.string().required(),
+    unit_id: Joi.number().integer().required(),
     description: Joi.string().allow(null).optional(),
     category: Joi.string().allow(null).optional(),
+    category_id: Joi.number().integer().allow(null).optional(),
     status: Joi.string().required(),
     expiration_date: Joi.date().iso().allow(null).optional(),
     response_count: Joi.number().required(),
@@ -97,8 +87,10 @@ export const marketplaceRequestDtoResponseSchema = Joi.object({
     product_service: Joi.string().required(),
     quantity: Joi.number().required(),
     unit_of_measure: Joi.string().required(),
+    unit_id: Joi.number().integer().required(),
     description: Joi.string().allow(null).optional(),
     category: Joi.string().allow(null).optional(),
+    category_id: Joi.number().integer().allow(null).optional(),
     status: Joi.string().required(),
     expiration_date: Joi.date().iso().allow(null).optional(),
     response_count: Joi.number().required(),

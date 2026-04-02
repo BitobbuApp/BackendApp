@@ -2,11 +2,11 @@ import { UseCase } from "../../../shared/application/useCase";
 import { VerificationRepository } from "../domain/repositories/verification.repository";
 import { submitDocumentDtoRequestSchema, documentDtoResponseSchema } from "./dtos/verification.dto";
 import Joi from "joi";
-import { VerificationDocument, VerifDocType } from "../domain/entities/verification.entity";
+import { VerificationDocument } from "../domain/entities/verification.entity";
 
 interface SubmitDocumentInput {
     company_id: string;
-    type: VerifDocType;
+    type_id: number;
     file_url: string;
 }
 

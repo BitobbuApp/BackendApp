@@ -7,6 +7,9 @@ import { companyOfferRoutes } from "./modules/companyOffers/infrastructure/http/
 import { transactionRoutes } from "./modules/transactions/infrastructure/http/transactionRoutes";
 import { conversationRoutes } from "./modules/conversations/infrastructure/http/conversationRoutes";
 import { messageRoutes } from "./modules/messages/infrastructure/http/messageRoutes";
+import { metaDataRoutes } from "./modules/metaData/infrastructure/http/metaDataRoutes";
+import { countryRoutes } from "./modules/countries/infrastructure/http/countryRoutes";
+import { stateRoutes } from "./modules/states/infrastructure/http/stateRoutes";
 
 export async function routes(app: FastifyInstance) {
     app.register(userRoutes, { prefix: '/users' });
@@ -17,4 +20,7 @@ export async function routes(app: FastifyInstance) {
     app.register(transactionRoutes, { prefix: '/transactions' });
     app.register(conversationRoutes, { prefix: '/conversations' });
     app.register(messageRoutes, { prefix: '/messages' });
+    app.register(metaDataRoutes, { prefix: '/metadata' });
+    app.register(countryRoutes, { prefix: '/countries' });
+    app.register(stateRoutes, { prefix: '/states' });
 }
