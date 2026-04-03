@@ -19,6 +19,7 @@ export class RequestEntity {
         public category_id: number | null = null,
         public category: string | null = null,
         public status: string = 'Active',
+        public type: string = 'Product',
         public expiration_date: Date | null = null,
         public response_count: number = 0,
         public files: RequestFileEntity[] = [],

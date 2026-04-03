@@ -1,8 +1,9 @@
+import Joi from "joi";
 import { UseCase } from "../../../shared/application/useCase";
 import { RequestRepository } from "../domain/repositories/request.repository";
 import { PrismaRequestRepository } from "../infrastructure/persistence/PrismaRequestRepository";
 import { createRequestDtoRequestSchema, requestDtoResponseSchema } from "./dtos/request.dto";
-import Joi from "joi";
+import { RFQ_TYPE } from "../../../shared/constants/request/request.contants";
 
 interface CreateRequestDto {
     company_id: string;
@@ -13,6 +14,7 @@ interface CreateRequestDto {
     description?: string | null;
     category_id?: number | null;
     status?: string;
+    type: number;
     expiration_date?: Date | null;
     files?: Array<{ url: string; file_name?: string | null }>;
 }
@@ -37,6 +39,7 @@ interface RequestResult {
     category: string | null;
     category_id: number | null;
     status: string;
+    type: string;
     expiration_date: Date | null;
     response_count: number;
     files: RequestFileResult[];
@@ -55,6 +58,7 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
     }
 
     protected async implementation(data: CreateRequestDto): Promise<RequestResult> {
+        (data as any).type = RFQ_TYPE[data.type as keyof typeof RFQ_TYPE] || 'Product';   
         const created = await this.requestRepository.create(data as any);
         return {
             id: created.id,
@@ -68,6 +72,7 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
             category: created.category,
             category_id: (created as any).category_id ?? null,
             status: created.status,
+            type: (created as any).type,
             expiration_date: created.expiration_date,
             response_count: created.response_count,
             files: created.files,

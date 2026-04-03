@@ -46,6 +46,7 @@ export class UpdateRequestUseCase extends UseCase<UpdateRequestDto, any> {
             category: updated.category,
             category_id: (updated as any).category_id ?? null,
             status: updated.status,
+            type: (updated as any).type,
             expiration_date: updated.expiration_date,
             response_count: updated.response_count,
             files: updated.files,

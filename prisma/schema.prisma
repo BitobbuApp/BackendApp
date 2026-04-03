@@ -92,6 +92,11 @@ enum VerifDocStatus {
   Rejected
 }
 
+enum RequestType {
+  Product
+  Service
+}
+
 // ==========================================
 // 2. COMPANIES & PROFILES
 // ==========================================
@@ -105,11 +110,11 @@ model Company {
   bio           String?
   logo_url      String?
 
-  sector_id          Int?     @db.SmallInt
-  company_type_id    Int?     @db.SmallInt
-  can_buy            Boolean  @default(false)
-  can_sell           Boolean  @default(false)
-  approximate_volume CompanyVolume?  @default(Medium)
+  sector_id          Int?           @db.SmallInt
+  company_type_id    Int?           @db.SmallInt
+  can_buy            Boolean        @default(false)
+  can_sell           Boolean        @default(false)
+  approximate_volume CompanyVolume? @default(Medium)
 
   average_rating    Decimal? @default(0.00) @db.Decimal(3, 2)
   transaction_count Int      @default(0)
@@ -249,9 +254,9 @@ model VerifDocTypeDict {
 }
 
 model CompanyPaymentMethod {
-  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String        @db.Uuid
-  method_id  Int           @db.SmallInt
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String @db.Uuid
+  method_id  Int    @db.SmallInt
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -264,8 +269,8 @@ model CompanyPaymentMethod {
 }
 
 model CompanyCategoryOfInterest {
-  company_id  String   @db.Uuid
-  category_id Int      @db.SmallInt
+  company_id  String @db.Uuid
+  category_id Int    @db.SmallInt
 
   company  Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
   category Category @relation(fields: [category_id], references: [id])
@@ -275,14 +280,14 @@ model CompanyCategoryOfInterest {
 }
 
 model CompanyLocation {
-  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id           String   @db.Uuid
-  is_main_headquarters Boolean  @default(true)
-  country_id           Int?     @db.SmallInt
-  state_id             Int?     @db.SmallInt
+  id                   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String  @db.Uuid
+  is_main_headquarters Boolean @default(true)
+  country_id           Int?    @db.SmallInt
+  state_id             Int?    @db.SmallInt
   city_id              Int?
   tax_address          String?
-  national_coverage    Boolean  @default(false)
+  national_coverage    Boolean @default(false)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -354,16 +359,16 @@ model CompanySettings {
 }
 
 model Subscription {
-  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String         @db.Uuid
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String    @db.Uuid
   plan              PlanType
-  founder_badge     Boolean        @default(false)
-  amount_usd        Decimal        @default(0.00) @db.Decimal(8, 2)
-  payment_method_id Int?           @db.SmallInt
-  payment_reference String?        @db.VarChar(100)
-  starts_at         DateTime       @default(now()) @db.Timestamptz
-  expires_at        DateTime?      @db.Timestamptz
-  is_active         Boolean        @default(true)
+  founder_badge     Boolean   @default(false)
+  amount_usd        Decimal   @default(0.00) @db.Decimal(8, 2)
+  payment_method_id Int?      @db.SmallInt
+  payment_reference String?   @db.VarChar(100)
+  starts_at         DateTime  @default(now()) @db.Timestamptz
+  expires_at        DateTime? @db.Timestamptz
+  is_active         Boolean   @default(true)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -403,23 +408,24 @@ model VerificationDocument {
 model Request {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   company_id      String        @db.Uuid
-  user_id         String?        @db.Uuid
+  user_id         String?       @db.Uuid
   product_service String        @db.VarChar(200)
   quantity        Decimal       @db.Decimal(12, 2)
   unit_id         Int           @default(1) @db.SmallInt
   description     String?
   category_id     Int?          @db.SmallInt
   status          RequestStatus @default(Active)
+  type            RequestType   @default(Product)
   expiration_date DateTime?     @db.Date
   response_count  Int           @default(0)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  company         Company         @relation(fields: [company_id], references: [id], onDelete: Restrict)
-  user            User?           @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  company         Company           @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  user            User?             @relation(fields: [user_id], references: [id], onDelete: SetNull)
   unit_of_measure UnitOfMeasureDict @relation(fields: [unit_id], references: [id])
-  category        Category?       @relation("RequestCategory", fields: [category_id], references: [id])
+  category        Category?         @relation("RequestCategory", fields: [category_id], references: [id])
   files           RequestFile[]
   quote_responses QuoteResponse[]
   conversations   Conversation[]
@@ -444,19 +450,19 @@ model RequestFile {
 // ==========================================
 
 model CompanyOffer {
-  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String         @db.Uuid
-  name              String         @db.VarChar(200)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String   @db.Uuid
+  name              String   @db.VarChar(200)
   description       String?
-  category_id       Int?           @db.SmallInt
-  supplier_type_id  Int?           @db.SmallInt
-  base_price        Decimal?       @db.Decimal(12, 2)
-  unit_id           Int?           @db.SmallInt
-  moq               Int?           @default(1)
-  std_delivery_time String?        @db.VarChar(100)
+  category_id       Int?     @db.SmallInt
+  supplier_type_id  Int?     @db.SmallInt
+  base_price        Decimal? @db.Decimal(12, 2)
+  unit_id           Int?     @db.SmallInt
+  moq               Int?     @default(1)
+  std_delivery_time String?  @db.VarChar(100)
   video_url         String?
-  is_active         Boolean        @default(true)
-  rating            Decimal?       @default(0.00) @db.Decimal(3, 2)
+  is_active         Boolean  @default(true)
+  rating            Decimal? @default(0.00) @db.Decimal(3, 2)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -542,9 +548,9 @@ model Transaction {
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  quote_response QuoteResponse @relation(fields: [quote_response_id], references: [id], onDelete: Restrict)
-  buyer          Company       @relation("BuyerTransactions", fields: [buyer_id], references: [id], onDelete: Restrict)
-  supplier       Company       @relation("SupplierTransactions", fields: [supplier_id], references: [id], onDelete: Restrict)
+  quote_response QuoteResponse      @relation(fields: [quote_response_id], references: [id], onDelete: Restrict)
+  buyer          Company            @relation("BuyerTransactions", fields: [buyer_id], references: [id], onDelete: Restrict)
+  supplier       Company            @relation("SupplierTransactions", fields: [supplier_id], references: [id], onDelete: Restrict)
   payment_method PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
   reviews        Review[]
   conversation   Conversation?
@@ -580,17 +586,17 @@ model Review {
 // ==========================================
 
 model Notification {
-  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id  String           @db.Uuid
-  user_id     String?          @db.Uuid
-  type_id     Int              @db.SmallInt
-  title       String           @db.VarChar(200)
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id  String    @db.Uuid
+  user_id     String?   @db.Uuid
+  type_id     Int       @db.SmallInt
+  title       String    @db.VarChar(200)
   message     String
   link        String?
-  is_read     Boolean          @default(false)
-  read_at     DateTime?        @db.Timestamptz
-  entity_type String?          @db.VarChar(50)
-  entity_id   String?          @db.Uuid
+  is_read     Boolean   @default(false)
+  read_at     DateTime? @db.Timestamptz
+  entity_type String?   @db.VarChar(50)
+  entity_id   String?   @db.Uuid
 
   created_at DateTime @default(now()) @db.Timestamptz
 

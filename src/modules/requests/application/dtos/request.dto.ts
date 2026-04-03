@@ -13,6 +13,7 @@ export const createRequestDtoRequestSchema = Joi.object({
     status: Joi.string().valid(
         'Active', 'Paused', 'Expired', 'Completed', 'Expiring_Soon', 'Closed'
     ).default('Active'),
+    type: Joi.number().integer().valid(1, 2).required(),
     expiration_date: Joi.date().iso().allow(null).optional(),
     files: Joi.array().items(
         Joi.object({
@@ -56,6 +57,7 @@ export const requestDtoResponseSchema = Joi.object({
     category: Joi.string().allow(null).optional(),
     category_id: Joi.number().integer().allow(null).optional(),
     status: Joi.string().required(),
+    type: Joi.string().valid('Product', 'Service').required(),
     expiration_date: Joi.date().iso().allow(null).optional(),
     response_count: Joi.number().required(),
     files: Joi.array().items(

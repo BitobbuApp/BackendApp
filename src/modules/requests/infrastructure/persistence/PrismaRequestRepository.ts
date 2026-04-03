@@ -13,6 +13,7 @@ export class PrismaRequestRepository implements RequestRepository {
             description: request.description ?? null,
             ...( (request as any).category_id !== undefined ? { category_id: (request as any).category_id } : {}),
             status: (request.status as any) ?? 'Active',
+            type: (request as any).type ?? 'Product',
             expiration_date: request.expiration_date ?? null,
         };
 
@@ -114,6 +115,7 @@ export class PrismaRequestRepository implements RequestRepository {
                 ...(request.description !== undefined && { description: request.description }),
                 ...( (request as any).category_id !== undefined && { category_id: (request as any).category_id }),
                 ...(request.status !== undefined && { status: request.status as any }),
+                ...( (request as any).type !== undefined && { type: (request as any).type as any }),
                 ...(request.expiration_date !== undefined && { expiration_date: request.expiration_date }),
             } as any,
             include: { files: true, unit_of_measure: true, category: true }
@@ -146,6 +148,7 @@ export class PrismaRequestRepository implements RequestRepository {
             db.category_id,
             db.category?.name_es ?? null,
             db.status,
+            db.type,
             db.expiration_date,
             db.response_count,
             files,
