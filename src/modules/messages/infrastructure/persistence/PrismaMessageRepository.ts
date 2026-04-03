@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import { IMessageRepository } from '../../domain/repositories/message.repository.interface';
 import { Message } from '../../domain/entities/message.entity';
 import { prisma } from '../../../../shared/infrastructure/database';

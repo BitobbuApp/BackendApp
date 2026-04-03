@@ -1,25 +1,26 @@
 import { IConversationRepository } from '../domain/repositories/conversation.repository.interface';
+import { PrismaConversationRepository } from '../infrastructure/persistence/PrismaConversationRepository';
 import { Conversation } from '../domain/entities/conversation.entity';
 import { UseCase } from '../../../shared/application/useCase';
 import Joi from 'joi';
+import { conversationListDtoResponseSchema, listConversationsQuerySchema } from './dtos/conversation.dto';
 
 interface ListUserConversationsDto {
-    userId: string;
+    company_id: string;
 }
 
 export class ListUserConversationsUseCase extends UseCase<ListUserConversationsDto, Conversation[]> {
-    protected inputSchema: Joi.Schema = Joi.object({
-        userId: Joi.string().uuid().required()
-    });
-    // We return array of conversations, disabling strict output schema for now
-    protected outputSchema: Joi.Schema = Joi.any();
+    protected inputSchema: Joi.Schema = listConversationsQuerySchema;
+    protected outputSchema: Joi.Schema = conversationListDtoResponseSchema;
+    private readonly conversationRepository: IConversationRepository;
 
-    constructor(private readonly conversationRepository: IConversationRepository) {
+    constructor(conversationRepository?: IConversationRepository) {
         super();
+        this.conversationRepository = conversationRepository ?? new PrismaConversationRepository();
     }
 
     protected async implementation(data: ListUserConversationsDto): Promise<Conversation[]> {
-        const conversations = await this.conversationRepository.listByUser(data.userId);
+        const conversations = await this.conversationRepository.listByUser(data.company_id);
         return conversations;
     }
 }

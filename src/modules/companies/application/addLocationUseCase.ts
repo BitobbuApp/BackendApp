@@ -3,12 +3,13 @@ import { LocationRepository } from "../domain/repositories/location.repository";
 import { PrismaLocationRepository } from "../infrastructure/persistence/PrismaLocationRepository";
 import { addLocationDtoRequestSchema, locationDtoResponseSchema } from "./dtos/location.dto";
 import Joi from "joi";
-import { CompanyLocation, VenezuelaState } from "../domain/entities/location.entity";
+import { CompanyLocation } from "../domain/entities/location.entity";
 
 interface AddLocationInput {
     company_id: string;
-    state: VenezuelaState;
-    city: string;
+    country_id?: number | null;
+    state_id?: number | null;
+    city_id?: number | null;
     tax_address?: string;
     national_coverage?: boolean;
     is_main_headquarters?: boolean;

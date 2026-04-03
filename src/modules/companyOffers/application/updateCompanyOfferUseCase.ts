@@ -15,10 +15,10 @@ interface UpdateCompanyOfferDto {
     id: string;
     name?: string;
     description?: string | null;
-    category?: string | null;
-    supplier_type?: string | null;
+    category_id?: number | null;
+    supplier_type_id?: number | null;
     base_price?: number | null;
-    unit_of_measure?: string | null;
+    unit_id?: number | null;
     moq?: number | null;
     std_delivery_time?: string | null;
     video_url?: string | null;

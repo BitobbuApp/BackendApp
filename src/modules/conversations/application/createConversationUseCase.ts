@@ -3,6 +3,7 @@ import { Conversation } from '../domain/entities/conversation.entity';
 import { UseCase } from '../../../shared/application/useCase';
 import { createConversationDtoRequestSchema, conversationDtoResponseSchema } from './dtos/conversation.dto';
 import Joi from 'joi';
+import { PrismaConversationRepository } from '../infrastructure/persistence/PrismaConversationRepository';
 
 interface CreateConversationDto {
     participant_1_id: string;
@@ -15,9 +16,11 @@ interface CreateConversationDto {
 export class CreateConversationUseCase extends UseCase<CreateConversationDto, Conversation> {
     protected inputSchema: Joi.Schema = createConversationDtoRequestSchema;
     protected outputSchema: Joi.Schema = conversationDtoResponseSchema;
+    private readonly conversationRepository: IConversationRepository;
 
-    constructor(private readonly conversationRepository: IConversationRepository) {
+    constructor(conversationRepository?: IConversationRepository) {
         super();
+        this.conversationRepository = conversationRepository ?? new PrismaConversationRepository();
     }
 
     protected async implementation(data: CreateConversationDto): Promise<Conversation> {

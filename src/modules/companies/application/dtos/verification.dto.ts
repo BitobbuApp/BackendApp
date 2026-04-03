@@ -2,7 +2,7 @@ import Joi from 'joi';
 
 export const submitDocumentDtoRequestSchema = Joi.object({
     company_id: Joi.string().uuid().required(),
-    type: Joi.string().valid('tax_id', 'rep_id', 'local_photo', 'articles_of_inc', 'other').required(),
+    type_id: Joi.number().integer().min(1).required(),
     file_url: Joi.string().uri().required()
 });
 
@@ -18,6 +18,7 @@ export const verificationDtoResponseSchema = Joi.object({
 export const documentDtoResponseSchema = Joi.object({
     id: Joi.string().required(),
     company_id: Joi.string().required(),
+    type_id: Joi.number().integer().required(),
     type: Joi.string().required(),
     file_url: Joi.string().required(),
     status: Joi.string().required(),

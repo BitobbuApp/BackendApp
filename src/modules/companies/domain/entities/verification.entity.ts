@@ -1,7 +1,6 @@
 // src/modules/companies/domain/verificationEntity.ts
 
 export type VerificationStatus = 'Pending' | 'Under_Review' | 'Verified' | 'Rejected';
-export type VerifDocType = 'tax_id' | 'rep_id' | 'local_photo' | 'articles_of_inc' | 'other';
 export type VerifDocStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export class CompanyVerification {
@@ -19,7 +18,8 @@ export class VerificationDocument {
     constructor(
         public id: string,
         public company_id: string,
-        public type: VerifDocType,
+        public type_id: number,
+        public type: string,
         public file_url: string,
         public status: VerifDocStatus = 'Pending',
         public feedback: string | null = null,

@@ -13,13 +13,15 @@ interface CreateCompanyInput {
     founding_year?: number;
     bio?: string;
     logo_url?: string;
-    sector?: any;
-    company_type?: any;
-    interest?: any;
+    sector_id?: number | null;
+    company_type_id?: number | null;
+    can_buy?: boolean;
+    can_sell?: boolean;
     approximate_volume?: any;
 
-    location_state?: string;
-    location_city?: string;
+    country_id?: number | null;
+    state_id?: number | null;
+    city_id?: number | null;
     tax_address?: string;
     national_coverage?: boolean;
 
@@ -35,8 +37,8 @@ interface CreateCompanyInput {
     web_notifications?: boolean;
     whatsapp_notifications?: boolean;
 
-    payment_methods?: string[];
-    interest_categories?: string[];
+    payment_method_ids?: number[];
+    interest_category_ids?: number[];
     creatorId: string;
 }
 

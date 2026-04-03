@@ -7,14 +7,16 @@ export const createCompanyDtoRequestSchema = Joi.object({
     founding_year: Joi.number().integer().min(1800).max(new Date().getFullYear()).allow(null).optional(),
     bio: Joi.string().allow(null, '').optional(),
     logo_url: Joi.string().allow(null, '').uri().optional(),
-    sector: Joi.string().valid('Alimentos', 'Ferretería', 'Salud', 'IT', 'Automotriz', 'Embalaje', 'Químicos', 'Oficina', 'Textil', 'Logística', 'Mantenimiento', 'Seguridad', 'Marketing', 'Legal', 'RRHH').allow(null, '').optional(),
-    company_type: Joi.string().valid('Fabricante', 'Mayorista', 'Distribuidor', 'Prestador de Servicios', 'Minorista').allow(null, '').optional(),
-    interest: Joi.string().valid('Comprar', 'Vender', 'Ambos').default('Ambos'),
-    approximate_volume: Joi.string().valid('Pequeño', 'Medio', 'Grande').default('Medio'),
+    sector_id: Joi.number().integer().min(1).allow(null).optional(),
+    company_type_id: Joi.number().integer().min(1).allow(null).optional(),
+    can_buy: Joi.boolean().default(false),
+    can_sell: Joi.boolean().default(false),
+    approximate_volume: Joi.string().valid('Small', 'Medium', 'Large').default('Medium'),
 
     // Flat mapping for Locations
-    location_state: Joi.string().allow(null, '').optional(),
-    location_city: Joi.string().max(100).allow(null, '').optional(),
+    country_id: Joi.number().integer().min(1).allow(null).optional(),
+    state_id: Joi.number().integer().min(1).allow(null).optional(),
+    city_id: Joi.number().integer().min(1).allow(null).optional(),
     tax_address: Joi.string().allow(null, '').optional(),
     national_coverage: Joi.boolean().default(false),
 
@@ -34,16 +36,8 @@ export const createCompanyDtoRequestSchema = Joi.object({
     whatsapp_notifications: Joi.boolean().default(false),
 
     // Arrays
-    payment_methods: Joi.array().items(Joi.string().valid(
-        'Transferencia',
-        'Efectivo',
-        'Tarjeta de Crédito',
-        'Tarjeta de Débito',
-        'Criptomoneda',
-        'Pago Móvil',
-        'Zelle'
-    )).default([]),
-    interest_categories: Joi.array().items(Joi.string()).default([]),
+    payment_method_ids: Joi.array().items(Joi.number().integer().min(1)).default([]),
+    interest_category_ids: Joi.array().items(Joi.number().integer().min(1)).default([]),
     creatorId: Joi.string().uuid().optional()
 });
 
@@ -64,14 +58,16 @@ export const updateCompanyDtoRequestSchema = Joi.object({
     founding_year: Joi.number().integer().min(1800).max(new Date().getFullYear()).allow(null).optional(),
     bio: Joi.string().allow(null, '').optional(),
     logo_url: Joi.string().allow(null, '').uri().optional(),
-    sector: Joi.string().valid('Alimentos', 'Ferretería', 'Salud', 'IT', 'Automotriz', 'Embalaje', 'Químicos', 'Oficina', 'Textil', 'Logística', 'Mantenimiento', 'Seguridad', 'Marketing', 'Legal', 'RRHH').allow(null, '').optional(),
-    company_type: Joi.string().valid('Fabricante', 'Mayorista', 'Distribuidor', 'Prestador de Servicios', 'Minorista').allow(null, '').optional(),
-    interest: Joi.string().valid('Comprar', 'Vender', 'Ambos'),
-    approximate_volume: Joi.string().valid('Pequeño', 'Medio', 'Grande'),
+    sector_id: Joi.number().integer().min(1).allow(null).optional(),
+    company_type_id: Joi.number().integer().min(1).allow(null).optional(),
+    can_buy: Joi.boolean(),
+    can_sell: Joi.boolean(),
+    approximate_volume: Joi.string().valid('Small', 'Medium', 'Large'),
 
     // Flat mapping for Locations
-    location_state: Joi.string().allow(null, '').optional(),
-    location_city: Joi.string().max(100).allow(null, '').optional(),
+    country_id: Joi.number().integer().min(1).allow(null).optional(),
+    state_id: Joi.number().integer().min(1).allow(null).optional(),
+    city_id: Joi.number().integer().min(1).allow(null).optional(),
     tax_address: Joi.string().allow(null, '').optional(),
     national_coverage: Joi.boolean(),
 
@@ -91,16 +87,8 @@ export const updateCompanyDtoRequestSchema = Joi.object({
     whatsapp_notifications: Joi.boolean(),
 
     // Arrays
-    payment_methods: Joi.array().items(Joi.string().valid(
-        'Transferencia',
-        'Efectivo',
-        'Tarjeta de Crédito',
-        'Tarjeta de Débito',
-        'Criptomoneda',
-        'Pago Móvil',
-        'Zelle'
-    )),
-    interest_categories: Joi.array().items(Joi.string())
+    payment_method_ids: Joi.array().items(Joi.number().integer().min(1)),
+    interest_category_ids: Joi.array().items(Joi.number().integer().min(1))
 }).min(1);
 
 const companyWithRelationsSchema = Joi.object({
@@ -110,7 +98,8 @@ const companyWithRelationsSchema = Joi.object({
     tax_id: Joi.string().allow(null, ''),
     sector: Joi.string().allow(null, ''),
     company_type: Joi.string().allow(null, ''),
-    interest: Joi.string().allow(null, ''),
+    can_buy: Joi.boolean(),
+    can_sell: Joi.boolean(),
     approximate_volume: Joi.string().allow(null, ''),
     logo_url: Joi.string().allow(null, ''),
     bio: Joi.string().allow(null, ''),
@@ -120,11 +109,26 @@ const companyWithRelationsSchema = Joi.object({
     review_count: Joi.number(),
     locations: Joi.array().items(Joi.object({
         id: Joi.string().required(),
-        location_state: Joi.string().allow(null, ''),
-        location_city: Joi.string().allow(null, ''),
+        country_id: Joi.number().integer().allow(null),
+        state_id: Joi.number().integer().allow(null),
+        city_id: Joi.number().integer().allow(null),
         tax_address: Joi.string().allow(null, ''),
         national_coverage: Joi.boolean(),
         is_main_headquarters: Joi.boolean(),
+        country: Joi.object({
+            id: Joi.number().integer().required(),
+            name: Joi.string().required(),
+            iso_code: Joi.string().required(),
+        }).optional(),
+        state: Joi.object({
+            id: Joi.number().integer().required(),
+            name: Joi.string().required(),
+            code: Joi.string().allow(null, ''),
+        }).optional(),
+        city: Joi.object({
+            id: Joi.number().integer().required(),
+            name: Joi.string().required(),
+        }).optional(),
     })).optional(),
     contacts: Joi.array().items(Joi.object({
         id: Joi.string().required(),
@@ -142,8 +146,14 @@ const companyWithRelationsSchema = Joi.object({
         email_notifications: Joi.boolean(),
         web_notifications: Joi.boolean(),
     }).allow(null).optional(),
-    payment_methods: Joi.array().items(Joi.string()).optional(),
-    categories_of_interest: Joi.array().items(Joi.string()).optional(),
+    payment_methods: Joi.array().items(Joi.object({
+        id: Joi.number().integer().required(),
+        name: Joi.string().required(),
+    })).optional(),
+    categories_of_interest: Joi.array().items(Joi.object({
+        id: Joi.number().integer().required(),
+        name: Joi.string().required(),
+    })).optional(),
     created_at: Joi.date().required(),
     updated_at: Joi.date().allow(null),
 }).options({ stripUnknown: true });
