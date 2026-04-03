@@ -89,8 +89,8 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                             id: true,
                             trade_name: true,
                             logo_url: true,
-                            company_type: true,
-                            sector: true,
+                            company_type_ref: true,
+                            sector_ref: true,
                             average_rating: true,
                         }
                     }
@@ -114,6 +114,8 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 updated_at: item.updated_at,
                 supplier: {
                     ...item.supplier,
+                    company_type: item.supplier?.company_type_ref?.name ?? null,
+                    sector: item.supplier?.sector_ref?.name ?? null,
                     average_rating: item.supplier?.average_rating ? Number(item.supplier.average_rating) : 0,
                     name: item.supplier?.trade_name, // Mapping to match frontend expectations
                     initial: item.supplier?.trade_name?.[0]?.toUpperCase() || 'S'
@@ -145,8 +147,8 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                             id: true,
                             trade_name: true,
                             logo_url: true,
-                            company_type: true,
-                            sector: true,
+                            company_type_ref: true,
+                            sector_ref: true,
                             average_rating: true,
                         }
                     },
@@ -173,6 +175,8 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 updated_at: item.updated_at,
                 supplier: {
                     ...item.supplier,
+                    company_type: item.supplier?.company_type_ref?.name ?? null,
+                    sector: item.supplier?.sector_ref?.name ?? null,
                     average_rating: item.supplier?.average_rating ? Number(item.supplier.average_rating) : 0,
                 },
                 request: item.request,

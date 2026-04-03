@@ -1,9 +1,8 @@
 import Joi from 'joi';
 
 export const listConversationsQuerySchema = Joi.object({
-    page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(20)
-});
+    company_id: Joi.string().uuid().required()
+}).options({ stripUnknown: true });
 
 export const createConversationDtoRequestSchema = Joi.object({
     participant_1_id: Joi.string().uuid().required(),
@@ -11,7 +10,7 @@ export const createConversationDtoRequestSchema = Joi.object({
     request_id: Joi.string().uuid().optional().allow(null),
     quote_response_id: Joi.string().uuid().optional().allow(null),
     transaction_id: Joi.string().uuid().optional().allow(null),
-});
+}).options({ stripUnknown: true });
 
 export const conversationDtoResponseSchema = Joi.object({
     id: Joi.string().uuid().required(),
@@ -27,3 +26,6 @@ export const conversationDtoResponseSchema = Joi.object({
     created_at: Joi.date().required(),
     updated_at: Joi.date().required()
 }).unknown(true);
+
+export const conversationListDtoResponseSchema = Joi.array()
+    .items(conversationDtoResponseSchema);

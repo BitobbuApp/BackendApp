@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import { IConversationRepository } from '../../domain/repositories/conversation.repository.interface';
 import { Conversation } from '../../domain/entities/conversation.entity';
 import { prisma } from '../../../../shared/infrastructure/database';
@@ -75,17 +74,17 @@ export class PrismaConversationRepository implements IConversationRepository {
     }
 
     async updateLastMessage(id: string, message: string, date: Date, unreadUserId: string): Promise<Conversation> {
-        // We need to fetch the conversation first to know if the unreadUserId is P1 or P2
+        // unreadUserId is the sender; increment the counter for the other participant
         const conv = await prisma.conversation.findUnique({ where: { id } });
         if (!conv) throw new Error('Conversation not found');
 
-        const isP1 = conv.participant_1_id === unreadUserId;
+        const senderIsP1 = conv.participant_1_id === unreadUserId;
         const updateData: any = {
             last_message: message,
             last_message_date: date,
         };
-        if (isP1) updateData.unread_count_1 = { increment: 1 };
-        else updateData.unread_count_2 = { increment: 1 };
+        if (senderIsP1) updateData.unread_count_2 = { increment: 1 };
+        else updateData.unread_count_1 = { increment: 1 };
 
         return await prisma.conversation.update({
             where: { id },

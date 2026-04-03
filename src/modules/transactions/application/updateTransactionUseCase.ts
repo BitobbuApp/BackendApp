@@ -11,7 +11,7 @@ interface UpdateTransactionDto {
     unit_price?: number;
     quantity?: number;
     total_amount?: number;
-    payment_method?: string;
+    payment_method_id?: number | null;
     payment_conditions?: string;
     delivery_time?: string;
     status?: string;

@@ -29,21 +29,25 @@ export class PrismaVerificationRepository implements VerificationRepository {
         const created = await prisma.verificationDocument.create({
             data: {
                 company_id: doc.company_id!,
-                type: doc.type as any,
+                type_id: (doc as any).type_id!,
                 url: doc.file_url!,
                 status: 'Pending',
-            }
+            } as any,
+            include: { type: true }
         });
         return this.mapDocumentToEntity(created);
     }
 
     async getDocuments(companyId: string): Promise<VerificationDocument[]> {
-        const list = await prisma.verificationDocument.findMany({ where: { company_id: companyId } });
+        const list = await prisma.verificationDocument.findMany({
+            where: { company_id: companyId },
+            include: { type: true }
+        });
         return list.map((item: any) => this.mapDocumentToEntity(item));
     }
 
     async findDocumentById(id: string): Promise<VerificationDocument | null> {
-        const found = await prisma.verificationDocument.findUnique({ where: { id } });
+        const found = await prisma.verificationDocument.findUnique({ where: { id }, include: { type: true } });
         if (!found) return null;
         return this.mapDocumentToEntity(found);
     }
@@ -56,7 +60,8 @@ export class PrismaVerificationRepository implements VerificationRepository {
                 ...(doc.feedback !== undefined && { notes: doc.feedback }),
                 ...(doc.reviewed_by !== undefined && { reviewed_by: doc.reviewed_by }),
                 reviewed_at: new Date()
-            }
+            },
+            include: { type: true }
         });
         return this.mapDocumentToEntity(updated);
     }
@@ -76,7 +81,8 @@ export class PrismaVerificationRepository implements VerificationRepository {
         return new VerificationDocument(
             db.id,
             db.company_id,
-            db.type,
+            db.type_id,
+            db.type?.name ?? '',
             db.url,
             db.status,
             db.notes,

@@ -1,9 +1,12 @@
 import { IMessageRepository } from '../domain/repositories/message.repository.interface';
 import { IConversationRepository } from '../../conversations/domain/repositories/conversation.repository.interface';
+import { PrismaConversationRepository } from '../../conversations/infrastructure/persistence/PrismaConversationRepository';
+import { PrismaMessageRepository } from '../infrastructure/persistence/PrismaMessageRepository';
 import { Message } from '../domain/entities/message.entity';
 import { UseCase } from '../../../shared/application/useCase';
-import { createMessageDtoRequestSchema } from './dtos/message.dto';
+import { createMessageDtoRequestSchema, createMessageUseCaseResponseSchema } from './dtos/message.dto';
 import Joi from 'joi';
+import { ConversationAccessDeniedError, ConversationNotFoundError } from '../../conversations/domain/errors/conversation.errors';
 
 interface CreateMessageDto {
     conversation_id: string;
@@ -16,17 +19,29 @@ interface CreateMessageDto {
 
 export class CreateMessageUseCase extends UseCase<CreateMessageDto, { message: Message, isDuplicate: boolean }> {
     protected inputSchema: Joi.Schema = createMessageDtoRequestSchema;
-    // We return an object containing the message and isDuplicate flag
-    protected outputSchema: Joi.Schema = Joi.any(); 
+    protected outputSchema: Joi.Schema = createMessageUseCaseResponseSchema;
+    private readonly messageRepository: IMessageRepository;
+    private readonly conversationRepository: IConversationRepository;
 
     constructor(
-        private readonly messageRepository: IMessageRepository,
-        private readonly conversationRepository: IConversationRepository
+        messageRepository?: IMessageRepository,
+        conversationRepository?: IConversationRepository
     ) {
         super();
+        this.messageRepository = messageRepository ?? new PrismaMessageRepository();
+        this.conversationRepository = conversationRepository ?? new PrismaConversationRepository();
     }
 
     protected async implementation(data: CreateMessageDto): Promise<{ message: Message, isDuplicate: boolean }> {
+        const conversation = await this.conversationRepository.findById(data.conversation_id);
+        if (!conversation) {
+            throw new ConversationNotFoundError(data.conversation_id);
+        }
+
+        if (conversation.participant_1_id !== data.sender_id && conversation.participant_2_id !== data.sender_id) {
+            throw new ConversationAccessDeniedError(data.conversation_id);
+        }
+
         // IDEMPOTENCY STRATEGY: 
         // If client_msg_id is provided, check if a message with this ID already exists.
         if (data.client_msg_id) {

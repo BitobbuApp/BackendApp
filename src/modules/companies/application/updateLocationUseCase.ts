@@ -3,13 +3,14 @@ import { LocationRepository } from "../domain/repositories/location.repository";
 import { PrismaLocationRepository } from "../infrastructure/persistence/PrismaLocationRepository";
 import { locationDtoResponseSchema } from "./dtos/location.dto";
 import Joi from "joi";
-import { CompanyLocation, VenezuelaState } from "../domain/entities/location.entity";
+import { CompanyLocation } from "../domain/entities/location.entity";
 import { LocationNotFoundError } from "../domain/errors/company.errors";
 
 interface UpdateLocationInput {
     id: string;
-    state?: VenezuelaState;
-    city?: string;
+    country_id?: number | null;
+    state_id?: number | null;
+    city_id?: number | null;
     tax_address?: string;
     national_coverage?: boolean;
     is_main_headquarters?: boolean;
@@ -18,12 +19,9 @@ interface UpdateLocationInput {
 export class UpdateLocationUseCase extends UseCase<UpdateLocationInput, CompanyLocation> {
     protected inputSchema: Joi.Schema = Joi.object({
         id: Joi.string().uuid().required(),
-        state: Joi.string().valid(
-            'Amazonas', 'Anzoategui', 'Apure', 'Aragua', 'Barinas', 'Bolivar', 'Carabobo', 'Cojedes',
-            'Delta_Amacuro', 'Distrito_Capital', 'Falcon', 'Guarico', 'Lara', 'Merida', 'Miranda', 'Monagas',
-            'Nueva_Esparta', 'Portuguesa', 'Sucre', 'Tachira', 'Trujillo', 'Vargas', 'Yaracuy', 'Zulia'
-        ),
-        city: Joi.string().max(100),
+        country_id: Joi.number().integer().min(1).allow(null),
+        state_id: Joi.number().integer().min(1).allow(null),
+        city_id: Joi.number().integer().min(1).allow(null),
         tax_address: Joi.string().allow(null, ''),
         national_coverage: Joi.boolean(),
         is_main_headquarters: Joi.boolean()

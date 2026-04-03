@@ -7,7 +7,7 @@ export const createMessageDtoRequestSchema = Joi.object({
     content: Joi.string().optional().allow(null, ''),
     file_url: Joi.string().uri().optional().allow(null, ''),
     file_name: Joi.string().optional().allow(null, ''),
-}).or('content', 'file_url'); // A message must have either text content or a file
+}).or('content', 'file_url').options({ stripUnknown: true }); // A message must have either text content or a file
 
 export const messageDtoResponseSchema = Joi.object({
     id: Joi.string().uuid().required(),
@@ -21,3 +21,18 @@ export const messageDtoResponseSchema = Joi.object({
     read_at: Joi.date().optional().allow(null),
     created_at: Joi.date().required()
 }).unknown(true);
+
+export const listMessagesDtoRequestSchema = Joi.object({
+    conversation_id: Joi.string().uuid().required(),
+    requester_company_id: Joi.string().uuid().required(),
+    limit: Joi.number().integer().min(1).max(200).default(50),
+    offset: Joi.number().integer().min(0).default(0)
+}).options({ stripUnknown: true });
+
+export const messageListDtoResponseSchema = Joi.array()
+    .items(messageDtoResponseSchema);
+
+export const createMessageUseCaseResponseSchema = Joi.object({
+    message: messageDtoResponseSchema.required(),
+    isDuplicate: Joi.boolean().required()
+}).options({ stripUnknown: true });

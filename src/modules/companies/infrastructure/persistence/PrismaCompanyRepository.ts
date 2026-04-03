@@ -5,57 +5,76 @@ import { prisma } from '../../../../shared/infrastructure/database';
 
 export class PrismaCompanyRepository implements CompanyRepository {
     async create(data: any): Promise<Company> {
-        const created = await prisma.company.create({
-            data: {
-                trade_name: data.trade_name,
-                legal_name: data.legal_name,
-                tax_id: data.tax_id,
-                founding_year: data.founding_year,
-                bio: data.bio,
-                logo_url: data.logo_url,
-                sector: data.sector,
-                company_type: data.company_type,
-                interest: data.interest,
-                approximate_volume: data.approximate_volume,
+        const dataPayload: any = {
+            trade_name: data.trade_name,
+            legal_name: data.legal_name,
+            tax_id: data.tax_id,
+            founding_year: data.founding_year,
+            bio: data.bio,
+            logo_url: data.logo_url,
+            can_buy: data.can_buy ?? false,
+            can_sell: data.can_sell ?? false,
+            approximate_volume: data.approximate_volume,
+            ...(data.sector_id ? { sector_ref: { connect: { id: data.sector_id } } } : {}),
+            ...(data.company_type_id ? { company_type_ref: { connect: { id: data.company_type_id } } } : {}),
 
-                // Nested writes
-                locations: {
-                    create: {
-                        location_state: data.location_state,
-                        location_city: data.location_city,
-                        tax_address: data.tax_address,
-                        is_main_headquarters: true,
-                        national_coverage: data.national_coverage || false
-                    }
-                },
-                contacts: {
-                    create: {
-                        contact_person: data.contact_person,
-                        position: data.contact_role,
-                        whatsapp: data.whatsapp,
-                        corporate_email: data.corporate_email,
-                        is_primary: true
-                    }
-                },
-                commercial_profile: {
-                    create: {
-                        retention_agent: data.retention_agent || false,
-                        works_with_credit: data.works_with_credit || false
-                    }
-                },
-                settings: {
-                    create: {
-                        email_notifications: data.email_notifications ?? true,
-                        web_notifications: data.web_notifications ?? true,
-                        whatsapp_notifications: data.whatsapp_notifications ?? false
-                    }
-                },
-                payment_methods: {
-                    create: (data.payment_methods || []).map((method: any) => ({ method }))
-                },
-                categories_of_interest: {
-                    create: (data.interest_categories || []).map((category: any) => ({ category }))
+            // Nested writes
+            locations: {
+                create: {
+                    ...(data.country_id !== undefined && data.country_id !== null
+                        ? { country: { connect: { id: data.country_id } } }
+                        : {}),
+                    ...(data.state_id !== undefined && data.state_id !== null
+                        ? { state: { connect: { id: data.state_id } } }
+                        : {}),
+                    ...(data.city_id !== undefined && data.city_id !== null
+                        ? { city: { connect: { id: data.city_id } } }
+                        : {}),
+                    tax_address: data.tax_address,
+                    is_main_headquarters: true,
+                    national_coverage: data.national_coverage || false
                 }
+            },
+            contacts: {
+                create: {
+                    contact_person: data.contact_person,
+                    position: data.contact_role,
+                    whatsapp: data.whatsapp,
+                    corporate_email: data.corporate_email,
+                    is_primary: true
+                }
+            },
+            commercial_profile: {
+                create: {
+                    retention_agent: data.retention_agent || false,
+                    works_with_credit: data.works_with_credit || false
+                }
+            },
+            settings: {
+                create: {
+                    email_notifications: data.email_notifications ?? true,
+                    web_notifications: data.web_notifications ?? true,
+                    whatsapp_notifications: data.whatsapp_notifications ?? false
+                }
+            },
+            payment_methods: {
+                create: (data.payment_method_ids || []).map((methodId: number) => ({
+                    method: { connect: { id: methodId } }
+                }))
+            },
+            categories_of_interest: {
+                create: (data.interest_category_ids || []).map((categoryId: number) => ({
+                    category: { connect: { id: categoryId } }
+                }))
+            }
+        };
+        const created = await prisma.company.create({
+            data: dataPayload,
+            include: {
+                sector_ref: true,
+                company_type_ref: true,
+                payment_methods: { include: { method: true } },
+                categories_of_interest: { include: { category: true } }
             }
         });
 
@@ -71,8 +90,10 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 contacts: true,
                 commercial_profile: true,
                 settings: true,
-                payment_methods: true,
-                categories_of_interest: true
+                payment_methods: { include: { method: true } },
+                categories_of_interest: { include: { category: true } },
+                sector_ref: true,
+                company_type_ref: true
             }
         });
         if (!found) return null;
@@ -89,8 +110,10 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 contacts: true,
                 commercial_profile: true,
                 settings: true,
-                payment_methods: true,
-                categories_of_interest: true
+                payment_methods: { include: { method: true } },
+                categories_of_interest: { include: { category: true } },
+                sector_ref: true,
+                company_type_ref: true
             }
         });
         if (!found) return null;
@@ -105,20 +128,23 @@ export class PrismaCompanyRepository implements CompanyRepository {
             founding_year: data.founding_year,
             bio: data.bio,
             logo_url: data.logo_url,
-            sector: data.sector,
-            company_type: data.company_type,
-            interest: data.interest,
+            ...(data.sector_id !== undefined && {
+                sector_ref: data.sector_id === null ? { disconnect: true } : { connect: { id: data.sector_id } }
+            }),
+            ...(data.company_type_id !== undefined && {
+                company_type_ref: data.company_type_id === null ? { disconnect: true } : { connect: { id: data.company_type_id } }
+            }),
+            ...(data.can_buy !== undefined && { can_buy: data.can_buy }),
+            ...(data.can_sell !== undefined && { can_sell: data.can_sell }),
             approximate_volume: data.approximate_volume,
         };
 
         // Nested updates (using upsert/updateMany for consistency)
-        if (data.location_state || data.location_city || data.tax_address) {
+        if (data.country_id !== undefined || data.state_id !== undefined || data.city_id !== undefined || data.tax_address !== undefined || data.national_coverage !== undefined) {
             updatePayload.locations = {
                 updateMany: {
                     where: { is_main_headquarters: true },
                     data: {
-                        location_state: data.location_state,
-                        location_city: data.location_city,
                         tax_address: data.tax_address,
                         national_coverage: data.national_coverage
                     }
@@ -172,23 +198,33 @@ export class PrismaCompanyRepository implements CompanyRepository {
             };
         }
 
-        if (data.payment_methods) {
+        if (data.payment_method_ids) {
             updatePayload.payment_methods = {
                 deleteMany: {},
-                create: data.payment_methods.map((method: any) => ({ method }))
+                create: data.payment_method_ids.map((methodId: number) => ({
+                    method: { connect: { id: methodId } }
+                }))
             };
         }
 
-        if (data.interest_categories) {
+        if (data.interest_category_ids) {
             updatePayload.categories_of_interest = {
                 deleteMany: {},
-                create: data.interest_categories.map((category: any) => ({ category }))
+                create: data.interest_category_ids.map((categoryId: number) => ({
+                    category: { connect: { id: categoryId } }
+                }))
             };
         }
 
         const updated = await prisma.company.update({
             where: { id },
-            data: updatePayload
+            data: updatePayload,
+            include: {
+                sector_ref: true,
+                company_type_ref: true,
+                payment_methods: { include: { method: true } },
+                categories_of_interest: { include: { category: true } }
+            }
         });
         return this.mapToEntity(updated);
     }
@@ -209,8 +245,10 @@ export class PrismaCompanyRepository implements CompanyRepository {
                     contacts: true,
                     commercial_profile: true,
                     settings: true,
-                    payment_methods: true,
-                    categories_of_interest: true,
+                    payment_methods: { include: { method: true } },
+                    categories_of_interest: { include: { category: true } },
+                    sector_ref: true,
+                    company_type_ref: true,
                 }
             })
         ]);
@@ -225,6 +263,16 @@ export class PrismaCompanyRepository implements CompanyRepository {
     }
 
     private mapToEntity(db: any): Company {
+        const paymentMethods = db.payment_methods?.map((pm: any) => ({
+            id: pm.method.id,
+            name: pm.method.name_es,
+        })) ?? [];
+
+        const categoriesOfInterest = db.categories_of_interest?.map((ci: any) => ({
+            id: ci.category.id,
+            name: ci.category.name_es,
+        })) ?? [];
+
         return new Company(
             db.id,
             db.trade_name,
@@ -233,9 +281,10 @@ export class PrismaCompanyRepository implements CompanyRepository {
             db.founding_year,
             db.bio,
             db.logo_url,
-            db.sector,
-            db.company_type,
-            db.interest,
+            db.sector_ref?.name_es ?? null,
+            db.company_type_ref?.name_es ?? null,
+            db.can_buy,
+            db.can_sell,
             db.approximate_volume,
             Number(db.average_rating),
             db.transaction_count,
@@ -246,8 +295,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
             db.contacts,
             db.commercial_profile,
             db.settings,
-            db.payment_methods,
-            db.categories_of_interest
+            paymentMethods,
+            categoriesOfInterest
         );
     }
 }

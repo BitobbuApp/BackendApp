@@ -9,10 +9,11 @@ export class PrismaRequestRepository implements RequestRepository {
             product_service: request.product_service!,
             quantity: request.quantity!,
             user_id: request.user_id ?? null,
-            unit_of_measure: (request.unit_of_measure as any) ?? 'Units',
+            unit_id: (request as any).unit_id ?? 1,
             description: request.description ?? null,
-            category: (request.category as any) ?? null,
+            ...( (request as any).category_id !== undefined ? { category_id: (request as any).category_id } : {}),
             status: (request.status as any) ?? 'Active',
+            type: (request as any).type ?? 'Product',
             expiration_date: request.expiration_date ?? null,
         };
 
@@ -27,7 +28,7 @@ export class PrismaRequestRepository implements RequestRepository {
 
         const created = await prisma.request.create({
             data: dataPayload,
-            include: { files: true }
+            include: { files: true, unit_of_measure: true, category: true }
         });
         return this.mapToEntity(created);
     }
@@ -35,7 +36,7 @@ export class PrismaRequestRepository implements RequestRepository {
     async findById(id: string): Promise<RequestEntity | null> {
         const found = await prisma.request.findUnique({
             where: { id },
-            include: { files: true }
+            include: { files: true, unit_of_measure: true, category: true }
         });
         if (!found) return null;
         return this.mapToEntity(found);
@@ -51,7 +52,7 @@ export class PrismaRequestRepository implements RequestRepository {
                 skip,
                 take: limit,
                 orderBy: { created_at: 'desc' },
-                include: { files: true }
+                include: { files: true, unit_of_measure: true, category: true }
             })
         ]);
 
@@ -79,12 +80,14 @@ export class PrismaRequestRepository implements RequestRepository {
                 orderBy: { created_at: 'desc' },
                 include: {
                     files: true,
+                    unit_of_measure: true,
+                    category: true,
                     company: {
                         select: {
                             id: true,
                             trade_name: true,
                             logo_url: true,
-                            sector: true,
+                            sector_ref: true,
                             average_rating: true,
                         }
                     }
@@ -108,12 +111,14 @@ export class PrismaRequestRepository implements RequestRepository {
                 ...(request.product_service !== undefined && { product_service: request.product_service }),
                 ...(request.quantity !== undefined && { quantity: request.quantity }),
                 ...(request.user_id !== undefined && { user_id: request.user_id }),
-                ...(request.unit_of_measure !== undefined && { unit_of_measure: request.unit_of_measure as any }),
+                ...( (request as any).unit_id !== undefined && { unit_id: (request as any).unit_id }),
                 ...(request.description !== undefined && { description: request.description }),
-                ...(request.category !== undefined && { category: request.category as any }),
+                ...( (request as any).category_id !== undefined && { category_id: (request as any).category_id }),
                 ...(request.status !== undefined && { status: request.status as any }),
+                ...( (request as any).type !== undefined && { type: (request as any).type as any }),
                 ...(request.expiration_date !== undefined && { expiration_date: request.expiration_date }),
-            }
+            } as any,
+            include: { files: true, unit_of_measure: true, category: true }
         });
         return this.mapToEntity(updated);
     }
@@ -137,10 +142,13 @@ export class PrismaRequestRepository implements RequestRepository {
             db.product_service,
             Number(db.quantity),
             db.user_id,
-            db.unit_of_measure,
+            db.unit_id,
+            db.unit_of_measure?.name ?? '',
             db.description,
-            db.category,
+            db.category_id,
+            db.category?.name_es ?? null,
             db.status,
+            db.type,
             db.expiration_date,
             db.response_count,
             files,
