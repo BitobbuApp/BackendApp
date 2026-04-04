@@ -121,6 +121,10 @@ export class PrismaCompanyRepository implements CompanyRepository {
     }
 
     async update(id: string, data: any): Promise<Company> {
+        const primaryContact = await prisma.companyContact.findFirst({
+            where: { company_id: id, is_primary: true }
+        });
+
         const updatePayload: any = {
             trade_name: data.trade_name,
             legal_name: data.legal_name,
@@ -162,17 +166,29 @@ export class PrismaCompanyRepository implements CompanyRepository {
         }
 
         if (data.contact_person || data.contact_role || data.whatsapp || data.corporate_email) {
-            updatePayload.contacts = {
-                updateMany: {
-                    where: { is_primary: true },
-                    data: {
+            if (primaryContact) {
+                updatePayload.contacts = {
+                    update: {
+                        where: { id: primaryContact.id },
+                        data: {
+                            contact_person: data.contact_person,
+                            position: data.contact_role,
+                            whatsapp: data.whatsapp,
+                            corporate_email: data.corporate_email
+                        }
+                    }
+                };
+            } else {
+                updatePayload.contacts = {
+                    create: {
+                        is_primary: true,
                         contact_person: data.contact_person,
                         position: data.contact_role,
                         whatsapp: data.whatsapp,
                         corporate_email: data.corporate_email
                     }
-                }
-            };
+                };
+            }
         }
 
         if (data.retention_agent !== undefined || data.works_with_credit !== undefined) {
