@@ -17,9 +17,10 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                         unit_price: new Prisma.Decimal(response.unit_price!),
                         quantity: new Prisma.Decimal(response.quantity!),
                         payment_conditions: response.payment_conditions ?? null,
+                        payment_condition_id: response.payment_condition_id ?? null,
                         delivery_time: response.delivery_time ?? null,
                         notes: response.notes ?? null,
-                        status: (response.status as ResponseStatus) ?? 'Pending',
+                        status: (response.status as any) ?? 'pending',
                         rejection_reason: response.rejection_reason ?? null,
                         total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!),
                     }
@@ -194,9 +195,14 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             ...(response.unit_price !== undefined && { unit_price: new Prisma.Decimal(response.unit_price) }),
             ...(response.quantity !== undefined && { quantity: new Prisma.Decimal(response.quantity) }),
             ...(response.payment_conditions !== undefined && { payment_conditions: response.payment_conditions }),
+            ...(response.payment_condition_id !== undefined && {
+                payment_condition: response.payment_condition_id === null
+                    ? { disconnect: true }
+                    : { connect: { id: response.payment_condition_id } }
+            }),
             ...(response.delivery_time !== undefined && { delivery_time: response.delivery_time }),
             ...(response.notes !== undefined && { notes: response.notes }),
-            ...(response.status !== undefined && { status: response.status as ResponseStatus }),
+            ...(response.status !== undefined && { status: response.status as any }),
             ...(response.rejection_reason !== undefined && { rejection_reason: response.rejection_reason }),
         };
 
@@ -236,6 +242,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             Number(db.unit_price),
             Number(db.quantity),
             db.payment_conditions,
+            (db as any).payment_condition_id ?? null,
             db.delivery_time,
             db.notes,
             db.status,

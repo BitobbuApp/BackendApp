@@ -12,9 +12,10 @@ export class PrismaRequestRepository implements RequestRepository {
             unit_id: (request as any).unit_id ?? 1,
             description: request.description ?? null,
             ...( (request as any).category_id !== undefined ? { category_id: (request as any).category_id } : {}),
-            status: (request.status as any) ?? 'Active',
-            type: (request as any).type ?? 'Product',
+            status: (request.status as any) ?? 'active',
+            type: (request as any).type ?? 'product',
             expiration_date: request.expiration_date ?? null,
+            payment_condition_id: (request as any).payment_condition_id ?? null,
         };
 
         if (request.files && request.files.length > 0) {
@@ -117,6 +118,11 @@ export class PrismaRequestRepository implements RequestRepository {
                 ...(request.status !== undefined && { status: request.status as any }),
                 ...( (request as any).type !== undefined && { type: (request as any).type as any }),
                 ...(request.expiration_date !== undefined && { expiration_date: request.expiration_date }),
+                ...( (request as any).payment_condition_id !== undefined && {
+                    payment_condition: (request as any).payment_condition_id === null
+                        ? { disconnect: true }
+                        : { connect: { id: (request as any).payment_condition_id } }
+                }),
             } as any,
             include: { files: true, unit_of_measure: true, category: true }
         });
@@ -151,6 +157,7 @@ export class PrismaRequestRepository implements RequestRepository {
             db.type,
             db.expiration_date,
             db.response_count,
+            db.payment_condition_id ?? null,
             files,
             db.created_at,
             db.updated_at

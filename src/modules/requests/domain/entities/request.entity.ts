@@ -18,10 +18,11 @@ export class RequestEntity {
         public description: string | null = null,
         public category_id: number | null = null,
         public category: string | null = null,
-        public status: string = 'Active',
-        public type: string = 'Product',
+        public status: string = 'active',
+        public type: string = 'product',
         public expiration_date: Date | null = null,
         public response_count: number = 0,
+        public payment_condition_id: string | null = null,
         public files: RequestFileEntity[] = [],
         public created_at: Date | null = null,
         public updated_at: Date | null = null

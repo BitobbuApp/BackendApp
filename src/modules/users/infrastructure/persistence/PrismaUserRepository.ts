@@ -17,29 +17,27 @@ export class PrismaUserRepository implements UserRepository {
                     salt: user.salt ?? 10,
                 }
             });
-            if (    
-                user.trade_name &&
-                user.founding_year
-            ) {
+            // Create company if trade_name is provided (registration flow)
+            if (user.trade_name) {
                 const companyCreated = await tx.company.create({
                     data: {
                         trade_name: user.trade_name,
-                        founding_year: user.founding_year,
+                        // founding_year is NOT set at registration — updated later via profile
                     }
                 });
                 await tx.companyLocation.create({
                     data: {
                         company_id: companyCreated.id,
-                        country_id: user.country_id,
-                        state_id: user.state_id,
+                        // country_id already coerced to VENEZUELA_COUNTRY_ID in the use case
+                        country_id: (user as any).country_id ?? null,
+                        state_id: (user as any).state_id ?? null,
                         is_main_headquarters: true,
                     }
                 });
-                if(companyCreated)
-                    await tx.user.update({
-                        where: { id: newUser.id },
-                        data: { company_id: companyCreated.id }
-                    });
+                await tx.user.update({
+                    where: { id: newUser.id },
+                    data: { company_id: companyCreated.id }
+                });
             }
             return newUser;
         });

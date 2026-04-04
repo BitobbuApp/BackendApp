@@ -1,7 +1,6 @@
 import { TransactionRepository, PaginatedTransactions } from "../../domain/repositories/transaction.repository";
 import { Transaction } from "../../domain/entities/transaction.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
-import { TransactionStatus } from "@prisma/client";
 
 export class PrismaTransactionRepository implements TransactionRepository {
     async create(transaction: Partial<Transaction>): Promise<Transaction> {
@@ -16,8 +15,9 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 total_amount: transaction.total_amount!,
                 ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
                 payment_conditions: transaction.payment_conditions ?? null,
+                payment_condition_id: transaction.payment_condition_id ?? null,
                 delivery_time: transaction.delivery_time ?? null,
-                status: (transaction.status as TransactionStatus) ?? TransactionStatus.In_Process,
+                status: (transaction.status as any) ?? 'in_process',
                 estimated_delivery_date: transaction.estimated_delivery_date ?? null,
                 actual_delivery_date: transaction.actual_delivery_date ?? null,
                 cancellation_reason: transaction.cancellation_reason ?? null,
@@ -81,8 +81,13 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 ...(transaction.total_amount !== undefined && { total_amount: transaction.total_amount }),
                 ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
                 ...(transaction.payment_conditions !== undefined && { payment_conditions: transaction.payment_conditions }),
+                ...(transaction.payment_condition_id !== undefined && {
+                    payment_condition: transaction.payment_condition_id === null
+                        ? { disconnect: true }
+                        : { connect: { id: transaction.payment_condition_id } }
+                }),
                 ...(transaction.delivery_time !== undefined && { delivery_time: transaction.delivery_time }),
-                ...(transaction.status !== undefined && { status: transaction.status as TransactionStatus }),
+                ...(transaction.status !== undefined && { status: transaction.status as any }),
                 ...(transaction.estimated_delivery_date !== undefined && { estimated_delivery_date: transaction.estimated_delivery_date }),
                 ...(transaction.actual_delivery_date !== undefined && { actual_delivery_date: transaction.actual_delivery_date }),
                 ...(transaction.cancellation_reason !== undefined && { cancellation_reason: transaction.cancellation_reason }),
@@ -113,6 +118,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
             db.payment_method_id,
             db.payment_method?.name_es ?? null,
             db.payment_conditions,
+            db.payment_condition_id ?? null,
             db.delivery_time,
             db.status,
             db.estimated_delivery_date,
