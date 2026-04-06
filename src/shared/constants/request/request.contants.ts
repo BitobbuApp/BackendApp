@@ -1,6 +1,6 @@
 export const RFQ_TYPE = {
-    1: 'Product',
-    2: 'Service',
+    1: 'product',
+    2: 'service',
 };
 
 export const RFQ_STATUS = {

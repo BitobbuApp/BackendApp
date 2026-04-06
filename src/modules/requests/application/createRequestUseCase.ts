@@ -15,6 +15,11 @@ interface CreateRequestDto {
     category_id?: number | null;
     status?: string;
     type: number;
+    payment_condition_id?: string | null;
+    country_id?: number | null;
+    state_id?: number | null;
+    city_id?: number | null;
+    reach_service?: string | null;
     expiration_date?: Date | null;
     files?: Array<{ url: string; file_name?: string | null }>;
 }
@@ -40,6 +45,11 @@ interface RequestResult {
     category_id: number | null;
     status: string;
     type: string;
+    payment_condition_id?: string | null;
+    country_id?: number | null;
+    state_id?: number | null;
+    city_id?: number | null;
+    reach_service?: string | null;
     expiration_date: Date | null;
     response_count: number;
     files: RequestFileResult[];
@@ -58,7 +68,7 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
     }
 
     protected async implementation(data: CreateRequestDto): Promise<RequestResult> {
-        (data as any).type = RFQ_TYPE[data.type as keyof typeof RFQ_TYPE] || 'Product';   
+        (data as any).type = RFQ_TYPE[data.type as keyof typeof RFQ_TYPE] || 'product';   
         const created = await this.requestRepository.create(data as any);
         return {
             id: created.id,
@@ -73,6 +83,11 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
             category_id: (created as any).category_id ?? null,
             status: created.status,
             type: (created as any).type,
+            payment_condition_id: created.payment_condition_id,
+            country_id: created.country_id,
+            state_id: created.state_id,
+            city_id: created.city_id,
+            reach_service: created.reach_service,
             expiration_date: created.expiration_date,
             response_count: created.response_count,
             files: created.files,

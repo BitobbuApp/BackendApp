@@ -15,6 +15,7 @@ interface RegisterDto {
     trade_name: string;
     country_id: number;
     state_id: number;
+    sector_id: number;
 }
 
 interface RegisterResult {

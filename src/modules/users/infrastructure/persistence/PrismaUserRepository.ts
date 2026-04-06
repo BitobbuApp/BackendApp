@@ -22,6 +22,7 @@ export class PrismaUserRepository implements UserRepository {
                 const companyCreated = await tx.company.create({
                     data: {
                         trade_name: user.trade_name,
+                        sector_id: (user as any).sector_id ?? null,
                         // founding_year is NOT set at registration — updated later via profile
                     }
                 });
@@ -50,6 +51,7 @@ export class PrismaUserRepository implements UserRepository {
             createdUser.password, 
             createdUser.salt, 
             null, 
+            null,
             null,
             null,
             null,
@@ -82,6 +84,7 @@ export class PrismaUserRepository implements UserRepository {
             null,
             null,
             null,
+            null,
             found.is_active, 
             found.last_access,
             found.created_at, 
@@ -105,6 +108,7 @@ export class PrismaUserRepository implements UserRepository {
             found.password, 
             found.salt, 
             null, 
+            null,
             null,
             null,
             null,
@@ -138,6 +142,7 @@ export class PrismaUserRepository implements UserRepository {
             updated.password, 
             updated.salt, 
             null, 
+            null,
             null,
             null,
             null,

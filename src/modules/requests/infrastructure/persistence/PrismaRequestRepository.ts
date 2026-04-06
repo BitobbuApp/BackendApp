@@ -16,6 +16,10 @@ export class PrismaRequestRepository implements RequestRepository {
             type: (request as any).type ?? 'product',
             expiration_date: request.expiration_date ?? null,
             payment_condition_id: (request as any).payment_condition_id ?? null,
+            country_id: (request as any).country_id ?? null,
+            state_id: (request as any).state_id ?? null,
+            city_id: (request as any).city_id ?? null,
+            reach_service: (request as any).reach_service ?? null,
         };
 
         if (request.files && request.files.length > 0) {
@@ -69,7 +73,7 @@ export class PrismaRequestRepository implements RequestRepository {
         const skip = (page - 1) * limit;
         const where = {
             company_id: { not: excludeCompanyId },
-            status: 'Active' as any,
+            status: 'active' as any,
         };
 
         const [total, data] = await Promise.all([
@@ -123,6 +127,10 @@ export class PrismaRequestRepository implements RequestRepository {
                         ? { disconnect: true }
                         : { connect: { id: (request as any).payment_condition_id } }
                 }),
+                ...( (request as any).country_id !== undefined && { country_id: (request as any).country_id }),
+                ...( (request as any).state_id !== undefined && { state_id: (request as any).state_id }),
+                ...( (request as any).city_id !== undefined && { city_id: (request as any).city_id }),
+                ...( (request as any).reach_service !== undefined && { reach_service: (request as any).reach_service }),
             } as any,
             include: { files: true, unit_of_measure: true, category: true }
         });
@@ -158,6 +166,10 @@ export class PrismaRequestRepository implements RequestRepository {
             db.expiration_date,
             db.response_count,
             db.payment_condition_id ?? null,
+            db.country_id ?? null,
+            db.state_id ?? null,
+            db.city_id ?? null,
+            db.reach_service ?? null,
             files,
             db.created_at,
             db.updated_at

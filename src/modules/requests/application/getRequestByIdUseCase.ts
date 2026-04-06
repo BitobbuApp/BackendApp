@@ -33,7 +33,12 @@ export class GetRequestByIdUseCase extends UseCase<string, any> {
             type: (request as any).type,
             expiration_date: request.expiration_date,
             response_count: request.response_count,
+            payment_condition_id: request.payment_condition_id,
             files: request.files,
+            country_id: request.country_id,
+            state_id: request.state_id,
+            city_id: request.city_id,
+            reach_service: request.reach_service,
             created_at: request.created_at,
             updated_at: request.updated_at,
         };

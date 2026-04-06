@@ -11,6 +11,7 @@ export interface PaginatedResult<T> {
 export interface QuoteResponseRepository {
     create(response: Partial<QuoteResponse>): Promise<QuoteResponse>;
     findById(id: string): Promise<QuoteResponse | null>;
+    findQuoteResponseAndSupplier(id: string): Promise<any | null>;
     findBySupplierId(supplierId: string, page: number, limit: number): Promise<PaginatedResult<QuoteResponse>>;
     findByRequestId(requestId: string, page: number, limit: number): Promise<PaginatedResult<any>>;
     findByRequestOwnerId(companyId: string, page: number, limit: number): Promise<PaginatedResult<any>>;

@@ -17,9 +17,11 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                         unit_price: new Prisma.Decimal(response.unit_price!),
                         quantity: new Prisma.Decimal(response.quantity!),
                         payment_conditions: response.payment_conditions ?? null,
-                        payment_condition_id: response.payment_condition_id ?? null,
+                        payment_condition_id: (response as any).payment_condition_id ?? null,
+                        delivery_method_id: (response as any).delivery_method_id ?? null,
                         delivery_time: response.delivery_time ?? null,
                         notes: response.notes ?? null,
+                        has_guarantee: response.has_guarantee ?? false,
                         status: (response.status as any) ?? 'pending',
                         rejection_reason: response.rejection_reason ?? null,
                         total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!),
@@ -108,6 +110,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 quantity: Number(item.quantity),
                 total_amount: Number(item.total_amount),
                 payment_conditions: item.payment_conditions,
+                payment_condition_id: item.payment_condition_id,
                 delivery_time: item.delivery_time,
                 notes: item.notes,
                 status: item.status,
@@ -196,12 +199,18 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             ...(response.quantity !== undefined && { quantity: new Prisma.Decimal(response.quantity) }),
             ...(response.payment_conditions !== undefined && { payment_conditions: response.payment_conditions }),
             ...(response.payment_condition_id !== undefined && {
-                payment_condition: response.payment_condition_id === null
+                payment_condition: (response as any).payment_condition_id === null
                     ? { disconnect: true }
-                    : { connect: { id: response.payment_condition_id } }
+                    : { connect: { id: (response as any).payment_condition_id } }
+            }),
+            ...((response as any).delivery_method_id !== undefined && {
+                delivery_method: (response as any).delivery_method_id === null
+                    ? { disconnect: true }
+                    : { connect: { id: (response as any).delivery_method_id } }
             }),
             ...(response.delivery_time !== undefined && { delivery_time: response.delivery_time }),
             ...(response.notes !== undefined && { notes: response.notes }),
+            ...(response.has_guarantee !== undefined && { has_guarantee: response.has_guarantee }),
             ...(response.status !== undefined && { status: response.status as any }),
             ...(response.rejection_reason !== undefined && { rejection_reason: response.rejection_reason }),
         };
@@ -233,6 +242,42 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         await prisma.quoteResponse.delete({ where: { id } });
     }
 
+    async findQuoteResponseAndSupplier(quoteResponseId: string) {
+        const found = await prisma.quoteResponse.findUnique({
+            where: { id: quoteResponseId },
+            include: {
+                supplier: {
+                    select: {
+                        id: true,
+                        trade_name: true,
+                        bio: true,
+                        logo_url: true,
+                        company_type_ref: true,
+                        sector_ref: true,
+                        average_rating: true,
+                        review_count: true,
+                        sector_id: true,
+                        locations: true,
+                    }
+                },
+                request: {
+                    select: { id: true, product_service: true }
+                }
+            }
+        });
+        if (!found) return null;
+        const entity = this.mapToEntity(found);
+        return {
+            ...entity,
+            supplier: {
+                ...found.supplier,
+                sector: (found.supplier as any).sector_ref?.name ?? null,
+                company_type: (found.supplier as any).company_type_ref?.name ?? null,
+            },
+            request: found.request
+        };
+    }
+
     private mapToEntity(db: Prisma.QuoteResponseGetPayload<{}>): QuoteResponse {
         return new QuoteResponse(
             db.id,
@@ -243,8 +288,10 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             Number(db.quantity),
             db.payment_conditions,
             (db as any).payment_condition_id ?? null,
+            (db as any).delivery_method_id ?? null,
             db.delivery_time,
             db.notes,
+            db.has_guarantee,
             db.status,
             db.rejection_reason,
             Number(db.total_amount),
