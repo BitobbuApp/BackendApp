@@ -5,6 +5,7 @@ import { UserAlreadyExistsError } from '../domain/errors/user.errors';
 import bcrypt from 'bcrypt';
 import { UseCase } from '../../../shared/application/useCase';
 import { registerUserDtoRequestSchema, registerUserDtoResponseSchema } from './dtos/register.dto';
+import { VENEZUELA_COUNTRY_ID } from '../../../shared/constants/geo.constants';
 
 interface RegisterDto {
     first_name: string;
@@ -12,9 +13,9 @@ interface RegisterDto {
     email: string;
     password: string;
     trade_name: string;
-    founding_year: number;
     country_id: number;
     state_id: number;
+    sector_id: number;
 }
 
 interface RegisterResult {
@@ -35,8 +36,14 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {
-        console.log(userDto);
         const { password, ...userData } = userDto;
+
+        // Enforce Venezuela as the platform country.
+        // If the client sends a different country_id, override it silently.
+        if (userData.country_id !== VENEZUELA_COUNTRY_ID) {
+            userData.country_id = VENEZUELA_COUNTRY_ID;
+        }
+
         if (userData.email) {
             const userExist = await this.userRepository.findByEmail(userData.email);
             if (userExist) throw new UserAlreadyExistsError(userData.email);

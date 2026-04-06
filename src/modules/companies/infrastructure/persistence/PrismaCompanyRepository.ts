@@ -2,6 +2,7 @@
 import { CompanyRepository, CompanyListResult } from "../../domain/repositories/company.repository";
 import { Company } from "../../domain/entities/company.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
+import { VENEZUELA_COUNTRY_ID } from '../../../../shared/constants/geo.constants';
 
 export class PrismaCompanyRepository implements CompanyRepository {
     async create(data: any): Promise<Company> {
@@ -9,21 +10,20 @@ export class PrismaCompanyRepository implements CompanyRepository {
             trade_name: data.trade_name,
             legal_name: data.legal_name,
             tax_id: data.tax_id,
-            founding_year: data.founding_year,
             bio: data.bio,
             logo_url: data.logo_url,
             can_buy: data.can_buy ?? false,
             can_sell: data.can_sell ?? false,
-            approximate_volume: data.approximate_volume,
+            ...(data.monthly_transactions_id ? { monthly_transactions: { connect: { id: data.monthly_transactions_id } } } : {}),
+            ...(data.company_size_id ? { company_size: { connect: { id: data.company_size_id } } } : {}),
             ...(data.sector_id ? { sector_ref: { connect: { id: data.sector_id } } } : {}),
             ...(data.company_type_id ? { company_type_ref: { connect: { id: data.company_type_id } } } : {}),
 
             // Nested writes
             locations: {
                 create: {
-                    ...(data.country_id !== undefined && data.country_id !== null
-                        ? { country: { connect: { id: data.country_id } } }
-                        : {}),
+                    // Country is always forced to Venezuela (brute force overwrite)
+                    country: { connect: { id: VENEZUELA_COUNTRY_ID } },
                     ...(data.state_id !== undefined && data.state_id !== null
                         ? { state: { connect: { id: data.state_id } } }
                         : {}),
@@ -121,11 +121,14 @@ export class PrismaCompanyRepository implements CompanyRepository {
     }
 
     async update(id: string, data: any): Promise<Company> {
+        const primaryContact = await prisma.companyContact.findFirst({
+            where: { company_id: id, is_primary: true }
+        });
+
         const updatePayload: any = {
             trade_name: data.trade_name,
             legal_name: data.legal_name,
             tax_id: data.tax_id,
-            founding_year: data.founding_year,
             bio: data.bio,
             logo_url: data.logo_url,
             ...(data.sector_id !== undefined && {
@@ -136,7 +139,17 @@ export class PrismaCompanyRepository implements CompanyRepository {
             }),
             ...(data.can_buy !== undefined && { can_buy: data.can_buy }),
             ...(data.can_sell !== undefined && { can_sell: data.can_sell }),
-            approximate_volume: data.approximate_volume,
+            ...(data.founding_year !== undefined && { founding_year: data.founding_year }),
+            ...(data.monthly_transactions_id !== undefined && {
+                monthly_transactions: data.monthly_transactions_id === null
+                    ? { disconnect: true }
+                    : { connect: { id: data.monthly_transactions_id } }
+            }),
+            ...(data.company_size_id !== undefined && {
+                company_size: data.company_size_id === null
+                    ? { disconnect: true }
+                    : { connect: { id: data.company_size_id } }
+            }),
         };
 
         // Nested updates (using upsert/updateMany for consistency)
@@ -153,17 +166,29 @@ export class PrismaCompanyRepository implements CompanyRepository {
         }
 
         if (data.contact_person || data.contact_role || data.whatsapp || data.corporate_email) {
-            updatePayload.contacts = {
-                updateMany: {
-                    where: { is_primary: true },
-                    data: {
+            if (primaryContact) {
+                updatePayload.contacts = {
+                    update: {
+                        where: { id: primaryContact.id },
+                        data: {
+                            contact_person: data.contact_person,
+                            position: data.contact_role,
+                            whatsapp: data.whatsapp,
+                            corporate_email: data.corporate_email
+                        }
+                    }
+                };
+            } else {
+                updatePayload.contacts = {
+                    create: {
+                        is_primary: true,
                         contact_person: data.contact_person,
                         position: data.contact_role,
                         whatsapp: data.whatsapp,
                         corporate_email: data.corporate_email
                     }
-                }
-            };
+                };
+            }
         }
 
         if (data.retention_agent !== undefined || data.works_with_credit !== undefined) {
@@ -278,14 +303,16 @@ export class PrismaCompanyRepository implements CompanyRepository {
             db.trade_name,
             db.legal_name,
             db.tax_id,
-            db.founding_year,
             db.bio,
             db.logo_url,
             db.sector_ref?.name_es ?? null,
             db.company_type_ref?.name_es ?? null,
             db.can_buy,
             db.can_sell,
-            db.approximate_volume,
+            db.is_founder_badge ?? false,
+            db.founding_year ?? null,
+            db.monthly_transactions_id ?? null,
+            db.company_size_id ?? null,
             Number(db.average_rating),
             db.transaction_count,
             db.review_count,

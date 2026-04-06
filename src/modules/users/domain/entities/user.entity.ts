@@ -12,6 +12,7 @@ export class User {
         public trade_name: string | null,
         public founding_year: number | null,
         public country_id: number | null,
+        public sector_id: number | null,
         public state_id: number | null,
         public is_active: boolean | null,
         public last_access: Date | null,
@@ -28,6 +29,7 @@ export class User {
         this.trade_name = trade_name;
         this.founding_year = founding_year;
         this.country_id = country_id;
+        this.sector_id = sector_id;
         this.state_id = state_id;
         this.is_active = is_active;
         this.last_access = last_access;

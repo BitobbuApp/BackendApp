@@ -16,11 +16,14 @@ export class GetCompanyByIdUseCase extends UseCase<string, any> {
         bio: Joi.string().allow(null, ''),
         logo_url: Joi.string().allow(null, ''),
         sector: Joi.string().allow(null),
+        founding_year: Joi.number().optional().allow(null, ''),
         company_type: Joi.string().allow(null),
         can_buy: Joi.boolean().required(),
         can_sell: Joi.boolean().required(),
         approximate_volume: Joi.string().allow(null),
         average_rating: Joi.number().required(),
+        monthly_transactions_id: Joi.string().optional().allow(null, ''),
+        company_size_id: Joi.string().optional().allow(null, ''),
         transaction_count: Joi.number().required(),
         review_count: Joi.number().required(),
         created_at: Joi.date().required(),
@@ -30,7 +33,7 @@ export class GetCompanyByIdUseCase extends UseCase<string, any> {
         commercial_profile: Joi.any().optional(),
         settings: Joi.any().optional(),
         payment_methods: Joi.array().items(Joi.any()).optional(),
-        categories_of_interest: Joi.array().items(Joi.any()).optional()
+        categories_of_interest: Joi.array().items(Joi.any()).optional(),
     }).options({ stripUnknown: true });
 
     private readonly companyRepository: CompanyRepository;

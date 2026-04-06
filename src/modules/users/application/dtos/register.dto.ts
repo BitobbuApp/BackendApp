@@ -13,9 +13,9 @@ export const registerUserDtoRequestSchema = Joi.object({
         }),
     // Company fields — required for registration
     trade_name: Joi.string().min(2).max(200).required(),
-    founding_year: Joi.number().integer().min(1900).max(new Date().getFullYear()).required(),
     country_id: Joi.number().integer().min(1).required(),
     state_id: Joi.number().integer().min(1).required(),
+    sector_id: Joi.number().integer().min(1).required(),
 }).options({
     stripUnknown: true
 });

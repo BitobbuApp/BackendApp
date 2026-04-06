@@ -45,6 +45,7 @@ export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceReque
                 category: r.category?.name_es ?? null,
                 status: r.status,
                 type: r.type,
+                reach_service: r.reach_service,
                 expiration_date: r.expiration_date,
                 response_count: r.response_count,
                 files: (r.files || []).map((f: any) => ({

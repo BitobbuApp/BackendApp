@@ -3,6 +3,7 @@ import { ApiResponse } from '../../../../shared/infrastructure/http/responseForm
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
 import { CreateCompanyUseCase } from '../../application/createCompanyUseCase';
 import { GetCompanyByIdUseCase } from '../../application/getCompanyByIdUseCase';
+import { GetMyCompanyByIdUseCase } from '../../application/getMyCompanyByIdUseCase';
 import { UpdateCompanyUseCase } from '../../application/updateCompanyUseCase';
 import { ListCompaniesUseCase } from '../../application/listCompaniesUseCase';
 
@@ -40,6 +41,12 @@ export async function companyRoutes(app: FastifyInstance) {
     app.get('/:id', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
         const useCase = new GetCompanyByIdUseCase();
         const result = await useCase.execute(request.params.id);
+        return ApiResponse.success(reply, result, "Company found");
+    });
+
+    app.get('/me', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+        const useCase = new GetMyCompanyByIdUseCase();
+        const result = await useCase.execute(request?.user?.companyId);
         return ApiResponse.success(reply, result, "Company found");
     });
 
