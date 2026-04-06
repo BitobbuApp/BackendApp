@@ -7,6 +7,9 @@ import { ListNotificationTypesUseCase } from "../../notificationTypes/applicatio
 import { ListPaymentMethodsUseCase } from "../../paymentMethods/application/listPaymentMethodsUseCase";
 import { ListUnitsOfMeasureUseCase } from "../../unitsOfMeasure/application/listUnitsOfMeasureUseCase";
 import { ListVerifDocTypesUseCase } from "../../verifDocTypes/application/listVerifDocTypesUseCase";
+import { ListPaymentConditionsUseCase } from "../../paymentConditions/application/listPaymentConditionsUseCase";
+import { ListEstimatedMonthlyTransactionsUseCase } from "../../estimatedMonthlyTransactions/application/listEstimatedMonthlyTransactionsUseCase";
+import { ListCompanySizesUseCase } from "../../companySizes/application/listCompanySizesUseCase";
 
 interface ListAppMetaDataOutput {
     categories: any[];
@@ -15,6 +18,9 @@ interface ListAppMetaDataOutput {
     payment_methods: any[];
     units_of_measure: any[];
     verif_doc_types: any[];
+    payment_conditions: any[];
+    estimated_monthly_transactions: any[];
+    company_sizes: any[];
 }
 
 export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListAppMetaDataOutput> {
@@ -26,6 +32,9 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
     private readonly listPaymentMethodsUseCase: ListPaymentMethodsUseCase;
     private readonly listUnitsOfMeasureUseCase: ListUnitsOfMeasureUseCase;
     private readonly listVerifDocTypesUseCase: ListVerifDocTypesUseCase;
+    private readonly listPaymentConditionsUseCase: ListPaymentConditionsUseCase;
+    private readonly listEstimatedMonthlyTransactionsUseCase: ListEstimatedMonthlyTransactionsUseCase;
+    private readonly listCompanySizesUseCase: ListCompanySizesUseCase;
 
     constructor() {
         super();
@@ -35,6 +44,9 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
         this.listPaymentMethodsUseCase = new ListPaymentMethodsUseCase();
         this.listUnitsOfMeasureUseCase = new ListUnitsOfMeasureUseCase();
         this.listVerifDocTypesUseCase = new ListVerifDocTypesUseCase();
+        this.listPaymentConditionsUseCase = new ListPaymentConditionsUseCase();
+        this.listEstimatedMonthlyTransactionsUseCase = new ListEstimatedMonthlyTransactionsUseCase();
+        this.listCompanySizesUseCase = new ListCompanySizesUseCase();
     }
 
     protected async implementation(): Promise<ListAppMetaDataOutput> {
@@ -45,6 +57,9 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
             paymentMethods,
             unitsOfMeasure,
             verifDocTypes,
+            paymentConditions,
+            estimatedMonthlyTransactions,
+            companySizes,
         ] = await Promise.all([
             this.listCategoriesUseCase.execute({}),
             this.listCompanyTypesUseCase.execute({}),
@@ -52,6 +67,9 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
             this.listPaymentMethodsUseCase.execute({}),
             this.listUnitsOfMeasureUseCase.execute({}),
             this.listVerifDocTypesUseCase.execute({}),
+            this.listPaymentConditionsUseCase.execute({}),
+            this.listEstimatedMonthlyTransactionsUseCase.execute({}),
+            this.listCompanySizesUseCase.execute({}),
         ]);
 
         return {
@@ -61,6 +79,9 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
             payment_methods: paymentMethods,
             units_of_measure: unitsOfMeasure,
             verif_doc_types: verifDocTypes,
+            payment_conditions: paymentConditions,
+            estimated_monthly_transactions: estimatedMonthlyTransactions,
+            company_sizes: companySizes,
         };
     }
 }

@@ -3,6 +3,7 @@ import { ApiResponse } from '../../../../shared/infrastructure/http/responseForm
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
 import { CreateQuoteResponseUseCase } from '../../application/createQuoteResponseUseCase';
 import { GetQuoteResponseByIdUseCase } from '../../application/getQuoteResponseByIdUseCase';
+import { GetQuoteResponseWithSupplierUseCase } from '../../application/getQuoteResponseWithSupplierUseCase';
 import { ListQuoteResponsesByCompanyUseCase } from '../../application/listQuoteResponsesByCompanyUseCase';
 import { ListReceivedQuoteResponsesUseCase } from '../../application/listReceivedQuoteResponsesUseCase';
 import { ListQuoteResponsesByRequestIdUseCase } from '../../application/listQuoteResponsesByRequestIdUseCase';
@@ -61,6 +62,16 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
             const useCase = new GetQuoteResponseByIdUseCase();
             const result = await useCase.execute(request.params.id);
             return ApiResponse.success(reply, result, "Quote response found");
+        }
+    );
+
+    // GET /quote-responses/:id/with-supplier (JWT protected)
+    app.get('/:id/with-supplier',
+        { preHandler: [authMiddleware] } as any,
+        async (request: any, reply: any) => {
+            const useCase = new GetQuoteResponseWithSupplierUseCase();
+            const result = await useCase.execute(request.params.id);
+            return ApiResponse.success(reply, result, "Quote response and supplier found");
         }
     );
 

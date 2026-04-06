@@ -11,9 +11,11 @@ interface CreateQuoteResponseDto {
     company_offer_id?: string | null;
     unit_price: number;
     quantity: number;
-    payment_conditions?: string | null;
+    payment_condition_id?: string | null;
+    delivery_method_id?: string | null;
     delivery_time?: string | null;
     notes?: string | null;
+    has_guarantee?: boolean;
     status?: string;
 }
 
@@ -31,6 +33,23 @@ export class CreateQuoteResponseUseCase extends UseCase<CreateQuoteResponseDto, 
 
     protected async implementation(data: CreateQuoteResponseDto): Promise<any> {
         const created = await this.quoteResponseRepository.create(data);
-        return created;
+        return {
+            id: created.id,
+            request_id: created.request_id,
+            supplier_id: created.supplier_id,
+            company_offer_id: created.company_offer_id,
+            unit_price: Number(created.unit_price),
+            quantity: created.quantity,
+            payment_conditions: created.payment_conditions,
+            delivery_time: created.delivery_time,
+            notes: created.notes,
+            has_guarantee: created.has_guarantee,
+            status: created.status,
+            rejection_reason: created.rejection_reason,
+            total_amount: Number(created.total_amount),
+            payment_condition_id: created.payment_condition_id,
+            delivery_method_id: created.delivery_method_id,
+            created_at: created.created_at,
+        };
     }
 }

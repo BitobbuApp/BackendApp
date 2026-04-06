@@ -11,9 +11,14 @@ export const createRequestDtoRequestSchema = Joi.object({
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
     status: Joi.string().valid(
-        'Active', 'Paused', 'Expired', 'Completed', 'Expiring_Soon', 'Closed'
-    ).default('Active'),
+        'active', 'paused', 'expired', 'completed', 'expiring_soon', 'closed'
+    ).default('active'),
     type: Joi.number().integer().valid(1, 2).required(),
+    payment_condition_id: Joi.string().uuid().allow(null, '').optional(),
+    country_id: Joi.number().integer().min(1).allow(null).optional(),
+    state_id: Joi.number().integer().min(1).allow(null).optional(),
+    city_id: Joi.number().integer().min(1).allow(null).optional(),
+    reach_service: Joi.string().max(200).allow(null, '').optional(),
     expiration_date: Joi.date().iso().allow(null).optional(),
     files: Joi.array().items(
         Joi.object({
@@ -32,8 +37,14 @@ export const updateRequestDtoRequestSchema = Joi.object({
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
     status: Joi.string().valid(
-        'Active', 'Paused', 'Expired', 'Completed', 'Expiring_Soon', 'Closed'
+        'active', 'paused', 'expired', 'completed', 'expiring_soon', 'closed'
     ).optional(),
+    type: Joi.number().integer().valid(1, 2).optional(),
+    payment_condition_id: Joi.string().uuid().allow(null, '').optional(),
+    country_id: Joi.number().integer().min(1).allow(null).optional(),
+    state_id: Joi.number().integer().min(1).allow(null).optional(),
+    city_id: Joi.number().integer().min(1).allow(null).optional(),
+    reach_service: Joi.string().max(200).allow(null, '').optional(),
     expiration_date: Joi.date().iso().allow(null).optional(),
 });
 
@@ -57,7 +68,12 @@ export const requestDtoResponseSchema = Joi.object({
     category: Joi.string().allow(null).optional(),
     category_id: Joi.number().integer().allow(null).optional(),
     status: Joi.string().required(),
-    type: Joi.string().valid('Product', 'Service').required(),
+    type: Joi.string().valid('product', 'service').required(),
+    payment_condition_id: Joi.string().uuid().allow(null).optional(),
+    country_id: Joi.number().integer().min(1).allow(null).optional(),
+    state_id: Joi.number().integer().min(1).allow(null).optional(),
+    city_id: Joi.number().integer().min(1).allow(null).optional(),
+    reach_service: Joi.string().max(200).allow(null, '').optional(),
     expiration_date: Joi.date().iso().allow(null).optional(),
     response_count: Joi.number().required(),
     files: Joi.array().items(
@@ -94,6 +110,12 @@ export const marketplaceRequestDtoResponseSchema = Joi.object({
     category: Joi.string().allow(null).optional(),
     category_id: Joi.number().integer().allow(null).optional(),
     status: Joi.string().required(),
+    type: Joi.string().valid('product', 'service').required(),
+    payment_condition_id: Joi.string().uuid().allow(null).optional(),
+    country_id: Joi.number().integer().min(1).allow(null).optional(),
+    state_id: Joi.number().integer().min(1).allow(null).optional(),
+    city_id: Joi.number().integer().min(1).allow(null).optional(),
+    reach_service: Joi.string().max(200).allow(null, '').optional(),
     expiration_date: Joi.date().iso().allow(null).optional(),
     response_count: Joi.number().required(),
     files: Joi.array().items(

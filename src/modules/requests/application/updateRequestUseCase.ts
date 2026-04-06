@@ -15,6 +15,9 @@ interface UpdateRequestDto {
     category_id?: number | null;
     status?: string;
     expiration_date?: Date | null;
+    payment_condition_id?: string | null;
+    country_id?: number | null;
+    state_id?: number | null;
 }
 
 export class UpdateRequestUseCase extends UseCase<UpdateRequestDto, any> {
@@ -47,6 +50,9 @@ export class UpdateRequestUseCase extends UseCase<UpdateRequestDto, any> {
             category_id: (updated as any).category_id ?? null,
             status: updated.status,
             type: (updated as any).type,
+            payment_condition_id: updated.payment_condition_id,
+            country_id: updated.country_id,
+            state_id: updated.state_id,
             expiration_date: updated.expiration_date,
             response_count: updated.response_count,
             files: updated.files,

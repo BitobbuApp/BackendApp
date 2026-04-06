@@ -1,6 +1,6 @@
 export enum RequestType {
-    PRODUCT = 'Product',
-    SERVICE = 'Service',
+    PRODUCT = 'product',
+    SERVICE = 'service',
 }
 
 export enum RequestTypeInt {

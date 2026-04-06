@@ -10,14 +10,15 @@ interface UpdateCompanyInput {
     trade_name?: string;
     legal_name?: string;
     tax_id?: string;
-    founding_year?: number;
     bio?: string;
     logo_url?: string;
     sector_id?: number | null;
     company_type_id?: number | null;
     can_buy?: boolean;
     can_sell?: boolean;
-    approximate_volume?: any;
+    founding_year?: number | null;
+    monthly_transactions_id?: string | null;
+    company_size_id?: string | null;
 
     country_id?: number | null;
     state_id?: number | null;

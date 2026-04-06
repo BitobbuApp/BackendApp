@@ -7,10 +7,12 @@ export const createQuoteResponseDtoRequestSchema = Joi.object({
     company_offer_id: Joi.string().uuid().allow(null).optional(),
     unit_price: Joi.number().precision(2).min(0).required(),
     quantity: Joi.number().precision(2).min(0).required(),
-    payment_conditions: Joi.string().max(200).allow(null, '').optional(),
+    payment_condition_id: Joi.string().uuid().allow(null, '').optional(),
+    delivery_method_id: Joi.string().uuid().allow(null, '').optional(),
     delivery_time: Joi.string().max(100).allow(null, '').optional(),
     notes: Joi.string().allow(null, '').optional(),
-    status: Joi.string().valid(...Object.values(ResponseStatus)).default(ResponseStatus.Pending)
+    has_guarantee: Joi.boolean().default(false).optional(),
+    status: Joi.string().valid('pending', 'accepted', 'rejected', 'negotiating', 'expired').default('pending')
 });
 
 export const updateQuoteResponseDtoRequestSchema = Joi.object({
@@ -18,10 +20,12 @@ export const updateQuoteResponseDtoRequestSchema = Joi.object({
     company_offer_id: Joi.string().uuid().allow(null).optional(),
     unit_price: Joi.number().precision(2).min(0).optional(),
     quantity: Joi.number().precision(2).min(0).optional(),
-    payment_conditions: Joi.string().max(200).allow(null, '').optional(),
+    payment_condition_id: Joi.string().uuid().allow(null, '').optional(),
+    delivery_method_id: Joi.string().uuid().allow(null, '').optional(),
     delivery_time: Joi.string().max(100).allow(null, '').optional(),
     notes: Joi.string().allow(null, '').optional(),
-    status: Joi.string().valid(...Object.values(ResponseStatus)).optional(),
+    has_guarantee: Joi.boolean().optional(),
+    status: Joi.string().valid('pending', 'accepted', 'rejected', 'negotiating', 'expired').optional(),
     rejection_reason: Joi.string().allow(null, '').optional()
 });
 
@@ -39,9 +43,11 @@ export const quoteResponseDtoResponseSchema = Joi.object({
     company_offer_id: Joi.string().allow(null).optional(),
     unit_price: Joi.number().required(),
     quantity: Joi.number().required(),
-    payment_conditions: Joi.string().allow(null).optional(),
+    payment_condition_id: Joi.string().uuid().allow(null).optional(),
+    delivery_method_id: Joi.string().uuid().allow(null).optional(),
     delivery_time: Joi.string().allow(null).optional(),
     notes: Joi.string().allow(null).optional(),
+    has_guarantee: Joi.boolean().required(),
     status: Joi.string().required(),
     rejection_reason: Joi.string().allow(null).optional(),
     total_amount: Joi.number().required(),
@@ -61,10 +67,16 @@ export const paginatedQuoteResponsesDtoResponseSchema = Joi.object({
 const supplierSummarySchema = Joi.object({
     id: Joi.string().required(),
     trade_name: Joi.string().allow(null, '').optional(),
+    bio: Joi.string().allow(null, '').optional(),
     logo_url: Joi.string().allow(null, '').optional(),
     company_type: Joi.string().allow(null, '').optional(),
+    company_type_ref: Joi.any().optional(),
     sector: Joi.string().allow(null, '').optional(),
+    sector_ref: Joi.any().optional(),
+    sector_id: Joi.number().allow(null).optional(),
     average_rating: Joi.any().optional(),
+    review_count: Joi.number().allow(null).optional(),
+    locations: Joi.array().items(Joi.any()).optional(),
 }).options({ stripUnknown: true });
 
 const requestSummarySchema = Joi.object({
@@ -80,9 +92,11 @@ export const receivedQuoteResponseDtoResponseSchema = Joi.object({
     unit_price: Joi.number().required(),
     quantity: Joi.number().required(),
     total_amount: Joi.number().required(),
-    payment_conditions: Joi.string().allow(null).optional(),
+    payment_condition_id: Joi.string().uuid().allow(null).optional(),
+    delivery_method_id: Joi.string().uuid().allow(null).optional(),
     delivery_time: Joi.string().allow(null).optional(),
     notes: Joi.string().allow(null).optional(),
+    has_guarantee: Joi.boolean().required(),
     status: Joi.string().required(),
     created_at: Joi.date().allow(null).optional(),
     updated_at: Joi.date().allow(null).optional(),
