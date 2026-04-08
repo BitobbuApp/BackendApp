@@ -10,6 +10,7 @@ export const createCompanyDtoRequestSchema = Joi.object({
     company_type_id: Joi.number().integer().min(1).allow(null).optional(),
     can_buy: Joi.boolean().default(false),
     can_sell: Joi.boolean().default(false),
+    founding_year: Joi.number().integer().min(1800).max(new Date().getFullYear()).allow(null).optional(),
     monthly_transactions_id: Joi.string().uuid().allow(null, '').optional(),
     company_size_id: Joi.string().uuid().allow(null, '').optional(),
 
@@ -110,6 +111,7 @@ const companyWithRelationsSchema = Joi.object({
     average_rating: Joi.number().allow(null),
     transaction_count: Joi.number(),
     review_count: Joi.number(),
+    product_count: Joi.number().min(0).optional(),
     locations: Joi.array().items(Joi.object({
         id: Joi.string().required(),
         country_id: Joi.number().integer().allow(null),
@@ -122,16 +124,16 @@ const companyWithRelationsSchema = Joi.object({
             id: Joi.number().integer().required(),
             name: Joi.string().required(),
             iso_code: Joi.string().required(),
-        }).optional(),
+        }).allow(null).optional(),
         state: Joi.object({
             id: Joi.number().integer().required(),
             name: Joi.string().required(),
             code: Joi.string().allow(null, ''),
-        }).optional(),
+        }).allow(null).optional(),
         city: Joi.object({
             id: Joi.number().integer().required(),
             name: Joi.string().required(),
-        }).optional(),
+        }).allow(null).optional(),
     })).optional(),
     contacts: Joi.array().items(Joi.object({
         id: Joi.string().required(),

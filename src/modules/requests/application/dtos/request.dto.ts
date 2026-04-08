@@ -85,6 +85,17 @@ export const requestDtoResponseSchema = Joi.object({
             created_at: Joi.date().iso().allow(null).optional(),
         })
     ).optional(),
+    company: Joi.object({
+        id: Joi.string().required(),
+        trade_name: Joi.string().required(),
+        logo_url: Joi.string().allow(null).optional(),
+        average_rating: Joi.number().allow(null).optional(),
+        bio: Joi.string().allow(null).optional(),
+        sector: Joi.string().allow(null).optional(),
+        company_type: Joi.string().allow(null).optional(),
+        review_count: Joi.number().optional(),
+        locations: Joi.array().items(Joi.any()).optional(),
+    }).allow(null).optional(),
     created_at: Joi.date().iso().allow(null).optional(),
     updated_at: Joi.date().iso().allow(null).optional(),
 }).options({ stripUnknown: true });
@@ -133,6 +144,10 @@ export const marketplaceRequestDtoResponseSchema = Joi.object({
         logo_url: Joi.string().allow(null).optional(),
         sector: Joi.string().allow(null).optional(),
         average_rating: Joi.number().allow(null).optional(),
+        bio: Joi.string().allow(null).optional(),
+        company_type: Joi.string().allow(null).optional(),
+        review_count: Joi.number().optional(),
+        locations: Joi.array().items(Joi.any()).optional(),
     }).allow(null).optional(),
     created_at: Joi.date().iso().allow(null).optional(),
     updated_at: Joi.date().iso().allow(null).optional(),

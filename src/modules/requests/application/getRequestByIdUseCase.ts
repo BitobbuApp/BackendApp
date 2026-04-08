@@ -39,6 +39,17 @@ export class GetRequestByIdUseCase extends UseCase<string, any> {
             state_id: request.state_id,
             city_id: request.city_id,
             reach_service: request.reach_service,
+            company: request.company ? {
+                id: request.company.id,
+                trade_name: request.company.trade_name,
+                logo_url: request.company.logo_url,
+                average_rating: request.company.average_rating,
+                bio: request.company.bio,
+                sector: request.company.sector,
+                company_type: request.company.company_type,
+                review_count: request.company.review_count,
+                locations: request.company.locations,
+            } : null,
             created_at: request.created_at,
             updated_at: request.updated_at,
         };

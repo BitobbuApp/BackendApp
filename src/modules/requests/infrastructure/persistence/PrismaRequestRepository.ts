@@ -41,7 +41,24 @@ export class PrismaRequestRepository implements RequestRepository {
     async findById(id: string): Promise<RequestEntity | null> {
         const found = await prisma.request.findUnique({
             where: { id },
-            include: { files: true, unit_of_measure: true, category: true }
+            include: {
+                files: true,
+                unit_of_measure: true,
+                category: true,
+                company: {
+                    select: {
+                        id: true,
+                        trade_name: true,
+                        logo_url: true,
+                        average_rating: true,
+                        review_count: true,
+                        bio: true,
+                        sector_ref: true,
+                        company_type_ref: true,
+                        locations: true
+                    }
+                }
+            }
         });
         if (!found) return null;
         return this.mapToEntity(found);
@@ -94,6 +111,10 @@ export class PrismaRequestRepository implements RequestRepository {
                             logo_url: true,
                             sector_ref: true,
                             average_rating: true,
+                            review_count: true,
+                            bio: true,
+                            company_type_ref: true,
+                            locations: true,
                         }
                     }
                 }
@@ -170,6 +191,19 @@ export class PrismaRequestRepository implements RequestRepository {
             db.state_id ?? null,
             db.city_id ?? null,
             db.reach_service ?? null,
+            db.company ? {
+                id: db.company.id,
+                trade_name: db.company.trade_name,
+                logo_url: db.company.logo_url ?? null,
+                average_rating: db.company.average_rating != null
+                    ? Number(db.company.average_rating)
+                    : null,
+                bio: db.company.bio ?? null,
+                sector: db.company.sector_ref?.name_es ?? null,
+                company_type: db.company.company_type_ref?.name_es ?? null,
+                review_count: db.company.review_count ?? 0,
+                locations: db.company.locations ?? [],
+            } : null,
             files,
             db.created_at,
             db.updated_at

@@ -25,6 +25,7 @@ import { SubmitVerificationDocumentUseCase } from '../../application/submitVerif
 
 import { GetSettingsUseCase } from '../../application/getSettingsUseCase';
 import { UpdateSettingsUseCase } from '../../application/updateSettingsUseCase';
+import { GetCompanyReviewsUseCase } from '../../application/getCompanyReviewsUseCase';
 
 export async function companyRoutes(app: FastifyInstance) {
 
@@ -169,5 +170,16 @@ export async function companyRoutes(app: FastifyInstance) {
         const useCase = new UpdateSettingsUseCase();
         const result = await useCase.execute({ ...request.body as any, company_id: request.params.companyId });
         return ApiResponse.success(reply, result, "Settings updated");
+    });
+
+    // ==========================================
+    // REVIEWS
+    // ==========================================
+
+    app.get('/:id/reviews', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { id: string }, Querystring: { limit?: string } }>, reply: FastifyReply) => {
+        const useCase = new GetCompanyReviewsUseCase();
+        const limit = request.query.limit ? parseInt(request.query.limit, 10) : 10;
+        const result = await useCase.execute({ id: request.params.id, limit });
+        return ApiResponse.success(reply, result, "Company reviews found");
     });
 }

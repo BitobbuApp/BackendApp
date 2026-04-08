@@ -6,6 +6,18 @@ export interface RequestFileEntity {
     created_at: Date | null;
 }
 
+export interface RequestCompanyEntity {
+    id: string;
+    trade_name: string;
+    logo_url: string | null;
+    average_rating: number | null;
+    bio: string | null;
+    sector: string | null;
+    company_type: string | null;
+    review_count: number;
+    locations: any[];
+}
+
 export class RequestEntity {
     constructor(
         public id: string,
@@ -27,6 +39,7 @@ export class RequestEntity {
         public state_id: number | null = null,
         public city_id: number | null = null,
         public reach_service: string | null = null,
+        public company: RequestCompanyEntity | null = null,
         public files: RequestFileEntity[] = [],
         public created_at: Date | null = null,
         public updated_at: Date | null = null
