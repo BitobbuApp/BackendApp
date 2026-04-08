@@ -19,6 +19,7 @@ export class Company {
         public average_rating: number = 0,
         public transaction_count: number = 0,
         public review_count: number = 0,
+        public product_count: number = 0,
         public created_at: Date | null = null,
         public updated_at: Date | null = null,
         // Relations

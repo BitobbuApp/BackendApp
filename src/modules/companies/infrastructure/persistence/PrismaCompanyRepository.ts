@@ -86,7 +86,12 @@ export class PrismaCompanyRepository implements CompanyRepository {
             where: { id },
             relationLoadStrategy: 'join',
             include: {
-                locations: true,
+                locations: {
+                    include: {
+                        state: true,
+                        city: true,
+                    }
+                },
                 contacts: true,
                 commercial_profile: true,
                 settings: true,
@@ -106,7 +111,12 @@ export class PrismaCompanyRepository implements CompanyRepository {
             where: { tax_id: taxId },
             relationLoadStrategy: 'join',
             include: {
-                locations: true,
+                locations: {
+                    include: {
+                        state: true,
+                        city: true,
+                    }
+                },
                 contacts: true,
                 commercial_profile: true,
                 settings: true,
@@ -266,7 +276,12 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 take: limit,
                 orderBy: { created_at: 'desc' },
                 include: {
-                    locations: true,
+                    locations: {
+                        include: {
+                            state: true,
+                            city: true,
+                        }
+                    },
                     contacts: true,
                     commercial_profile: true,
                     settings: true,
@@ -274,6 +289,9 @@ export class PrismaCompanyRepository implements CompanyRepository {
                     categories_of_interest: { include: { category: true } },
                     sector_ref: true,
                     company_type_ref: true,
+                    _count: {
+                        select: { offers: true }
+                    }
                 }
             })
         ]);
@@ -316,6 +334,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
             Number(db.average_rating),
             db.transaction_count,
             db.review_count,
+            db._count?.offers || 0,
             db.created_at,
             db.updated_at,
             db.locations,
@@ -325,5 +344,22 @@ export class PrismaCompanyRepository implements CompanyRepository {
             paymentMethods,
             categoriesOfInterest
         );
+    }
+
+    async getReviews(id: string, limit: number): Promise<any[]> {
+        const reviews = await prisma.review.findMany({
+            where: { evaluated_company_id: id },
+            take: limit,
+            orderBy: { created_at: 'desc' },
+            include: {
+                author: {
+                    select: {
+                        trade_name: true,
+                        logo_url: true
+                    }
+                }
+            }
+        });
+        return reviews;
     }
 }

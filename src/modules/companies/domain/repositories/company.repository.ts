@@ -15,4 +15,5 @@ export interface CompanyRepository {
     findByTaxId(taxId: string): Promise<Company | null>;
     update(id: string, company: Partial<Company>): Promise<Company>;
     list(filters?: any, page?: number, limit?: number): Promise<CompanyListResult>;
+    getReviews(id: string, limit: number): Promise<any[]>;
 }
