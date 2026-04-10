@@ -178,7 +178,7 @@ export class PrismaRequestRepository implements RequestRepository {
             Number(db.quantity),
             db.user_id,
             db.unit_id,
-            db.unit_of_measure?.name ?? '',
+            db.unit_of_measure?.name_es ?? db.unit_of_measure?.name_en ?? db.unit_of_measure?.abbreviation ?? 'Units',
             db.description,
             db.category_id,
             db.category?.name_es ?? null,

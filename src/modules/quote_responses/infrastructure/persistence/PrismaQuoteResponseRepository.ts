@@ -14,7 +14,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                         request_id: response.request_id!,
                         supplier_id: response.supplier_id!,
                         company_offer_id: response.company_offer_id ?? null,
-                        unit_price: new Prisma.Decimal(response.unit_price!),
+                        unit_price_usd: new Prisma.Decimal(response.unit_price_usd!),
                         quantity: new Prisma.Decimal(response.quantity!),
                         payment_conditions: response.payment_conditions ?? null,
                         payment_condition_id: (response as any).payment_condition_id ?? null,
@@ -24,7 +24,9 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                         has_guarantee: response.has_guarantee ?? false,
                         status: (response.status as any) ?? 'pending',
                         rejection_reason: response.rejection_reason ?? null,
-                        total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!),
+                        total_amount_usd: new Prisma.Decimal(response.unit_price_usd! * response.quantity!),
+                        payment_currency: (response as any).payment_currency ?? 'USD',
+                        exchange_rate_id: (response as any).exchange_rate_id ?? null,
                     }
                 });
 
@@ -106,9 +108,9 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 id: item.id,
                 request_id: item.request_id,
                 supplier_id: item.supplier_id,
-                unit_price: Number(item.unit_price),
+                unit_price_usd: Number(item.unit_price_usd),
                 quantity: Number(item.quantity),
-                total_amount: Number(item.total_amount),
+                total_amount_usd: Number(item.total_amount_usd),
                 payment_conditions: item.payment_conditions,
                 payment_condition_id: item.payment_condition_id,
                 delivery_time: item.delivery_time,
@@ -168,9 +170,9 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 id: item.id,
                 request_id: item.request_id,
                 supplier_id: item.supplier_id,
-                unit_price: Number(item.unit_price),
+                unit_price_usd: Number(item.unit_price_usd),
                 quantity: Number(item.quantity),
-                total_amount: Number(item.total_amount),
+                total_amount_usd: Number(item.total_amount_usd),
                 payment_conditions: item.payment_conditions,
                 delivery_time: item.delivery_time,
                 notes: item.notes,
@@ -195,7 +197,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     async update(id: string, response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         const dataToUpdate: any = {
             ...(response.company_offer_id !== undefined && { company_offer_id: response.company_offer_id }),
-            ...(response.unit_price !== undefined && { unit_price: new Prisma.Decimal(response.unit_price) }),
+            ...(response.unit_price_usd !== undefined && { unit_price_usd: new Prisma.Decimal(response.unit_price_usd) }),
             ...(response.quantity !== undefined && { quantity: new Prisma.Decimal(response.quantity) }),
             ...(response.payment_conditions !== undefined && { payment_conditions: response.payment_conditions }),
             ...(response.payment_condition_id !== undefined && {
@@ -213,15 +215,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             ...(response.has_guarantee !== undefined && { has_guarantee: response.has_guarantee }),
             ...(response.status !== undefined && { status: response.status as any }),
             ...(response.rejection_reason !== undefined && { rejection_reason: response.rejection_reason }),
+            ...((response as any).exchange_rate_id !== undefined && { exchange_rate_id: (response as any).exchange_rate_id }),
+            ...((response as any).payment_currency !== undefined && { payment_currency: (response as any).payment_currency }),
         };
 
-        if (response.unit_price !== undefined || response.quantity !== undefined) {
+        if (response.unit_price_usd !== undefined || response.quantity !== undefined) {
              return prisma.$transaction(async (tx) => {
-                 const existing = await tx.quoteResponse.findUnique({ where: { id }, select: { unit_price: true, quantity: true } });
+                 const existing = await tx.quoteResponse.findUnique({ where: { id }, select: { unit_price_usd: true, quantity: true } });
                  if (existing) {
-                     const newUnitPrice = response.unit_price !== undefined ? new Prisma.Decimal(response.unit_price) : existing.unit_price;
+                     const newUnitPrice = response.unit_price_usd !== undefined ? new Prisma.Decimal(response.unit_price_usd) : existing.unit_price_usd;
                      const newQuantity = response.quantity !== undefined ? new Prisma.Decimal(response.quantity) : existing.quantity;
-                     dataToUpdate.total_amount = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
+                     dataToUpdate.total_amount_usd = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
                  }
                  const updated = await tx.quoteResponse.update({
                      where: { id },
@@ -284,7 +288,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             db.request_id,
             db.supplier_id,
             db.company_offer_id,
-            Number(db.unit_price),
+            Number(db.unit_price_usd),
             Number(db.quantity),
             db.payment_conditions,
             (db as any).payment_condition_id ?? null,
@@ -294,7 +298,9 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             db.has_guarantee,
             db.status,
             db.rejection_reason,
-            Number(db.total_amount),
+            Number(db.total_amount_usd),
+            (db as any).exchange_rate_id ?? null,
+            (db as any).payment_currency ?? 'USD',
             db.created_at,
             db.updated_at
         );

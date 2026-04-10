@@ -16,6 +16,8 @@ interface RegisterDto {
     country_id: number;
     state_id: number;
     sector_id: number;
+    can_buy?: boolean;
+    can_sell?: boolean;
 }
 
 interface RegisterResult {

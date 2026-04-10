@@ -10,9 +10,9 @@ interface CreateTransactionDto {
     buyer_id: string;
     supplier_id: string;
     product_description: string;
-    unit_price: number;
+    unit_price_usd: number;
     quantity: number;
-    total_amount: number;
+    total_amount_usd: number;
     payment_method_id?: number | null;
     payment_conditions?: string;
     delivery_time?: string;

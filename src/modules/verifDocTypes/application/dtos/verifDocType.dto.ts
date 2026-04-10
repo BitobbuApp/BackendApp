@@ -2,7 +2,8 @@ import Joi from "joi";
 
 const verifDocTypeDtoSchema = Joi.object({
     id: Joi.number().integer().required(),
-    name: Joi.string().required(),
+    name_en: Joi.string().required(),
+    name_es: Joi.string().allow(null, "").optional(),
     instructions: Joi.string().allow(null, "").optional(),
 }).options({ stripUnknown: true });
 

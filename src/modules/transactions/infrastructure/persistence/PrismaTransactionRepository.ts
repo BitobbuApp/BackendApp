@@ -10,9 +10,9 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 buyer_id: transaction.buyer_id!,
                 supplier_id: transaction.supplier_id!,
                 product_description: transaction.product_description!,
-                unit_price: transaction.unit_price!,
+                unit_price_usd: transaction.unit_price_usd!,
                 quantity: transaction.quantity!,
-                total_amount: transaction.total_amount!,
+                total_amount_usd: transaction.total_amount_usd!,
                 ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
                 payment_conditions: transaction.payment_conditions ?? null,
                 payment_condition_id: transaction.payment_condition_id ?? null,
@@ -25,6 +25,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 supplier_confirmed: transaction.supplier_confirmed ?? false,
                 buyer_confirmed_at: transaction.buyer_confirmed_at ?? null,
                 supplier_confirmed_at: transaction.supplier_confirmed_at ?? null,
+                ...(transaction.exchange_rate_id !== undefined && { exchange_rate_id: transaction.exchange_rate_id }),
+                ...(transaction.payment_currency !== undefined && { payment_currency: transaction.payment_currency }),
             } as any
         });
         return this.mapToEntity(created);
@@ -76,9 +78,9 @@ export class PrismaTransactionRepository implements TransactionRepository {
             where: { id },
             data: {
                 ...(transaction.product_description !== undefined && { product_description: transaction.product_description }),
-                ...(transaction.unit_price !== undefined && { unit_price: transaction.unit_price }),
+                ...(transaction.unit_price_usd !== undefined && { unit_price_usd: transaction.unit_price_usd }),
                 ...(transaction.quantity !== undefined && { quantity: transaction.quantity }),
-                ...(transaction.total_amount !== undefined && { total_amount: transaction.total_amount }),
+                ...(transaction.total_amount_usd !== undefined && { total_amount_usd: transaction.total_amount_usd }),
                 ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
                 ...(transaction.payment_conditions !== undefined && { payment_conditions: transaction.payment_conditions }),
                 ...(transaction.payment_condition_id !== undefined && {
@@ -95,6 +97,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 ...(transaction.supplier_confirmed !== undefined && { supplier_confirmed: transaction.supplier_confirmed }),
                 ...(transaction.buyer_confirmed_at !== undefined && { buyer_confirmed_at: transaction.buyer_confirmed_at }),
                 ...(transaction.supplier_confirmed_at !== undefined && { supplier_confirmed_at: transaction.supplier_confirmed_at }),
+                ...(transaction.exchange_rate_id !== undefined && { exchange_rate_id: transaction.exchange_rate_id }),
+                ...(transaction.payment_currency !== undefined && { payment_currency: transaction.payment_currency }),
             } as any,
             include: { payment_method: true }
         });
@@ -112,9 +116,9 @@ export class PrismaTransactionRepository implements TransactionRepository {
             db.buyer_id,
             db.supplier_id,
             db.product_description,
-            Number(db.unit_price),
+            Number(db.unit_price_usd),
             Number(db.quantity),
-            Number(db.total_amount),
+            Number(db.total_amount_usd),
             db.payment_method_id,
             db.payment_method?.name_es ?? null,
             db.payment_conditions,
@@ -128,6 +132,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
             db.supplier_confirmed,
             db.buyer_confirmed_at,
             db.supplier_confirmed_at,
+            db.exchange_rate_id ?? null,
+            db.payment_currency ?? 'USD',
             db.created_at,
             db.updated_at
         );

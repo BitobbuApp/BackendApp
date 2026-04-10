@@ -20,7 +20,7 @@ export class CompanyOffer {
         public category: string | null = null,
         public supplier_type_id: number | null = null,
         public supplier_type: string | null = null,
-        public base_price: number | null = null,
+        public base_price_usd: number | null = null,
         public unit_id: number | null = null,
         public unit_of_measure: string | null = 'Units',
         public moq: number | null = 1,

@@ -4,8 +4,14 @@ import { listPaymentMethodsDtoResponseSchema } from "./dtos/paymentMethod.dto";
 import { PaymentMethodRepository } from "../domain/repositories/paymentMethod.repository";
 import { PrismaPaymentMethodRepository } from "../infrastructure/persistence/PrismaPaymentMethodRepository";
 
-export class ListPaymentMethodsUseCase extends UseCase<Record<string, never>, any> {
-    protected inputSchema: Joi.Schema = Joi.object({});
+interface ListPaymentMethodsInput {
+    country_id?: number;
+}
+
+export class ListPaymentMethodsUseCase extends UseCase<ListPaymentMethodsInput, any> {
+    protected inputSchema: Joi.Schema = Joi.object({
+        country_id: Joi.number().integer().min(1).optional(),
+    });
     protected outputSchema: Joi.Schema = listPaymentMethodsDtoResponseSchema;
     private readonly paymentMethodRepository: PaymentMethodRepository;
 
@@ -14,7 +20,10 @@ export class ListPaymentMethodsUseCase extends UseCase<Record<string, never>, an
         this.paymentMethodRepository = new PrismaPaymentMethodRepository();
     }
 
-    protected async implementation(): Promise<any> {
+    protected async implementation(input: ListPaymentMethodsInput): Promise<any> {
+        if (input.country_id) {
+            return await this.paymentMethodRepository.listByCountry(input.country_id);
+        }
         return await this.paymentMethodRepository.list();
     }
 }

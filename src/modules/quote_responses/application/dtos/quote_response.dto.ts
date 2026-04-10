@@ -5,7 +5,7 @@ import { ResponseStatus } from "../../domain/entities/quote_response.entity";
 export const createQuoteResponseDtoRequestSchema = Joi.object({
     request_id: Joi.string().uuid().required(),
     company_offer_id: Joi.string().uuid().allow(null).optional(),
-    unit_price: Joi.number().precision(2).min(0).required(),
+    unit_price_usd: Joi.number().precision(2).min(0).required(),
     quantity: Joi.number().precision(2).min(0).required(),
     payment_condition_id: Joi.string().uuid().allow(null, '').optional(),
     delivery_method_id: Joi.string().uuid().allow(null, '').optional(),
@@ -18,7 +18,7 @@ export const createQuoteResponseDtoRequestSchema = Joi.object({
 export const updateQuoteResponseDtoRequestSchema = Joi.object({
     id: Joi.string().uuid().required(),
     company_offer_id: Joi.string().uuid().allow(null).optional(),
-    unit_price: Joi.number().precision(2).min(0).optional(),
+    unit_price_usd: Joi.number().precision(2).min(0).optional(),
     quantity: Joi.number().precision(2).min(0).optional(),
     payment_condition_id: Joi.string().uuid().allow(null, '').optional(),
     delivery_method_id: Joi.string().uuid().allow(null, '').optional(),
@@ -41,7 +41,7 @@ export const quoteResponseDtoResponseSchema = Joi.object({
     request_id: Joi.string().required(),
     supplier_id: Joi.string().required(),
     company_offer_id: Joi.string().allow(null).optional(),
-    unit_price: Joi.number().required(),
+    unit_price_usd: Joi.number().required(),
     quantity: Joi.number().required(),
     payment_condition_id: Joi.string().uuid().allow(null).optional(),
     delivery_method_id: Joi.string().uuid().allow(null).optional(),
@@ -50,7 +50,7 @@ export const quoteResponseDtoResponseSchema = Joi.object({
     has_guarantee: Joi.boolean().allow(null).optional().default(false),
     status: Joi.string().required(),
     rejection_reason: Joi.string().allow(null).optional(),
-    total_amount: Joi.number().required(),
+    total_amount_usd: Joi.number().required(),
     created_at: Joi.date().allow(null).optional(),
     updated_at: Joi.date().allow(null).optional()
 }).options({ stripUnknown: true });
@@ -89,9 +89,9 @@ export const receivedQuoteResponseDtoResponseSchema = Joi.object({
     id: Joi.string().required(),
     request_id: Joi.string().required(),
     supplier_id: Joi.string().required(),
-    unit_price: Joi.number().required(),
+    unit_price_usd: Joi.number().required(),
     quantity: Joi.number().required(),
-    total_amount: Joi.number().required(),
+    total_amount_usd: Joi.number().required(),
     payment_condition_id: Joi.string().uuid().allow(null).optional(),
     delivery_method_id: Joi.string().uuid().allow(null).optional(),
     delivery_time: Joi.string().allow(null).optional(),

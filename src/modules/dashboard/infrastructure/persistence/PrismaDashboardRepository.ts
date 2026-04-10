@@ -3,64 +3,74 @@ import { prisma } from "../../../../shared/infrastructure/database";
 
 export class PrismaDashboardRepository implements DashboardRepository {
     async getStats(companyId: string): Promise<DashboardStats> {
-        // --- Buyer Stats ---
-        const solicitudesGeneradas = await prisma.request.count({
-            where: { company_id: companyId }
+        // Find company to know permissions
+        const company = await prisma.company.findUnique({
+            where: { id: companyId },
+            select: { can_buy: true, can_sell: true }
         });
 
-        const cotizacionesRecibidas = await prisma.quoteResponse.count({
-            where: {
-                request: { company_id: companyId }
-            }
-        });
+        const canBuy = company?.can_buy ?? false;
+        const canSell = company?.can_sell ?? false;
 
-        const comprasGeneradas = await prisma.transaction.count({
-            where: { buyer_id: companyId, status: 'completed' }
-        });
+        const buyerStats = {
+            generated_requests: 0,
+            received_quotes: 0,
+            generated_purchases: 0,
+            estimated_savings: 0
+        };
 
-        const ahorroEstimado = 0; // Placeholder for future logic
+        const supplierStats = {
+            received_requests: 0,
+            created_quotes: 0,
+            generated_sales: 0,
+            generated_revenue: 0
+        };
 
-        // --- Supplier Stats ---
-        const catOfInterest = await prisma.companyCategoryOfInterest.findMany({
-            where: { company_id: companyId },
-            select: { category_id: true }
-        });
-        const catIds = catOfInterest.map(c => c.category_id);
+        if (canBuy) {
+            const [solicitudesGeneradas, cotizacionesRecibidas, comprasGeneradas] = await Promise.all([
+                prisma.request.count({ where: { company_id: companyId } }),
+                prisma.quoteResponse.count({ where: { request: { company_id: companyId } } }),
+                prisma.transaction.count({ where: { buyer_id: companyId, status: 'completed' } })
+            ]);
 
-        const solicitudesRecibidas = await prisma.request.count({
-            where: {
-                category_id: { in: catIds },
-                company_id: { not: companyId },
-                status: 'active'
-            }
-        });
+            buyerStats.generated_requests = solicitudesGeneradas;
+            buyerStats.received_quotes = cotizacionesRecibidas;
+            buyerStats.generated_purchases = comprasGeneradas;
+            // buyerStats.estimated_savings remains 0 (Placeholder for future logic)
+        }
 
-        const cotizacionesCreadas = await prisma.quoteResponse.count({
-            where: { supplier_id: companyId }
-        });
+        if (canSell) {
+            const catOfInterest = await prisma.companyCategoryOfInterest.findMany({
+                where: { company_id: companyId },
+                select: { category_id: true }
+            });
+            const catIds = catOfInterest.map(c => c.category_id);
 
-        const ventasGeneradas = await prisma.transaction.count({
-            where: { supplier_id: companyId, status: 'completed' }
-        });
+            const [solicitudesRecibidas, cotizacionesCreadas, ventasGeneradas, ingresosAggregate] = await Promise.all([
+                prisma.request.count({
+                    where: {
+                        category_id: { in: catIds },
+                        company_id: { not: companyId },
+                        status: 'active'
+                    }
+                }),
+                prisma.quoteResponse.count({ where: { supplier_id: companyId } }),
+                prisma.transaction.count({ where: { supplier_id: companyId, status: 'completed' } }),
+                prisma.transaction.aggregate({
+                    _sum: { total_amount_usd: true },
+                    where: { supplier_id: companyId, status: 'completed' }
+                })
+            ]);
 
-        const ingresosAggregate = await prisma.transaction.aggregate({
-            _sum: { total_amount: true },
-            where: { supplier_id: companyId, status: 'completed' }
-        });
+            supplierStats.received_requests = solicitudesRecibidas;
+            supplierStats.created_quotes = cotizacionesCreadas;
+            supplierStats.generated_sales = ventasGeneradas;
+            supplierStats.generated_revenue = Number(ingresosAggregate._sum.total_amount_usd || 0);
+        }
 
         return {
-            buyer_stats: {
-                generated_requests: solicitudesGeneradas,
-                received_quotes: cotizacionesRecibidas,
-                generated_purchases: comprasGeneradas,
-                estimated_savings: ahorroEstimado
-            },
-            supplier_stats: {
-                received_requests: solicitudesRecibidas,
-                created_quotes: cotizacionesCreadas,
-                generated_sales: ventasGeneradas,
-                generated_revenue: Number(ingresosAggregate._sum.total_amount || 0)
-            }
+            buyer_stats: buyerStats,
+            supplier_stats: supplierStats
         };
     }
 }

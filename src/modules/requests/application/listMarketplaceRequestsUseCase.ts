@@ -39,7 +39,7 @@ export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceReque
                 product_service: r.product_service,
                 quantity: Number(r.quantity),
                 unit_id: r.unit_id,
-                unit_of_measure: r.unit_of_measure?.name ?? '',
+                unit_of_measure: r.unit_of_measure?.name_es ?? r.unit_of_measure?.name_en ?? r.unit_of_measure?.abbreviation ?? 'Units',
                 description: r.description,
                 category_id: r.category_id,
                 category: r.category?.name_es ?? null,

@@ -16,7 +16,7 @@ interface CreateCompanyOfferDto {
     description?: string | null;
     category_id?: number | null;
     supplier_type_id?: number | null;
-    base_price?: number | null;
+    base_price_usd?: number | null;
     unit_id?: number | null;
     moq?: number | null;
     std_delivery_time?: string | null;
@@ -38,6 +38,9 @@ export class CreateCompanyOfferUseCase extends UseCase<CreateCompanyOfferDto, an
 
     protected async implementation(data: CreateCompanyOfferDto): Promise<any> {
         const payload: any = { ...data };
+        if (payload.base_price_usd !== undefined) {
+            payload.base_price_usd = payload.base_price_usd;
+        }
         // Maps photos if needed for the repo
         if (payload.photos) {
             payload.photos = payload.photos.map((p: any) => ({
