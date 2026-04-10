@@ -73,14 +73,19 @@ enum RequestStatus {
 
 enum ResponseStatus {
   pending
+  negotiating
+  formal_request_pending
+  formal_approval_pending
   accepted
   rejected
-  negotiating
   expired
 }
 
 enum TransactionStatus {
-  in_process
+  awaiting_payment
+  payment_review
+  preparing_order
+  in_transit
   completed
   canceled
   in_dispute
@@ -641,7 +646,7 @@ model Transaction {
   payment_conditions      String?           @db.VarChar(200)
   payment_condition_id    String?           @db.Uuid
   delivery_time           String?           @db.VarChar(100)
-  status                  TransactionStatus @default(in_process)
+  status                  TransactionStatus @default(awaiting_payment)
   estimated_delivery_date DateTime?         @db.Date
   actual_delivery_date    DateTime?         @db.Date
   cancellation_reason     String?
