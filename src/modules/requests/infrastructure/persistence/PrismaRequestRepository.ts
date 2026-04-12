@@ -55,7 +55,17 @@ export class PrismaRequestRepository implements RequestRepository {
                         bio: true,
                         sector_ref: true,
                         company_type_ref: true,
-                        locations: true
+                        locations: true,
+                        transaction_count: true,
+                        avg_quality: true,
+                        avg_compliance_seller: true,
+                        avg_communication_seller: true,
+                        avg_price: true,
+                        seller_review_count: true,
+                        avg_compliance_buyer: true,
+                        avg_reliability: true,
+                        avg_communication_buyer: true,
+                        buyer_review_count: true
                     }
                 }
             }
@@ -68,9 +78,9 @@ export class PrismaRequestRepository implements RequestRepository {
         const skip = (page - 1) * limit;
 
         const [total, data] = await Promise.all([
-            prisma.request.count({ where: { company_id: companyId } }),
+            prisma.request.count({ where: { company_id: companyId, status: { notIn: ['completed', 'closed'] } } }),
             prisma.request.findMany({
-                where: { company_id: companyId },
+                where: { company_id: companyId, status: { notIn: ['completed', 'closed'] } },
                 skip,
                 take: limit,
                 orderBy: { created_at: 'desc' },
@@ -115,6 +125,16 @@ export class PrismaRequestRepository implements RequestRepository {
                             bio: true,
                             company_type_ref: true,
                             locations: true,
+                            transaction_count: true,
+                            avg_quality: true,
+                            avg_compliance_seller: true,
+                            avg_communication_seller: true,
+                            avg_price: true,
+                            seller_review_count: true,
+                            avg_compliance_buyer: true,
+                            avg_reliability: true,
+                            avg_communication_buyer: true,
+                            buyer_review_count: true,
                         }
                     }
                 }
@@ -178,7 +198,7 @@ export class PrismaRequestRepository implements RequestRepository {
             Number(db.quantity),
             db.user_id,
             db.unit_id,
-            db.unit_of_measure?.name ?? '',
+            db.unit_of_measure?.name_es ?? db.unit_of_measure?.name_en ?? db.unit_of_measure?.abbreviation ?? 'Units',
             db.description,
             db.category_id,
             db.category?.name_es ?? null,
@@ -202,6 +222,16 @@ export class PrismaRequestRepository implements RequestRepository {
                 sector: db.company.sector_ref?.name_es ?? null,
                 company_type: db.company.company_type_ref?.name_es ?? null,
                 review_count: db.company.review_count ?? 0,
+                transaction_count: db.company.transaction_count ?? 0,
+                avg_quality: Number(db.company.avg_quality ?? 0),
+                avg_compliance_seller: Number(db.company.avg_compliance_seller ?? 0),
+                avg_communication_seller: Number(db.company.avg_communication_seller ?? 0),
+                avg_price: Number(db.company.avg_price ?? 0),
+                seller_review_count: db.company.seller_review_count ?? 0,
+                avg_compliance_buyer: Number(db.company.avg_compliance_buyer ?? 0),
+                avg_reliability: Number(db.company.avg_reliability ?? 0),
+                avg_communication_buyer: Number(db.company.avg_communication_buyer ?? 0),
+                buyer_review_count: db.company.buyer_review_count ?? 0,
                 locations: db.company.locations ?? [],
             } : null,
             files,

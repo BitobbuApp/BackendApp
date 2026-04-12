@@ -64,7 +64,7 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
             this.listCategoriesUseCase.execute({}),
             this.listCompanyTypesUseCase.execute({}),
             this.listNotificationTypesUseCase.execute({}),
-            this.listPaymentMethodsUseCase.execute({}),
+            this.listPaymentMethodsUseCase.execute({ country_id: 1 }),
             this.listUnitsOfMeasureUseCase.execute({}),
             this.listVerifDocTypesUseCase.execute({}),
             this.listPaymentConditionsUseCase.execute({}),

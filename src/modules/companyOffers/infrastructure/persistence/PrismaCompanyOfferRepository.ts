@@ -15,7 +15,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             ...(offer.supplier_type_id !== undefined && {
                 supplier_type: offer.supplier_type_id === null ? undefined : { connect: { id: offer.supplier_type_id } }
             }),
-            base_price: offer.base_price ?? null,
+            base_price_usd: offer.base_price_usd ?? null,
             ...(offer.unit_id !== undefined && {
                 unit_of_measure: offer.unit_id === null ? undefined : { connect: { id: offer.unit_id } }
             }),
@@ -92,7 +92,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             ...(offer.supplier_type_id !== undefined && {
                 supplier_type: offer.supplier_type_id === null ? { disconnect: true } : { connect: { id: offer.supplier_type_id } }
             }),
-            ...(offer.base_price !== undefined && { base_price: offer.base_price }),
+            ...(offer.base_price_usd !== undefined && { base_price_usd: offer.base_price_usd }),
             ...(offer.unit_id !== undefined && {
                 unit_of_measure: offer.unit_id === null ? { disconnect: true } : { connect: { id: offer.unit_id } }
             }),
@@ -140,9 +140,9 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             db.category?.name_es ?? null,
             db.supplier_type_id,
             db.supplier_type?.name_es ?? null,
-            db.base_price ? Number(db.base_price) : null,
+            db.base_price_usd ? Number(db.base_price_usd) : null,
             db.unit_id,
-            db.unit_of_measure?.name ?? null,
+            db.unit_of_measure?.name_es ?? db.unit_of_measure?.name_en ?? null,
             db.moq,
             db.std_delivery_time,
             db.video_url,
