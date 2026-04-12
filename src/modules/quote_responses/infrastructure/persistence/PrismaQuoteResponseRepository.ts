@@ -59,9 +59,9 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         const skip = (page - 1) * limit;
 
         const [total, items] = await Promise.all([
-            prisma.quoteResponse.count({ where: { supplier_id: supplierId } }),
+            prisma.quoteResponse.count({ where: { supplier_id: supplierId, status: { notIn: ['accepted', 'rejected', 'expired'] as any } } }),
             prisma.quoteResponse.findMany({
-                where: { supplier_id: supplierId },
+                where: { supplier_id: supplierId, status: { notIn: ['accepted', 'rejected', 'expired'] as any } },
                 skip,
                 take: limit,
                 orderBy: { created_at: 'desc' }
@@ -97,6 +97,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                             company_type_ref: true,
                             sector_ref: true,
                             average_rating: true,
+                            review_count: true,
+                            transaction_count: true,
+                            avg_quality: true,
+                            avg_compliance_seller: true,
+                            avg_communication_seller: true,
+                            avg_price: true,
+                            seller_review_count: true,
+                            avg_compliance_buyer: true,
+                            avg_reliability: true,
+                            avg_communication_buyer: true,
+                            buyer_review_count: true,
                         }
                     }
                 }
@@ -123,6 +134,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                     company_type: item.supplier?.company_type_ref?.name ?? null,
                     sector: item.supplier?.sector_ref?.name ?? null,
                     average_rating: item.supplier?.average_rating ? Number(item.supplier.average_rating) : 0,
+                    review_count: item.supplier?.review_count ?? 0,
+                    transaction_count: item.supplier?.transaction_count ?? 0,
+                    avg_quality: Number(item.supplier?.avg_quality ?? 0),
+                    avg_compliance_seller: Number(item.supplier?.avg_compliance_seller ?? 0),
+                    avg_communication_seller: Number(item.supplier?.avg_communication_seller ?? 0),
+                    avg_price: Number(item.supplier?.avg_price ?? 0),
+                    seller_review_count: item.supplier?.seller_review_count ?? 0,
+                    avg_compliance_buyer: Number(item.supplier?.avg_compliance_buyer ?? 0),
+                    avg_reliability: Number(item.supplier?.avg_reliability ?? 0),
+                    avg_communication_buyer: Number(item.supplier?.avg_communication_buyer ?? 0),
+                    buyer_review_count: item.supplier?.buyer_review_count ?? 0,
                     name: item.supplier?.trade_name, // Mapping to match frontend expectations
                     initial: item.supplier?.trade_name?.[0]?.toUpperCase() || 'S'
                 }
@@ -137,6 +159,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     async findByRequestOwnerId(companyId: string, page: number, limit: number): Promise<PaginatedResult<any>> {
         const skip = (page - 1) * limit;
         const where = {
+            status: { notIn: ['accepted', 'rejected', 'expired'] as any },
             request: { company_id: companyId }
         };
 
@@ -156,6 +179,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                             company_type_ref: true,
                             sector_ref: true,
                             average_rating: true,
+                            review_count: true,
+                            transaction_count: true,
+                            avg_quality: true,
+                            avg_compliance_seller: true,
+                            avg_communication_seller: true,
+                            avg_price: true,
+                            seller_review_count: true,
+                            avg_compliance_buyer: true,
+                            avg_reliability: true,
+                            avg_communication_buyer: true,
+                            buyer_review_count: true,
                         }
                     },
                     request: {
@@ -184,6 +218,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                     company_type: item.supplier?.company_type_ref?.name ?? null,
                     sector: item.supplier?.sector_ref?.name ?? null,
                     average_rating: item.supplier?.average_rating ? Number(item.supplier.average_rating) : 0,
+                    review_count: item.supplier?.review_count ?? 0,
+                    transaction_count: item.supplier?.transaction_count ?? 0,
+                    avg_quality: Number(item.supplier?.avg_quality ?? 0),
+                    avg_compliance_seller: Number(item.supplier?.avg_compliance_seller ?? 0),
+                    avg_communication_seller: Number(item.supplier?.avg_communication_seller ?? 0),
+                    avg_price: Number(item.supplier?.avg_price ?? 0),
+                    seller_review_count: item.supplier?.seller_review_count ?? 0,
+                    avg_compliance_buyer: Number(item.supplier?.avg_compliance_buyer ?? 0),
+                    avg_reliability: Number(item.supplier?.avg_reliability ?? 0),
+                    avg_communication_buyer: Number(item.supplier?.avg_communication_buyer ?? 0),
+                    buyer_review_count: item.supplier?.buyer_review_count ?? 0,
                 },
                 request: item.request,
             })),
@@ -340,6 +385,16 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                         review_count: true,
                         sector_id: true,
                         locations: true,
+                        transaction_count: true,
+                        avg_quality: true,
+                        avg_compliance_seller: true,
+                        avg_communication_seller: true,
+                        avg_price: true,
+                        seller_review_count: true,
+                        avg_compliance_buyer: true,
+                        avg_reliability: true,
+                        avg_communication_buyer: true,
+                        buyer_review_count: true,
                     }
                 },
                 request: {
@@ -355,6 +410,14 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 ...found.supplier,
                 sector: (found.supplier as any).sector_ref?.name ?? null,
                 company_type: (found.supplier as any).company_type_ref?.name ?? null,
+                average_rating: found.supplier?.average_rating ? Number(found.supplier.average_rating) : 0,
+                avg_quality: Number(found.supplier?.avg_quality ?? 0),
+                avg_compliance_seller: Number(found.supplier?.avg_compliance_seller ?? 0),
+                avg_communication_seller: Number(found.supplier?.avg_communication_seller ?? 0),
+                avg_price: Number(found.supplier?.avg_price ?? 0),
+                avg_compliance_buyer: Number(found.supplier?.avg_compliance_buyer ?? 0),
+                avg_reliability: Number(found.supplier?.avg_reliability ?? 0),
+                avg_communication_buyer: Number(found.supplier?.avg_communication_buyer ?? 0),
             },
             request: found.request
         };

@@ -100,7 +100,7 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
             // Find the conversation linked to this transaction
             const conversation = await prisma.conversation.findFirst({
                 where: { transaction_id: data.transactionId },
-                select: { id: true },
+                select: { id: true, status: true },
             });
 
             if (!conversation) {
@@ -115,6 +115,7 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
                 action: data.action,
                 actor_company_id: data.actorCompanyId,
                 status: result.status,
+                conversation_status: conversation.status,
                 timestamp: new Date().toISOString(),
             });
 

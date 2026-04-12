@@ -110,6 +110,12 @@ export class AcceptedStrategy implements QuoteRevisionStrategy {
                 });
             }
 
+            // 6. Mark the parent Request (RFQ) as completed
+            await tx.request.update({
+                where: { id: quoteResponse.request_id },
+                data: { status: 'completed' as any },
+            });
+
             return new QuoteResponse(
                 updated.id,
                 updated.request_id,

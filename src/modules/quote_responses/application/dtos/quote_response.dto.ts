@@ -76,6 +76,16 @@ const supplierSummarySchema = Joi.object({
     sector_id: Joi.number().allow(null).optional(),
     average_rating: Joi.any().optional(),
     review_count: Joi.number().allow(null).optional(),
+    transaction_count: Joi.number().optional(),
+    avg_quality: Joi.number().optional(),
+    avg_compliance_seller: Joi.number().optional(),
+    avg_communication_seller: Joi.number().optional(),
+    avg_price: Joi.number().optional(),
+    seller_review_count: Joi.number().optional(),
+    avg_compliance_buyer: Joi.number().optional(),
+    avg_reliability: Joi.number().optional(),
+    avg_communication_buyer: Joi.number().optional(),
+    buyer_review_count: Joi.number().optional(),
     locations: Joi.array().items(Joi.any()).optional(),
 }).options({ stripUnknown: true });
 

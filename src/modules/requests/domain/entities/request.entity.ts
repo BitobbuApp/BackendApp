@@ -15,6 +15,18 @@ export interface RequestCompanyEntity {
     sector: string | null;
     company_type: string | null;
     review_count: number;
+    transaction_count: number;
+    // As SELLER
+    avg_quality: number;
+    avg_compliance_seller: number;
+    avg_communication_seller: number;
+    avg_price: number;
+    seller_review_count: number;
+    // As BUYER
+    avg_compliance_buyer: number;
+    avg_reliability: number;
+    avg_communication_buyer: number;
+    buyer_review_count: number;
     locations: any[];
 }
 

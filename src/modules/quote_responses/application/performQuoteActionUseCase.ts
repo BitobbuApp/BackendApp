@@ -115,7 +115,7 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
             // Find the conversation linked to this quote response
             const conversation = await prisma.conversation.findFirst({
                 where: { quote_response_id: data.quoteResponseId },
-                select: { id: true },
+                select: { id: true, status: true },
             });
 
             if (!conversation) {
@@ -130,6 +130,7 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
                 action: data.action,
                 actor_company_id: data.actorCompanyId,
                 status: result.status,
+                conversation_status: conversation.status,
                 unit_price_usd: Number(result.unit_price_usd),
                 quantity: Number(result.quantity),
                 total_amount_usd: Number(result.total_amount_usd),
