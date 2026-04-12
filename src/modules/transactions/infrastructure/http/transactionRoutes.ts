@@ -7,6 +7,7 @@ import { UpdateTransactionUseCase } from '../../application/updateTransactionUse
 import { DeleteTransactionUseCase } from '../../application/deleteTransactionUseCase';
 import { ListTransactionsByCompanyUseCase } from '../../application/listTransactionsByCompanyUseCase';
 import { listTransactionsQuerySchema } from '../../application/dtos/transaction.dto';
+import { PerformTransactionActionUseCase } from '../../application/performTransactionActionUseCase';
 
 export async function transactionRoutes(app: FastifyInstance) {
 
@@ -80,6 +81,22 @@ export async function transactionRoutes(app: FastifyInstance) {
             const useCase = new DeleteTransactionUseCase();
             const result = await useCase.execute(request.params.id);
             return ApiResponse.success(reply, result, "Transaction removed");
+        }
+    );
+
+    // POST /transactions/:id/action (JWT protected — State Machine entry point)
+    app.post('/:id/action',
+        { preHandler: [authMiddleware] } as any,
+        async (request: any, reply: any) => {
+            const { action, payload } = request.body;
+            const useCase = new PerformTransactionActionUseCase();
+            const result = await useCase.execute({
+                transactionId: request.params.id,
+                action,
+                actorCompanyId: request.user.companyId,
+                payload: payload || {},
+            });
+            return ApiResponse.success(reply, result, `Transaction action "${action}" performed successfully`);
         }
     );
 }

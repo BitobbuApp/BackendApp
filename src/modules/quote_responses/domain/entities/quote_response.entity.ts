@@ -1,9 +1,11 @@
 export enum ResponseStatus {
-    Pending = 'Pending',
-    Accepted = 'Accepted',
-    Rejected = 'Rejected',
-    Negotiating = 'Negotiating',
-    Expired = 'Expired'
+    Pending = 'pending',
+    Negotiating = 'negotiating',
+    FormalRequestPending = 'formal_request_pending',
+    FormalApprovalPending = 'formal_approval_pending',
+    Accepted = 'accepted',
+    Rejected = 'rejected',
+    Expired = 'expired',
 }
 
 export class QuoteResponse {
@@ -25,6 +27,7 @@ export class QuoteResponse {
         public total_amount_usd: number = 0,
         public exchange_rate_id: string | null = null,
         public payment_currency: string = 'USD',
+        public formal_quote_url: string | null = null,
         public created_at: Date | null = null,
         public updated_at: Date | null = null
     ) { }

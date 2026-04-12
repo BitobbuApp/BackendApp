@@ -23,6 +23,16 @@ export function errorHandler(app: any) {
             return;
         }
 
+        // Handle generic custom errors that explicitly provide a statusCode (e.g. UnauthorizedActorError)
+        const customStatusCode = (error as any).statusCode;
+        if (customStatusCode && typeof customStatusCode === 'number' && customStatusCode >= 400 && customStatusCode < 500) {
+            reply.status(customStatusCode).send({
+                error: error.name,
+                message: error.message
+            });
+            return;
+        }
+
         // Handle unknown errors
         app.log.error(error);
         reply.status(500).send({

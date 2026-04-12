@@ -102,6 +102,31 @@ enum RequestType {
   service
 }
 
+enum QuoteRevisionAction {
+  created
+  negotiation_started
+  price_updated
+  quantity_updated
+  terms_updated
+  formal_quote_requested
+  formal_quote_attached
+  formal_quote_rejected
+  accepted
+  canceled
+  expired
+}
+
+enum TransactionRevisionAction {
+  transaction_created
+  payment_uploaded
+  payment_approved
+  payment_rejected
+  order_shipped
+  delivery_confirmed
+  transaction_canceled
+  dispute_raised
+}
+
 // ==========================================
 // 2. COMPANIES & PROFILES
 // ==========================================
@@ -133,34 +158,36 @@ model Company {
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  locations              CompanyLocation[]
-  contacts               CompanyContact[]
-  commercial_profile     CompanyCommercialProfile?
-  verification           CompanyVerification?
-  settings               CompanySettings?
-  subscriptions          Subscription[]
-  users                  User[]
-  payment_methods        CompanyPaymentMethod[]
-  categories_of_interest CompanyCategoryOfInterest[]
-  verif_documents        VerificationDocument[]
-  requests               Request[]
-  offers                 CompanyOffer[]
-  quote_responses        QuoteResponse[]
-  purchases              Transaction[]                @relation("BuyerTransactions")
-  sales                  Transaction[]                @relation("SupplierTransactions")
-  authored_reviews       Review[]                     @relation("ReviewAuthor")
-  received_reviews       Review[]                     @relation("ReviewTarget")
-  notifications          Notification[]
-  conversations_p1       Conversation[]               @relation("ConversationP1")
-  conversations_p2       Conversation[]               @relation("ConversationP2")
-  messages               Message[]
-  onboarding_statuses    UserOnboardingStatus[]
-  sector_ref             Category?                    @relation("CompanySector", fields: [sector_id], references: [id])
-  company_type_ref       CompanyTypeDict?             @relation("CompanyCompanyType", fields: [company_type_id], references: [id])
-  monthly_transactions   EstimatedMonthlyTransaction? @relation(fields: [monthly_transactions_id], references: [id])
-  company_size           CompanySize?                 @relation(fields: [company_size_id], references: [id])
-  currency               Currency?                    @relation(fields: [default_currency], references: [code])
-  operating_countries    CompanyOperatingCountry[]
+  locations                CompanyLocation[]
+  contacts                 CompanyContact[]
+  commercial_profile       CompanyCommercialProfile?
+  verification             CompanyVerification?
+  settings                 CompanySettings?
+  subscriptions            Subscription[]
+  users                    User[]
+  payment_methods          CompanyPaymentMethod[]
+  categories_of_interest   CompanyCategoryOfInterest[]
+  verif_documents          VerificationDocument[]
+  requests                 Request[]
+  offers                   CompanyOffer[]
+  quote_responses          QuoteResponse[]
+  quote_response_revisions QuoteResponseRevision[]      @relation("QuoteResponseRevisionActor")
+  transaction_revisions    TransactionRevision[]        @relation("TransactionRevisionActor")
+  purchases                Transaction[]                @relation("BuyerTransactions")
+  sales                    Transaction[]                @relation("SupplierTransactions")
+  authored_reviews         Review[]                     @relation("ReviewAuthor")
+  received_reviews         Review[]                     @relation("ReviewTarget")
+  notifications            Notification[]
+  conversations_p1         Conversation[]               @relation("ConversationP1")
+  conversations_p2         Conversation[]               @relation("ConversationP2")
+  messages                 Message[]
+  onboarding_statuses      UserOnboardingStatus[]
+  sector_ref               Category?                    @relation("CompanySector", fields: [sector_id], references: [id])
+  company_type_ref         CompanyTypeDict?             @relation("CompanyCompanyType", fields: [company_type_id], references: [id])
+  monthly_transactions     EstimatedMonthlyTransaction? @relation(fields: [monthly_transactions_id], references: [id])
+  company_size             CompanySize?                 @relation(fields: [company_size_id], references: [id])
+  currency                 Currency?                    @relation(fields: [default_currency], references: [code])
+  operating_countries      CompanyOperatingCountry[]
 
   @@map("companies")
 }
@@ -611,22 +638,39 @@ model QuoteResponse {
   total_amount_usd     Decimal        @db.Decimal(14, 2) // Computed in DB, mapping required but Prisma supports reading computed 
   exchange_rate_id     String?        @db.Uuid
   payment_currency     String         @default("USD") @db.Char(3)
+  formal_quote_url     String?
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  request           Request           @relation(fields: [request_id], references: [id], onDelete: Cascade)
-  supplier          Company           @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
-  offer             CompanyOffer?     @relation(fields: [company_offer_id], references: [id], onDelete: SetNull)
-  payment_condition PaymentCondition? @relation("QuoteResponsePaymentCondition", fields: [payment_condition_id], references: [id])
-  delivery_method   DeliveryMethod?   @relation(fields: [delivery_method_id], references: [id])
-  exchange_rate     ExchangeRate?     @relation(fields: [exchange_rate_id], references: [id])
-  currency          Currency          @relation(fields: [payment_currency], references: [code])
+  request           Request                 @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  supplier          Company                 @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
+  offer             CompanyOffer?           @relation(fields: [company_offer_id], references: [id], onDelete: SetNull)
+  payment_condition PaymentCondition?       @relation("QuoteResponsePaymentCondition", fields: [payment_condition_id], references: [id])
+  delivery_method   DeliveryMethod?         @relation(fields: [delivery_method_id], references: [id])
+  exchange_rate     ExchangeRate?           @relation(fields: [exchange_rate_id], references: [id])
+  currency          Currency                @relation(fields: [payment_currency], references: [code])
   transaction       Transaction?
   conversations     Conversation[]
+  revisions         QuoteResponseRevision[]
 
   @@unique([request_id, supplier_id], name: "uq_response_per_request")
   @@map("quote_responses")
+}
+
+model QuoteResponseRevision {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quote_response_id String              @db.Uuid
+  actor_company_id  String              @db.Uuid
+  action            QuoteRevisionAction
+  snapshot          Json?
+  created_at        DateTime            @default(now()) @db.Timestamptz
+
+  quote_response QuoteResponse @relation(fields: [quote_response_id], references: [id], onDelete: Cascade)
+  actor_company  Company       @relation("QuoteResponseRevisionActor", fields: [actor_company_id], references: [id], onDelete: Restrict)
+
+  @@index([quote_response_id, created_at(sort: Desc)])
+  @@map("quote_response_revisions")
 }
 
 // ==========================================
@@ -669,8 +713,24 @@ model Transaction {
   currency          Currency           @relation(fields: [payment_currency], references: [code])
   reviews           Review[]
   conversation      Conversation?
+  revisions         TransactionRevision[]
 
   @@map("transactions")
+}
+
+model TransactionRevision {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id    String                    @db.Uuid
+  actor_company_id  String                    @db.Uuid
+  action            TransactionRevisionAction
+  snapshot          Json?
+  created_at        DateTime                  @default(now()) @db.Timestamptz
+
+  transaction   Transaction  @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  actor_company Company      @relation("TransactionRevisionActor", fields: [actor_company_id], references: [id], onDelete: Restrict)
+
+  @@index([transaction_id, created_at(sort: Desc)])
+  @@map("transaction_revisions")
 }
 
 // ==========================================

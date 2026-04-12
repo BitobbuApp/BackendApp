@@ -1,4 +1,4 @@
-import { TransactionRepository, PaginatedTransactions } from "../../domain/repositories/transaction.repository";
+import { TransactionRepository, PaginatedTransactions, RevisionData } from "../../domain/repositories/transaction.repository";
 import { Transaction } from "../../domain/entities/transaction.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 
@@ -107,6 +107,80 @@ export class PrismaTransactionRepository implements TransactionRepository {
 
     async delete(id: string): Promise<void> {
         await prisma.transaction.delete({ where: { id } });
+    }
+
+    async updateWithRevision(
+        id: string,
+        transactionData: Partial<Transaction>,
+        revision: RevisionData
+    ): Promise<Transaction> {
+        return prisma.$transaction(async (tx) => {
+            const current = await tx.transaction.findUniqueOrThrow({ where: { id } });
+
+            const dataToUpdate: any = {
+                ...(transactionData.product_description !== undefined && { product_description: transactionData.product_description }),
+                ...(transactionData.unit_price_usd !== undefined && { unit_price_usd: transactionData.unit_price_usd }),
+                ...(transactionData.quantity !== undefined && { quantity: transactionData.quantity }),
+                ...(transactionData.total_amount_usd !== undefined && { total_amount_usd: transactionData.total_amount_usd }),
+                ...(transactionData.payment_method_id !== undefined && { payment_method_id: transactionData.payment_method_id }),
+                ...(transactionData.payment_conditions !== undefined && { payment_conditions: transactionData.payment_conditions }),
+                ...(transactionData.payment_condition_id !== undefined && {
+                    payment_condition: transactionData.payment_condition_id === null
+                        ? { disconnect: true }
+                        : { connect: { id: transactionData.payment_condition_id } }
+                }),
+                ...(transactionData.delivery_time !== undefined && { delivery_time: transactionData.delivery_time }),
+                ...(transactionData.status !== undefined && { status: transactionData.status as any }),
+                ...(transactionData.estimated_delivery_date !== undefined && { estimated_delivery_date: transactionData.estimated_delivery_date }),
+                ...(transactionData.actual_delivery_date !== undefined && { actual_delivery_date: transactionData.actual_delivery_date }),
+                ...(transactionData.cancellation_reason !== undefined && { cancellation_reason: transactionData.cancellation_reason }),
+                ...(transactionData.buyer_confirmed !== undefined && { buyer_confirmed: transactionData.buyer_confirmed }),
+                ...(transactionData.supplier_confirmed !== undefined && { supplier_confirmed: transactionData.supplier_confirmed }),
+                ...(transactionData.buyer_confirmed_at !== undefined && { buyer_confirmed_at: transactionData.buyer_confirmed_at }),
+                ...(transactionData.supplier_confirmed_at !== undefined && { supplier_confirmed_at: transactionData.supplier_confirmed_at }),
+                ...(transactionData.exchange_rate_id !== undefined && { exchange_rate_id: transactionData.exchange_rate_id }),
+                ...(transactionData.payment_currency !== undefined && { payment_currency: transactionData.payment_currency }),
+            };
+
+            const updated = await tx.transaction.update({
+                where: { id },
+                data: dataToUpdate,
+                include: { payment_method: true }
+            });
+
+            const snapshot = {
+                unit_price_usd: Number(current.unit_price_usd),
+                quantity: Number(current.quantity),
+                total_amount_usd: Number(current.total_amount_usd),
+                payment_method_id: current.payment_method_id,
+                payment_conditions: current.payment_conditions,
+                payment_condition_id: current.payment_condition_id,
+                delivery_time: current.delivery_time,
+                status: current.status,
+                estimated_delivery_date: current.estimated_delivery_date,
+                actual_delivery_date: current.actual_delivery_date,
+                cancellation_reason: current.cancellation_reason,
+                buyer_confirmed: current.buyer_confirmed,
+                supplier_confirmed: current.supplier_confirmed,
+                buyer_confirmed_at: current.buyer_confirmed_at,
+                supplier_confirmed_at: current.supplier_confirmed_at,
+                ...revision.snapshot,
+            };
+
+            await tx.transactionRevision.create({
+                data: {
+                    transaction_id: id,
+                    actor_company_id: revision.actorCompanyId,
+                    action: revision.action as any,
+                    snapshot,
+                },
+            });
+
+            return this.mapToEntity(updated);
+        }, {
+            maxWait: 300000,
+            timeout: 300000
+        });
     }
 
     private mapToEntity(db: any): Transaction {

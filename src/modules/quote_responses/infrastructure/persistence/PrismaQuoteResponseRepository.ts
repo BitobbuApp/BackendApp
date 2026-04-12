@@ -1,4 +1,4 @@
-import { QuoteResponseRepository, PaginatedResult } from "../../domain/repositories/quote_response.repository";
+import { QuoteResponseRepository, PaginatedResult, RevisionData } from "../../domain/repositories/quote_response.repository";
 import { QuoteResponse, ResponseStatus } from "../../domain/entities/quote_response.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 import { Prisma } from "@prisma/client";
@@ -217,6 +217,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             ...(response.rejection_reason !== undefined && { rejection_reason: response.rejection_reason }),
             ...((response as any).exchange_rate_id !== undefined && { exchange_rate_id: (response as any).exchange_rate_id }),
             ...((response as any).payment_currency !== undefined && { payment_currency: (response as any).payment_currency }),
+            ...(response.formal_quote_url !== undefined && { formal_quote_url: response.formal_quote_url }),
         };
 
         if (response.unit_price_usd !== undefined || response.quantity !== undefined) {
@@ -244,6 +245,83 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
 
     async delete(id: string): Promise<void> {
         await prisma.quoteResponse.delete({ where: { id } });
+    }
+
+    async updateWithRevision(
+        id: string,
+        data: Partial<QuoteResponse>,
+        revision: RevisionData
+    ): Promise<QuoteResponse> {
+        return prisma.$transaction(async (tx) => {
+            // 1. Snapshot the current state before update
+            const current = await tx.quoteResponse.findUniqueOrThrow({ where: { id } });
+
+            // 2. Build update payload
+            const dataToUpdate: any = {
+                ...(data.unit_price_usd !== undefined && { unit_price_usd: new Prisma.Decimal(data.unit_price_usd) }),
+                ...(data.quantity !== undefined && { quantity: new Prisma.Decimal(data.quantity) }),
+                ...(data.payment_conditions !== undefined && { payment_conditions: data.payment_conditions }),
+                ...(data.delivery_time !== undefined && { delivery_time: data.delivery_time }),
+                ...(data.notes !== undefined && { notes: data.notes }),
+                ...(data.has_guarantee !== undefined && { has_guarantee: data.has_guarantee }),
+                ...(data.status !== undefined && { status: data.status as any }),
+                ...(data.rejection_reason !== undefined && { rejection_reason: data.rejection_reason }),
+                ...(data.formal_quote_url !== undefined && { formal_quote_url: data.formal_quote_url }),
+                ...(data.payment_condition_id !== undefined && {
+                    payment_condition: data.payment_condition_id === null
+                        ? { disconnect: true }
+                        : { connect: { id: data.payment_condition_id } }
+                }),
+                ...(data.delivery_method_id !== undefined && {
+                    delivery_method: data.delivery_method_id === null
+                        ? { disconnect: true }
+                        : { connect: { id: data.delivery_method_id } }
+                }),
+            };
+
+            // Recalculate total if price or quantity changed
+            if (data.unit_price_usd !== undefined || data.quantity !== undefined) {
+                const newUnitPrice = data.unit_price_usd !== undefined ? new Prisma.Decimal(data.unit_price_usd) : current.unit_price_usd;
+                const newQuantity = data.quantity !== undefined ? new Prisma.Decimal(data.quantity) : current.quantity;
+                dataToUpdate.total_amount_usd = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
+            }
+
+            // 3. Update the quote response
+            const updated = await tx.quoteResponse.update({
+                where: { id },
+                data: dataToUpdate,
+            });
+
+            // 4. Create the revision snapshot
+            const snapshot = {
+                unit_price_usd: Number(current.unit_price_usd),
+                quantity: Number(current.quantity),
+                total_amount_usd: Number(current.total_amount_usd),
+                payment_conditions: current.payment_conditions,
+                payment_condition_id: current.payment_condition_id,
+                delivery_method_id: current.delivery_method_id,
+                delivery_time: current.delivery_time,
+                notes: current.notes,
+                has_guarantee: current.has_guarantee,
+                status: current.status,
+                formal_quote_url: current.formal_quote_url,
+                ...revision.snapshot,
+            };
+
+            await tx.quoteResponseRevision.create({
+                data: {
+                    quote_response_id: id,
+                    actor_company_id: revision.actorCompanyId,
+                    action: revision.action as any,
+                    snapshot,
+                },
+            });
+
+            return this.mapToEntity(updated);
+        }, {
+            maxWait: 300000,
+            timeout: 300000
+        });
     }
 
     async findQuoteResponseAndSupplier(quoteResponseId: string) {
@@ -301,6 +379,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             Number(db.total_amount_usd),
             (db as any).exchange_rate_id ?? null,
             (db as any).payment_currency ?? 'USD',
+            (db as any).formal_quote_url ?? null,
             db.created_at,
             db.updated_at
         );

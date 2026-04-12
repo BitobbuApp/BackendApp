@@ -1,3 +1,13 @@
+export enum TransactionStatus {
+    AwaitingPayment = 'awaiting_payment',
+    PaymentReview = 'payment_review',
+    PreparingOrder = 'preparing_order',
+    InTransit = 'in_transit',
+    Completed = 'completed',
+    Canceled = 'canceled',
+    InDispute = 'in_dispute',
+}
+
 export class Transaction {
     constructor(
         public id: string,
@@ -13,7 +23,7 @@ export class Transaction {
         public payment_conditions: string | null = null,
         public payment_condition_id: string | null = null,
         public delivery_time: string | null = null,
-        public status: string = 'in_process',
+        public status: string = 'awaiting_payment',
         public estimated_delivery_date: Date | null = null,
         public actual_delivery_date: Date | null = null,
         public cancellation_reason: string | null = null,
