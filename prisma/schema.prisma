@@ -131,6 +131,19 @@ enum TransactionRevisionAction {
 // 2. COMPANIES & PROFILES
 // ==========================================
 
+enum ConversationStatus {
+  active
+  pending_review
+  completed
+  cancelled
+}
+
+enum ReviewStatus {
+  pending
+  submitted
+  expired
+}
+
 model Company {
   id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   trade_name String  @db.VarChar(200)
@@ -154,6 +167,19 @@ model Company {
   average_rating    Decimal? @default(0.00) @db.Decimal(3, 2)
   transaction_count Int      @default(0)
   review_count      Int      @default(0)
+
+  // As SELLER — evaluated by buyers
+  avg_quality               Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_compliance_seller     Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_communication_seller  Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_price                 Decimal @default(0.00) @db.Decimal(3, 2)
+  seller_review_count       Int     @default(0)
+
+  // As BUYER — evaluated by sellers
+  avg_compliance_buyer      Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_reliability           Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_communication_buyer   Decimal @default(0.00) @db.Decimal(3, 2)
+  buyer_review_count        Int     @default(0)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -700,6 +726,8 @@ model Transaction {
   supplier_confirmed_at   DateTime?         @db.Timestamptz
   exchange_rate_id        String?           @db.Uuid
   payment_currency        String            @default("USD") @db.Char(3)
+  buyer_review_status     ReviewStatus      @default(pending)
+  supplier_review_status  ReviewStatus      @default(pending)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -738,21 +766,37 @@ model TransactionRevision {
 // ==========================================
 
 model Review {
-  id                   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transaction_id       String  @db.Uuid
-  author_company_id    String  @db.Uuid
-  evaluated_company_id String  @db.Uuid
-  rating               Int     @db.SmallInt
-  comment              String?
-  is_public            Boolean @default(true)
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id       String    @db.Uuid
+  author_company_id    String    @db.Uuid
+  evaluated_company_id String    @db.Uuid
+  reviewer_role        String    @db.VarChar(10)   // 'buyer' | 'seller'
+  rating               Decimal?  @db.Decimal(3, 2) // auto-computed from dimension scores
 
-  created_at DateTime @default(now()) @db.Timestamptz
+  // Seller dimensions (filled when reviewer_role = 'buyer')
+  score_quality        Int?      @db.SmallInt
+  score_compliance     Int?      @db.SmallInt
+  score_communication  Int?      @db.SmallInt
+  score_price          Int?      @db.SmallInt
+
+  // Buyer dimension (filled when reviewer_role = 'seller')
+  score_reliability    Int?      @db.SmallInt
+
+  // Flow control
+  review_status        ReviewStatus @default(pending)
+  comment              String?
+  is_public            Boolean   @default(true)
+  submitted_at         DateTime? @db.Timestamptz
+  expires_at           DateTime? @db.Timestamptz
+
+  created_at           DateTime  @default(now()) @db.Timestamptz
 
   transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Restrict)
   author      Company     @relation("ReviewAuthor", fields: [author_company_id], references: [id], onDelete: Restrict)
   evaluated   Company     @relation("ReviewTarget", fields: [evaluated_company_id], references: [id], onDelete: Restrict)
 
   @@unique([transaction_id, author_company_id], name: "uq_review_per_transaction")
+  @@index([author_company_id, review_status])
   @@map("reviews")
 }
 
@@ -793,6 +837,7 @@ model Conversation {
   request_id        String?   @db.Uuid
   quote_response_id String?   @db.Uuid
   transaction_id    String?   @unique @db.Uuid
+  status            ConversationStatus @default(active)
   last_message      String?
   last_message_date DateTime? @db.Timestamptz
   unread_count_1    Int       @default(0)

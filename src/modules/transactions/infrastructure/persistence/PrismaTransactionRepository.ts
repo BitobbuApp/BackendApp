@@ -208,6 +208,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
             db.supplier_confirmed_at,
             db.exchange_rate_id ?? null,
             db.payment_currency ?? 'USD',
+            db.buyer_review_status ?? 'pending',
+            db.supplier_review_status ?? 'pending',
             db.created_at,
             db.updated_at
         );

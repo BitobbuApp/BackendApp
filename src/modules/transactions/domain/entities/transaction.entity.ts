@@ -33,6 +33,8 @@ export class Transaction {
         public supplier_confirmed_at: Date | null = null,
         public exchange_rate_id: string | null = null,
         public payment_currency: string = 'USD',
+        public buyer_review_status: string = 'pending',
+        public supplier_review_status: string = 'pending',
         public created_at: Date | null = null,
         public updated_at: Date | null = null
     ) { }
