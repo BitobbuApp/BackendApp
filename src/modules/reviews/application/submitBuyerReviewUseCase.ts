@@ -77,63 +77,42 @@ export class SubmitBuyerReviewUseCase extends UseCase<SubmitBuyerReviewDto, any>
 
         const now = new Date();
 
-        // 4. Atomic operation
-        const result = await prisma.$transaction(async (tx) => {
-            // Update the Review row
-            const submittedReview = await tx.review.update({
-                where: { id: existingReview.id },
-                data: {
-                    rating,
-                    review_status: 'submitted',
-                    submitted_at: now,
-                    comment: data.comment ?? null,
-                    is_public: data.is_public ?? true,
-                    score_quality: data.score_quality,
-                    score_compliance: data.score_compliance,
-                    score_communication: data.score_communication,
-                    score_price: data.score_price,
-                } as any,
-            });
+        // 4. Atomic operation via repository
+        const reviewData = {
+            rating,
+            review_status: 'submitted',
+            submitted_at: now,
+            comment: data.comment ?? null,
+            is_public: data.is_public ?? true,
+            score_quality: data.score_quality,
+            score_compliance: data.score_compliance,
+            score_communication: data.score_communication,
+            score_price: data.score_price,
+        };
 
-            // Update Transaction review status
-            await tx.transaction.update({
-                where: { id: transactionId },
-                data: { buyer_review_status: 'submitted' as any },
-            });
+        const supplierId = existingReview.evaluated_company_id;
+        const supplier = await prisma.company.findUniqueOrThrow({ where: { id: supplierId } });
+        const cnt = supplier.seller_review_count;
 
-            // Recompute SUPPLIER averages
-            const supplierId = existingReview.evaluated_company_id;
-            const supplier = await tx.company.findUniqueOrThrow({ where: { id: supplierId } });
+        const companyUpdateData = {
+            review_count: { increment: 1 },
+            seller_review_count: { increment: 1 },
+            average_rating: computeNewAvg(Number(supplier.average_rating ?? 0), supplier.review_count, rating),
+            avg_quality: computeNewAvg(Number(supplier.avg_quality), cnt, data.score_quality),
+            avg_compliance_seller: computeNewAvg(Number(supplier.avg_compliance_seller), cnt, data.score_compliance),
+            avg_communication_seller: computeNewAvg(Number(supplier.avg_communication_seller), cnt, data.score_communication),
+            avg_price: computeNewAvg(Number(supplier.avg_price), cnt, data.score_price),
+        };
 
-            const cnt = supplier.seller_review_count;
-            await tx.company.update({
-                where: { id: supplierId },
-                data: {
-                    review_count: { increment: 1 },
-                    seller_review_count: { increment: 1 },
-                    average_rating: computeNewAvg(Number(supplier.average_rating ?? 0), supplier.review_count, rating),
-                    avg_quality: computeNewAvg(Number(supplier.avg_quality), cnt, data.score_quality),
-                    avg_compliance_seller: computeNewAvg(Number(supplier.avg_compliance_seller), cnt, data.score_compliance),
-                    avg_communication_seller: computeNewAvg(Number(supplier.avg_communication_seller), cnt, data.score_communication),
-                    avg_price: computeNewAvg(Number(supplier.avg_price), cnt, data.score_price),
-                },
-            });
-
-            // Check if BOTH are submitted
-            const counterpart = await tx.review.findFirst({
-                where: { transaction_id: transactionId, reviewer_role: 'seller' },
-            });
-            const bothSubmitted = counterpart?.review_status === 'submitted';
-
-            if (bothSubmitted && transaction.conversation?.id) {
-                await tx.conversation.update({
-                    where: { id: transaction.conversation.id },
-                    data: { status: 'completed' as any },
-                });
-            }
-
-            return { submittedReview, bothSubmitted };
-        }, { maxWait: 30000, timeout: 30000 });
+        const result = await this.repo.submitReviewAndUpdateAverages(
+            existingReview.id,
+            transactionId,
+            'buyer',
+            reviewData,
+            companyUpdateData,
+            supplierId,
+            now
+        );
 
         // 5. Emit socket event
         try {

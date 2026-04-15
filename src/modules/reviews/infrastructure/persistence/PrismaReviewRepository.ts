@@ -48,6 +48,60 @@ export class PrismaReviewRepository implements ReviewRepository {
         return this.mapToEntity(found);
     }
 
+    async submitReviewAndUpdateAverages(
+        reviewId: string,
+        transactionId: string,
+        reviewerRole: 'buyer' | 'seller',
+        reviewData: any,
+        companyUpdateData: any,
+        supplierId: string,
+        now: Date
+    ): Promise<{ submittedReview: Review, bothSubmitted: boolean }> {
+        return prisma.$transaction(async (tx) => {
+            const submittedReview = await tx.review.update({
+                where: { id: reviewId },
+                data: reviewData,
+            });
+
+            if (reviewerRole === 'buyer') {
+                await tx.transaction.update({
+                    where: { id: transactionId },
+                    data: { buyer_review_status: 'submitted' as any },
+                });
+            } else {
+                await tx.transaction.update({
+                    where: { id: transactionId },
+                    data: { supplier_review_status: 'submitted' as any },
+                });
+            }
+
+            await tx.company.update({
+                where: { id: supplierId },
+                data: companyUpdateData,
+            });
+
+            const counterpartRole = reviewerRole === 'buyer' ? 'seller' : 'buyer';
+            const counterpart = await tx.review.findFirst({
+                where: { transaction_id: transactionId, reviewer_role: counterpartRole },
+            });
+            const bothSubmitted = counterpart?.review_status === 'submitted';
+
+            const transaction = await tx.transaction.findUnique({
+                where: { id: transactionId },
+                include: { conversation: { select: { id: true } } },
+            });
+
+            if (bothSubmitted && transaction?.conversation?.id) {
+                await tx.conversation.update({
+                    where: { id: transaction.conversation.id },
+                    data: { status: 'completed' as any },
+                });
+            }
+
+            return { submittedReview: this.mapToEntity(submittedReview), bothSubmitted };
+        }, { maxWait: 30000, timeout: 30000 });
+    }
+
     async update(id: string, data: Partial<Review>): Promise<Review> {
         const updated = await prisma.review.update({
             where: { id },

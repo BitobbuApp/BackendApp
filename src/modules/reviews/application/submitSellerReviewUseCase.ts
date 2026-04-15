@@ -74,61 +74,40 @@ export class SubmitSellerReviewUseCase extends UseCase<SubmitSellerReviewDto, an
 
         const now = new Date();
 
-        // 4. Atomic operation
-        const result = await prisma.$transaction(async (tx) => {
-            // Update the Review row
-            const submittedReview = await tx.review.update({
-                where: { id: existingReview.id },
-                data: {
-                    rating,
-                    review_status: 'submitted',
-                    submitted_at: now,
-                    comment: data.comment ?? null,
-                    is_public: data.is_public ?? true,
-                    score_compliance: data.score_compliance,
-                    score_communication: data.score_communication,
-                    score_reliability: data.score_reliability,
-                } as any,
-            });
+        // 4. Atomic operation via repository
+        const reviewData = {
+            rating,
+            review_status: 'submitted',
+            submitted_at: now,
+            comment: data.comment ?? null,
+            is_public: data.is_public ?? true,
+            score_compliance: data.score_compliance,
+            score_communication: data.score_communication,
+            score_reliability: data.score_reliability,
+        };
 
-            // Update Transaction review status
-            await tx.transaction.update({
-                where: { id: transactionId },
-                data: { supplier_review_status: 'submitted' as any },
-            });
+        const buyerId = existingReview.evaluated_company_id;
+        const buyer = await prisma.company.findUniqueOrThrow({ where: { id: buyerId } });
+        const cnt = buyer.buyer_review_count;
 
-            // Recompute BUYER averages
-            const buyerId = existingReview.evaluated_company_id;
-            const buyer = await tx.company.findUniqueOrThrow({ where: { id: buyerId } });
+        const companyUpdateData = {
+            review_count: { increment: 1 },
+            buyer_review_count: { increment: 1 },
+            average_rating: computeNewAvg(Number(buyer.average_rating ?? 0), buyer.review_count, rating),
+            avg_compliance_buyer: computeNewAvg(Number(buyer.avg_compliance_buyer), cnt, data.score_compliance),
+            avg_reliability: computeNewAvg(Number(buyer.avg_reliability), cnt, data.score_reliability),
+            avg_communication_buyer: computeNewAvg(Number(buyer.avg_communication_buyer), cnt, data.score_communication),
+        };
 
-            const cnt = buyer.buyer_review_count;
-            await tx.company.update({
-                where: { id: buyerId },
-                data: {
-                    review_count: { increment: 1 },
-                    buyer_review_count: { increment: 1 },
-                    average_rating: computeNewAvg(Number(buyer.average_rating ?? 0), buyer.review_count, rating),
-                    avg_compliance_buyer: computeNewAvg(Number(buyer.avg_compliance_buyer), cnt, data.score_compliance),
-                    avg_reliability: computeNewAvg(Number(buyer.avg_reliability), cnt, data.score_reliability),
-                    avg_communication_buyer: computeNewAvg(Number(buyer.avg_communication_buyer), cnt, data.score_communication),
-                },
-            });
-
-            // Check if BOTH are submitted
-            const counterpart = await tx.review.findFirst({
-                where: { transaction_id: transactionId, reviewer_role: 'buyer' },
-            });
-            const bothSubmitted = counterpart?.review_status === 'submitted';
-
-            if (bothSubmitted && transaction.conversation?.id) {
-                await tx.conversation.update({
-                    where: { id: transaction.conversation.id },
-                    data: { status: 'completed' as any },
-                });
-            }
-
-            return { submittedReview, bothSubmitted };
-        }, { maxWait: 30000, timeout: 30000 });
+        const result = await this.repo.submitReviewAndUpdateAverages(
+            existingReview.id,
+            transactionId,
+            'seller',
+            reviewData,
+            companyUpdateData,
+            buyerId,
+            now
+        );
 
         // 5. Emit socket event
         try {
