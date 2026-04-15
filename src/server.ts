@@ -3,6 +3,7 @@ import cors from '@fastify/cors'
 import { routes } from './routes'
 import { connectDatabase } from './shared/infrastructure/database'
 import logger from './shared/infrastructure/logger'
+import { initSentry } from './shared/infrastructure/observability/sentry'
 
 
 const app = fastify({
@@ -34,6 +35,7 @@ import { initializeSocket } from './shared/infrastructure/socket';
  */
 export const start = async () => {
     try {
+        initSentry();
         await connectDatabase();
         
         // Initialize Socket.io attached to Fastify's native node server

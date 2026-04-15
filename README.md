@@ -28,8 +28,16 @@ src/
    npm install
    ```
 
-2. **Database Setup:**
-   Ensure your `.env` is configured with the `DATABASE_URL`.
+2. **Database & Environment Setup:**
+   Ensure your `.env` is configured with the required variables:
+   - `DATABASE_URL`: Connection string to your database.
+   - `SENTRY_ENABLED`: Set to `true` to enable Sentry error tracking.
+   - `SENTRY_DSN`: Required if Sentry is enabled.
+   - `SENTRY_ENVIRONMENT`: (Optional) `development`, `staging`, or `production`.
+   - `SENTRY_RELEASE`: (Optional) The version or commit hash for tracking.
+   - `SENTRY_TRACES_SAMPLE_RATE`: (Optional) Numeric rate for performance tracing.
+
+   Then set up Prisma:
    ```bash
    npx prisma db push
    npx prisma generate
