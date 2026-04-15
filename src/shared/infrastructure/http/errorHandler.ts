@@ -1,6 +1,7 @@
 // src/shared/infrastructure/http/errorHandler.ts
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ApplicationError, ValidationError } from '../../domain/error';
+import { captureException } from '../observability/sentry';
 
 export function errorHandler(app: any) {
     app.setErrorHandler((error: Error, request: FastifyRequest, reply: FastifyReply) => {
@@ -35,6 +36,30 @@ export function errorHandler(app: any) {
 
         // Handle unknown errors
         app.log.error(error);
+
+        // Capture 5xx unhandled exceptions in Sentry
+        const context: Record<string, any> = {
+            tags: {
+                route: request.routeOptions?.url || request.url,
+                method: request.method,
+                statusCode: 500,
+            },
+            extra: {
+                requestId: request.id,
+            }
+        };
+
+        const userContext = (request as any).user;
+        if (userContext) {
+            context.user = {
+                id: userContext.userId,
+                email: userContext.email,
+                companyId: userContext.companyId,
+            };
+        }
+
+        captureException(error, context);
+
         reply.status(500).send({
             error: 'Internal Server Error',
             message: 'An unexpected error occurred'
