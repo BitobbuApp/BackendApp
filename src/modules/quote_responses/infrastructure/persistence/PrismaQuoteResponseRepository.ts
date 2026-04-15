@@ -292,6 +292,92 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         await prisma.quoteResponse.delete({ where: { id } });
     }
 
+    async acceptQuoteResponse(
+        id: string,
+        actorCompanyId: string
+    ): Promise<QuoteResponse> {
+        return prisma.$transaction(async (tx) => {
+            const current = await tx.quoteResponse.findUniqueOrThrow({
+                where: { id },
+            });
+
+            const updated = await tx.quoteResponse.update({
+                where: { id },
+                data: { status: 'accepted' },
+            });
+
+            await tx.quoteResponseRevision.create({
+                data: {
+                    quote_response_id: id,
+                    actor_company_id: actorCompanyId,
+                    action: 'accepted',
+                    snapshot: {
+                        unit_price_usd: Number(current.unit_price_usd),
+                        quantity: Number(current.quantity),
+                        total_amount_usd: Number(current.total_amount_usd),
+                        status: 'accepted',
+                    },
+                },
+            });
+
+            await tx.request.update({
+                where: { id: current.request_id },
+                data: { status: 'completed' as any },
+            });
+
+            return this.mapToEntity(updated);
+        }, { maxWait: 300000, timeout: 300000 });
+    }
+
+    async startNegotiation(
+        id: string,
+        actorCompanyId: string,
+        buyerCompanyId: string,
+        supplierCompanyId: string
+    ): Promise<QuoteResponse> {
+        return prisma.$transaction(async (tx) => {
+            const current = await tx.quoteResponse.findUniqueOrThrow({
+                where: { id },
+            });
+
+            const updated = await tx.quoteResponse.update({
+                where: { id },
+                data: { status: 'negotiating' },
+            });
+
+            await tx.quoteResponseRevision.create({
+                data: {
+                    quote_response_id: id,
+                    actor_company_id: actorCompanyId,
+                    action: 'negotiation_started',
+                    snapshot: {
+                        status: 'negotiating',
+                    },
+                },
+            });
+
+            const existingConversation = await tx.conversation.findFirst({
+                where: {
+                    request_id: current.request_id,
+                    quote_response_id: id,
+                },
+            });
+
+            if (!existingConversation) {
+                await tx.conversation.create({
+                    data: {
+                        participant_1_id: buyerCompanyId,
+                        participant_2_id: supplierCompanyId,
+                        request_id: current.request_id,
+                        quote_response_id: id,
+                    },
+                });
+            }
+
+            return this.mapToEntity(updated);
+        }, { maxWait: 300000, timeout: 300000 });
+    }
+
     async updateWithRevision(
         id: string,
         data: Partial<QuoteResponse>,

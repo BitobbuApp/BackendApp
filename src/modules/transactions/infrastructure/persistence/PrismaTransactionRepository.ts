@@ -3,6 +3,64 @@ import { Transaction } from "../../domain/entities/transaction.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 
 export class PrismaTransactionRepository implements TransactionRepository {
+    async createFromQuoteResponse(data: {
+        quote_response_id: string;
+        buyer_id: string;
+        supplier_id: string;
+        product_description: string;
+        unit_price_usd: number;
+        quantity: number;
+        total_amount_usd: number;
+        payment_conditions?: string;
+        payment_condition_id?: string | null;
+        delivery_time?: string;
+        exchange_rate_id?: string | null;
+        payment_currency?: string;
+    }): Promise<Transaction> {
+        return prisma.$transaction(async (tx) => {
+            const transaction = await tx.transaction.create({
+                data: {
+                    quote_response_id: data.quote_response_id,
+                    buyer_id: data.buyer_id,
+                    supplier_id: data.supplier_id,
+                    product_description: data.product_description,
+                    unit_price_usd: data.unit_price_usd,
+                    quantity: data.quantity,
+                    total_amount_usd: data.total_amount_usd,
+                    ...(data.payment_conditions !== undefined && { payment_conditions: data.payment_conditions }),
+                    ...(data.payment_condition_id !== undefined && { payment_condition_id: data.payment_condition_id }),
+                    ...(data.delivery_time !== undefined && { delivery_time: data.delivery_time }),
+                    ...(data.exchange_rate_id !== undefined && { exchange_rate_id: data.exchange_rate_id }),
+                    ...(data.payment_currency !== undefined && { payment_currency: data.payment_currency }),
+                    status: 'awaiting_payment',
+                },
+            });
+
+            await tx.transactionRevision.create({
+                data: {
+                    transaction_id: transaction.id,
+                    actor_company_id: data.buyer_id, // Default to buyer as they accepted the quote
+                    action: 'transaction_created',
+                    snapshot: {
+                        unit_price_usd: Number(transaction.unit_price_usd),
+                        quantity: Number(transaction.quantity),
+                        total_amount_usd: Number(transaction.total_amount_usd),
+                        payment_conditions: transaction.payment_conditions,
+                        payment_condition_id: transaction.payment_condition_id,
+                        delivery_time: transaction.delivery_time,
+                        status: transaction.status,
+                        payment_currency: transaction.payment_currency,
+                    },
+                },
+            });
+
+            return this.mapToEntity(transaction);
+        }, {
+            maxWait: 300000,
+            timeout: 300000
+        });
+    }
+
     async create(transaction: Partial<Transaction>): Promise<Transaction> {
         const created = await prisma.transaction.create({
             data: {
@@ -107,6 +165,125 @@ export class PrismaTransactionRepository implements TransactionRepository {
 
     async delete(id: string): Promise<void> {
         await prisma.transaction.delete({ where: { id } });
+    }
+
+    async cancelTransaction(
+        id: string,
+        actorCompanyId: string,
+        reason: string
+    ): Promise<Transaction> {
+        return prisma.$transaction(async (tx) => {
+            const existing = await tx.transaction.findUniqueOrThrow({
+                where: { id },
+                include: { conversation: { select: { id: true } } }
+            });
+
+            const updated = await tx.transaction.update({
+                where: { id },
+                data: {
+                    status: 'canceled',
+                    cancellation_reason: reason,
+                },
+                include: { payment_method: true },
+            });
+
+            await tx.transactionRevision.create({
+                data: {
+                    transaction_id: id,
+                    actor_company_id: actorCompanyId,
+                    action: 'transaction_canceled',
+                    snapshot: {
+                        status: existing.status,
+                        cancellation_reason: reason,
+                    },
+                },
+            });
+
+            if (existing.conversation?.id) {
+                await tx.conversation.update({
+                    where: { id: existing.conversation.id },
+                    data: { status: 'cancelled' },
+                });
+            }
+
+            return this.mapToEntity(updated);
+        }, { maxWait: 300000, timeout: 300000 });
+    }
+
+    async confirmDelivery(
+        id: string,
+        actorCompanyId: string,
+        deliveryDate: Date
+    ): Promise<Transaction> {
+        const REVIEW_EXPIRY_DAYS = 14;
+        const expiresAt = new Date(deliveryDate);
+        expiresAt.setDate(expiresAt.getDate() + REVIEW_EXPIRY_DAYS);
+
+        return prisma.$transaction(async (tx) => {
+            const existing = await tx.transaction.findUniqueOrThrow({
+                where: { id },
+                include: { conversation: { select: { id: true } } },
+            });
+
+            const updated = await tx.transaction.update({
+                where: { id },
+                data: {
+                    status: 'completed',
+                    actual_delivery_date: deliveryDate,
+                    buyer_review_status: 'pending',
+                    supplier_review_status: 'pending',
+                },
+                include: { payment_method: true },
+            });
+
+            await tx.company.updateMany({
+                where: { id: { in: [existing.buyer_id, existing.supplier_id] } },
+                data: { transaction_count: { increment: 1 } },
+            });
+
+            await tx.transactionRevision.create({
+                data: {
+                    transaction_id: id,
+                    actor_company_id: actorCompanyId,
+                    action: 'delivery_confirmed',
+                    snapshot: {
+                        status: existing.status,
+                        actual_delivery_date: deliveryDate.toISOString(),
+                    },
+                },
+            });
+
+            await tx.review.create({
+                data: {
+                    transaction_id: id,
+                    author_company_id: existing.buyer_id,
+                    evaluated_company_id: existing.supplier_id,
+                    reviewer_role: 'buyer',
+                    review_status: 'pending',
+                    expires_at: expiresAt,
+                },
+            });
+
+            await tx.review.create({
+                data: {
+                    transaction_id: id,
+                    author_company_id: existing.supplier_id,
+                    evaluated_company_id: existing.buyer_id,
+                    reviewer_role: 'seller',
+                    review_status: 'pending',
+                    expires_at: expiresAt,
+                },
+            });
+
+            if (existing.conversation?.id) {
+                await tx.conversation.update({
+                    where: { id: existing.conversation.id },
+                    data: { status: 'pending_review' },
+                });
+            }
+
+            return this.mapToEntity(updated);
+        }, { maxWait: 300000, timeout: 300000 });
     }
 
     async updateWithRevision(
