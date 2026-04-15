@@ -3,31 +3,34 @@ import { QuoteResponse, ResponseStatus } from "../../domain/entities/quote_respo
 import { prisma } from '../../../../shared/infrastructure/database';
 import { Prisma } from "@prisma/client";
 import { DuplicateQuoteResponseError } from "../../domain/errors/quote_response.errors";
+import { pickDefined, connectOrDisconnect } from "../../../../shared/infrastructure/database/prismaDataHelpers";
 
 export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     async create(response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         try {
             const created = await prisma.$transaction(async (tx) => {
+                const rawData = {
+                    request_id: response.request_id!,
+                    supplier_id: response.supplier_id!,
+                    company_offer_id: response.company_offer_id ?? null,
+                    unit_price_usd: new Prisma.Decimal(response.unit_price_usd!),
+                    quantity: new Prisma.Decimal(response.quantity!),
+                    payment_conditions: response.payment_conditions ?? null,
+                    payment_condition_id: (response as any).payment_condition_id ?? null,
+                    delivery_method_id: (response as any).delivery_method_id ?? null,
+                    delivery_time: response.delivery_time ?? null,
+                    notes: response.notes ?? null,
+                    has_guarantee: response.has_guarantee ?? false,
+                    status: (response.status as any) ?? 'pending',
+                    rejection_reason: response.rejection_reason ?? null,
+                    total_amount_usd: new Prisma.Decimal(response.unit_price_usd! * response.quantity!),
+                    payment_currency: (response as any).payment_currency ?? 'USD',
+                    exchange_rate_id: (response as any).exchange_rate_id ?? null,
+                };
+
                 // 1. Create the quote response
                 const newResponse = await tx.quoteResponse.create({
-                    data: {
-                        request_id: response.request_id!,
-                        supplier_id: response.supplier_id!,
-                        company_offer_id: response.company_offer_id ?? null,
-                        unit_price_usd: new Prisma.Decimal(response.unit_price_usd!),
-                        quantity: new Prisma.Decimal(response.quantity!),
-                        payment_conditions: response.payment_conditions ?? null,
-                        payment_condition_id: (response as any).payment_condition_id ?? null,
-                        delivery_method_id: (response as any).delivery_method_id ?? null,
-                        delivery_time: response.delivery_time ?? null,
-                        notes: response.notes ?? null,
-                        has_guarantee: response.has_guarantee ?? false,
-                        status: (response.status as any) ?? 'pending',
-                        rejection_reason: response.rejection_reason ?? null,
-                        total_amount_usd: new Prisma.Decimal(response.unit_price_usd! * response.quantity!),
-                        payment_currency: (response as any).payment_currency ?? 'USD',
-                        exchange_rate_id: (response as any).exchange_rate_id ?? null,
-                    }
+                    data: pickDefined(rawData) as any
                 });
 
                 // 2. Atomically increment response_count on the parent Request
@@ -240,30 +243,28 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     }
 
     async update(id: string, response: Partial<QuoteResponse>): Promise<QuoteResponse> {
-        const dataToUpdate: any = {
-            ...(response.company_offer_id !== undefined && { company_offer_id: response.company_offer_id }),
-            ...(response.unit_price_usd !== undefined && { unit_price_usd: new Prisma.Decimal(response.unit_price_usd) }),
-            ...(response.quantity !== undefined && { quantity: new Prisma.Decimal(response.quantity) }),
-            ...(response.payment_conditions !== undefined && { payment_conditions: response.payment_conditions }),
-            ...(response.payment_condition_id !== undefined && {
-                payment_condition: (response as any).payment_condition_id === null
-                    ? { disconnect: true }
-                    : { connect: { id: (response as any).payment_condition_id } }
-            }),
-            ...((response as any).delivery_method_id !== undefined && {
-                delivery_method: (response as any).delivery_method_id === null
-                    ? { disconnect: true }
-                    : { connect: { id: (response as any).delivery_method_id } }
-            }),
-            ...(response.delivery_time !== undefined && { delivery_time: response.delivery_time }),
-            ...(response.notes !== undefined && { notes: response.notes }),
-            ...(response.has_guarantee !== undefined && { has_guarantee: response.has_guarantee }),
-            ...(response.status !== undefined && { status: response.status as any }),
-            ...(response.rejection_reason !== undefined && { rejection_reason: response.rejection_reason }),
-            ...((response as any).exchange_rate_id !== undefined && { exchange_rate_id: (response as any).exchange_rate_id }),
-            ...((response as any).payment_currency !== undefined && { payment_currency: (response as any).payment_currency }),
-            ...(response.formal_quote_url !== undefined && { formal_quote_url: response.formal_quote_url }),
+        const rawData = {
+            company_offer_id: response.company_offer_id,
+            unit_price_usd: response.unit_price_usd !== undefined ? new Prisma.Decimal(response.unit_price_usd) : undefined,
+            quantity: response.quantity !== undefined ? new Prisma.Decimal(response.quantity) : undefined,
+            payment_conditions: response.payment_conditions,
+            delivery_time: response.delivery_time,
+            notes: response.notes,
+            has_guarantee: response.has_guarantee,
+            status: response.status as any,
+            rejection_reason: response.rejection_reason,
+            exchange_rate_id: (response as any).exchange_rate_id,
+            payment_currency: (response as any).payment_currency,
+            formal_quote_url: response.formal_quote_url,
         };
+
+        const dataToUpdate = pickDefined(rawData) as any;
+        if ((response as any).payment_condition_id !== undefined) {
+            dataToUpdate.payment_condition = connectOrDisconnect((response as any).payment_condition_id);
+        }
+        if ((response as any).delivery_method_id !== undefined) {
+            dataToUpdate.delivery_method = connectOrDisconnect((response as any).delivery_method_id);
+        }
 
         if (response.unit_price_usd !== undefined || response.quantity !== undefined) {
              return prisma.$transaction(async (tx) => {
@@ -302,27 +303,25 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             const current = await tx.quoteResponse.findUniqueOrThrow({ where: { id } });
 
             // 2. Build update payload
-            const dataToUpdate: any = {
-                ...(data.unit_price_usd !== undefined && { unit_price_usd: new Prisma.Decimal(data.unit_price_usd) }),
-                ...(data.quantity !== undefined && { quantity: new Prisma.Decimal(data.quantity) }),
-                ...(data.payment_conditions !== undefined && { payment_conditions: data.payment_conditions }),
-                ...(data.delivery_time !== undefined && { delivery_time: data.delivery_time }),
-                ...(data.notes !== undefined && { notes: data.notes }),
-                ...(data.has_guarantee !== undefined && { has_guarantee: data.has_guarantee }),
-                ...(data.status !== undefined && { status: data.status as any }),
-                ...(data.rejection_reason !== undefined && { rejection_reason: data.rejection_reason }),
-                ...(data.formal_quote_url !== undefined && { formal_quote_url: data.formal_quote_url }),
-                ...(data.payment_condition_id !== undefined && {
-                    payment_condition: data.payment_condition_id === null
-                        ? { disconnect: true }
-                        : { connect: { id: data.payment_condition_id } }
-                }),
-                ...(data.delivery_method_id !== undefined && {
-                    delivery_method: data.delivery_method_id === null
-                        ? { disconnect: true }
-                        : { connect: { id: data.delivery_method_id } }
-                }),
+            const rawData = {
+                unit_price_usd: data.unit_price_usd !== undefined ? new Prisma.Decimal(data.unit_price_usd) : undefined,
+                quantity: data.quantity !== undefined ? new Prisma.Decimal(data.quantity) : undefined,
+                payment_conditions: data.payment_conditions,
+                delivery_time: data.delivery_time,
+                notes: data.notes,
+                has_guarantee: data.has_guarantee,
+                status: data.status as any,
+                rejection_reason: data.rejection_reason,
+                formal_quote_url: data.formal_quote_url,
             };
+
+            const dataToUpdate = pickDefined(rawData) as any;
+            if (data.payment_condition_id !== undefined) {
+                dataToUpdate.payment_condition = connectOrDisconnect(data.payment_condition_id);
+            }
+            if (data.delivery_method_id !== undefined) {
+                dataToUpdate.delivery_method = connectOrDisconnect(data.delivery_method_id);
+            }
 
             // Recalculate total if price or quantity changed
             if (data.unit_price_usd !== undefined || data.quantity !== undefined) {

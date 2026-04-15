@@ -1,33 +1,36 @@
 import { TransactionRepository, PaginatedTransactions, RevisionData } from "../../domain/repositories/transaction.repository";
 import { Transaction } from "../../domain/entities/transaction.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
+import { pickDefined, connectOrDisconnect, connectIfPresent } from "../../../../shared/infrastructure/database/prismaDataHelpers";
 
 export class PrismaTransactionRepository implements TransactionRepository {
     async create(transaction: Partial<Transaction>): Promise<Transaction> {
+        const rawData = {
+            quote_response_id: transaction.quote_response_id!,
+            buyer_id: transaction.buyer_id!,
+            supplier_id: transaction.supplier_id!,
+            product_description: transaction.product_description!,
+            unit_price_usd: transaction.unit_price_usd!,
+            quantity: transaction.quantity!,
+            total_amount_usd: transaction.total_amount_usd!,
+            payment_method_id: transaction.payment_method_id,
+            payment_conditions: transaction.payment_conditions ?? null,
+            payment_condition_id: transaction.payment_condition_id ?? null,
+            delivery_time: transaction.delivery_time ?? null,
+            status: (transaction.status as any) ?? 'in_process',
+            estimated_delivery_date: transaction.estimated_delivery_date ?? null,
+            actual_delivery_date: transaction.actual_delivery_date ?? null,
+            cancellation_reason: transaction.cancellation_reason ?? null,
+            buyer_confirmed: transaction.buyer_confirmed ?? false,
+            supplier_confirmed: transaction.supplier_confirmed ?? false,
+            buyer_confirmed_at: transaction.buyer_confirmed_at ?? null,
+            supplier_confirmed_at: transaction.supplier_confirmed_at ?? null,
+            exchange_rate_id: transaction.exchange_rate_id,
+            payment_currency: transaction.payment_currency,
+        };
+
         const created = await prisma.transaction.create({
-            data: {
-                quote_response_id: transaction.quote_response_id!,
-                buyer_id: transaction.buyer_id!,
-                supplier_id: transaction.supplier_id!,
-                product_description: transaction.product_description!,
-                unit_price_usd: transaction.unit_price_usd!,
-                quantity: transaction.quantity!,
-                total_amount_usd: transaction.total_amount_usd!,
-                ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
-                payment_conditions: transaction.payment_conditions ?? null,
-                payment_condition_id: transaction.payment_condition_id ?? null,
-                delivery_time: transaction.delivery_time ?? null,
-                status: (transaction.status as any) ?? 'in_process',
-                estimated_delivery_date: transaction.estimated_delivery_date ?? null,
-                actual_delivery_date: transaction.actual_delivery_date ?? null,
-                cancellation_reason: transaction.cancellation_reason ?? null,
-                buyer_confirmed: transaction.buyer_confirmed ?? false,
-                supplier_confirmed: transaction.supplier_confirmed ?? false,
-                buyer_confirmed_at: transaction.buyer_confirmed_at ?? null,
-                supplier_confirmed_at: transaction.supplier_confirmed_at ?? null,
-                ...(transaction.exchange_rate_id !== undefined && { exchange_rate_id: transaction.exchange_rate_id }),
-                ...(transaction.payment_currency !== undefined && { payment_currency: transaction.payment_currency }),
-            } as any
+            data: pickDefined(rawData) as any
         });
         return this.mapToEntity(created);
     }
@@ -74,32 +77,34 @@ export class PrismaTransactionRepository implements TransactionRepository {
     }
 
     async update(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
+        const rawData = {
+            product_description: transaction.product_description,
+            unit_price_usd: transaction.unit_price_usd,
+            quantity: transaction.quantity,
+            total_amount_usd: transaction.total_amount_usd,
+            payment_method_id: transaction.payment_method_id,
+            payment_conditions: transaction.payment_conditions,
+            delivery_time: transaction.delivery_time,
+            status: transaction.status as any,
+            estimated_delivery_date: transaction.estimated_delivery_date,
+            actual_delivery_date: transaction.actual_delivery_date,
+            cancellation_reason: transaction.cancellation_reason,
+            buyer_confirmed: transaction.buyer_confirmed,
+            supplier_confirmed: transaction.supplier_confirmed,
+            buyer_confirmed_at: transaction.buyer_confirmed_at,
+            supplier_confirmed_at: transaction.supplier_confirmed_at,
+            exchange_rate_id: transaction.exchange_rate_id,
+            payment_currency: transaction.payment_currency,
+        };
+
+        const data = pickDefined(rawData) as any;
+        if (transaction.payment_condition_id !== undefined) {
+            data.payment_condition = connectOrDisconnect(transaction.payment_condition_id);
+        }
+
         const updated = await prisma.transaction.update({
             where: { id },
-            data: {
-                ...(transaction.product_description !== undefined && { product_description: transaction.product_description }),
-                ...(transaction.unit_price_usd !== undefined && { unit_price_usd: transaction.unit_price_usd }),
-                ...(transaction.quantity !== undefined && { quantity: transaction.quantity }),
-                ...(transaction.total_amount_usd !== undefined && { total_amount_usd: transaction.total_amount_usd }),
-                ...(transaction.payment_method_id !== undefined && { payment_method_id: transaction.payment_method_id }),
-                ...(transaction.payment_conditions !== undefined && { payment_conditions: transaction.payment_conditions }),
-                ...(transaction.payment_condition_id !== undefined && {
-                    payment_condition: transaction.payment_condition_id === null
-                        ? { disconnect: true }
-                        : { connect: { id: transaction.payment_condition_id } }
-                }),
-                ...(transaction.delivery_time !== undefined && { delivery_time: transaction.delivery_time }),
-                ...(transaction.status !== undefined && { status: transaction.status as any }),
-                ...(transaction.estimated_delivery_date !== undefined && { estimated_delivery_date: transaction.estimated_delivery_date }),
-                ...(transaction.actual_delivery_date !== undefined && { actual_delivery_date: transaction.actual_delivery_date }),
-                ...(transaction.cancellation_reason !== undefined && { cancellation_reason: transaction.cancellation_reason }),
-                ...(transaction.buyer_confirmed !== undefined && { buyer_confirmed: transaction.buyer_confirmed }),
-                ...(transaction.supplier_confirmed !== undefined && { supplier_confirmed: transaction.supplier_confirmed }),
-                ...(transaction.buyer_confirmed_at !== undefined && { buyer_confirmed_at: transaction.buyer_confirmed_at }),
-                ...(transaction.supplier_confirmed_at !== undefined && { supplier_confirmed_at: transaction.supplier_confirmed_at }),
-                ...(transaction.exchange_rate_id !== undefined && { exchange_rate_id: transaction.exchange_rate_id }),
-                ...(transaction.payment_currency !== undefined && { payment_currency: transaction.payment_currency }),
-            } as any,
+            data,
             include: { payment_method: true }
         });
         return this.mapToEntity(updated);
@@ -117,30 +122,30 @@ export class PrismaTransactionRepository implements TransactionRepository {
         return prisma.$transaction(async (tx) => {
             const current = await tx.transaction.findUniqueOrThrow({ where: { id } });
 
-            const dataToUpdate: any = {
-                ...(transactionData.product_description !== undefined && { product_description: transactionData.product_description }),
-                ...(transactionData.unit_price_usd !== undefined && { unit_price_usd: transactionData.unit_price_usd }),
-                ...(transactionData.quantity !== undefined && { quantity: transactionData.quantity }),
-                ...(transactionData.total_amount_usd !== undefined && { total_amount_usd: transactionData.total_amount_usd }),
-                ...(transactionData.payment_method_id !== undefined && { payment_method_id: transactionData.payment_method_id }),
-                ...(transactionData.payment_conditions !== undefined && { payment_conditions: transactionData.payment_conditions }),
-                ...(transactionData.payment_condition_id !== undefined && {
-                    payment_condition: transactionData.payment_condition_id === null
-                        ? { disconnect: true }
-                        : { connect: { id: transactionData.payment_condition_id } }
-                }),
-                ...(transactionData.delivery_time !== undefined && { delivery_time: transactionData.delivery_time }),
-                ...(transactionData.status !== undefined && { status: transactionData.status as any }),
-                ...(transactionData.estimated_delivery_date !== undefined && { estimated_delivery_date: transactionData.estimated_delivery_date }),
-                ...(transactionData.actual_delivery_date !== undefined && { actual_delivery_date: transactionData.actual_delivery_date }),
-                ...(transactionData.cancellation_reason !== undefined && { cancellation_reason: transactionData.cancellation_reason }),
-                ...(transactionData.buyer_confirmed !== undefined && { buyer_confirmed: transactionData.buyer_confirmed }),
-                ...(transactionData.supplier_confirmed !== undefined && { supplier_confirmed: transactionData.supplier_confirmed }),
-                ...(transactionData.buyer_confirmed_at !== undefined && { buyer_confirmed_at: transactionData.buyer_confirmed_at }),
-                ...(transactionData.supplier_confirmed_at !== undefined && { supplier_confirmed_at: transactionData.supplier_confirmed_at }),
-                ...(transactionData.exchange_rate_id !== undefined && { exchange_rate_id: transactionData.exchange_rate_id }),
-                ...(transactionData.payment_currency !== undefined && { payment_currency: transactionData.payment_currency }),
+            const rawData = {
+                product_description: transactionData.product_description,
+                unit_price_usd: transactionData.unit_price_usd,
+                quantity: transactionData.quantity,
+                total_amount_usd: transactionData.total_amount_usd,
+                payment_method_id: transactionData.payment_method_id,
+                payment_conditions: transactionData.payment_conditions,
+                delivery_time: transactionData.delivery_time,
+                status: transactionData.status as any,
+                estimated_delivery_date: transactionData.estimated_delivery_date,
+                actual_delivery_date: transactionData.actual_delivery_date,
+                cancellation_reason: transactionData.cancellation_reason,
+                buyer_confirmed: transactionData.buyer_confirmed,
+                supplier_confirmed: transactionData.supplier_confirmed,
+                buyer_confirmed_at: transactionData.buyer_confirmed_at,
+                supplier_confirmed_at: transactionData.supplier_confirmed_at,
+                exchange_rate_id: transactionData.exchange_rate_id,
+                payment_currency: transactionData.payment_currency,
             };
+
+            const dataToUpdate = pickDefined(rawData) as any;
+            if (transactionData.payment_condition_id !== undefined) {
+                dataToUpdate.payment_condition = connectOrDisconnect(transactionData.payment_condition_id);
+            }
 
             const updated = await tx.transaction.update({
                 where: { id },
