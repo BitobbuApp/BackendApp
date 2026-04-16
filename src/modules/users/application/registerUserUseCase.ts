@@ -6,6 +6,8 @@ import bcrypt from 'bcrypt';
 import { UseCase } from '../../../shared/application/useCase';
 import { registerUserDtoRequestSchema, registerUserDtoResponseSchema } from './dtos/register.dto';
 import { VENEZUELA_COUNTRY_ID } from '../../../shared/constants/geo.constants';
+import { EmailService } from '../../../shared/application/services/email.service';
+import { NodemailerBrevoEmailService } from '../../../shared/infrastructure/notifications/nodemailerBrevoEmailService';
 
 interface RegisterDto {
     first_name: string;
@@ -32,9 +34,12 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     protected inputSchema: Joi.Schema = registerUserDtoRequestSchema;
     protected outputSchema: Joi.Schema = registerUserDtoResponseSchema;
     private readonly userRepository: UserRepository;
+    private readonly emailService: EmailService;
+
     constructor() {
         super();
         this.userRepository = new PrismaUserRepository();
+        this.emailService = new NodemailerBrevoEmailService();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {
@@ -63,6 +68,16 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             updated_at: new Date(),
             last_access: null
         } as any);
+
+        // Send welcome email (fire and forget / fail-safe)
+        await this.emailService.sendTemplate({
+            to: newUser.email,
+            templateKey: 'welcome',
+            variables: {
+                first_name: newUser.first_name,
+                last_name: newUser.last_name
+            }
+        });
 
         return {
             id: newUser.id,
