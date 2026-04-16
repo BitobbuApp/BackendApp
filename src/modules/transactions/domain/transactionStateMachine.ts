@@ -43,7 +43,7 @@ export function canTransition(from: string, to: string): boolean {
 
 export function assertTransition(from: string, to: string): void {
     if (!canTransition(from, to)) {
-        const { InvalidTransactionTransitionError } = require('./errors/InvalidTransactionTransitionError');
-        throw new InvalidTransactionTransitionError(from, to);
+        const { InvalidTransitionError } = require('./errors/transaction.errors');
+        throw new InvalidTransitionError(from, to);
     }
 }

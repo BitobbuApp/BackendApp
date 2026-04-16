@@ -1,3 +1,4 @@
+import { TransactionNotFoundError } from "../../domain/errors/transaction.errors";
 import { TransactionStrategy, TransactionActionParams } from './TransactionStrategy';
 import { Transaction, TransactionStatus } from '../../domain/entities/transaction.entity';
 import { assertTransactionActorRole } from '../helpers/assertTransactionActorRole';
@@ -32,7 +33,7 @@ export class DeliveryConfirmedStrategy implements TransactionStrategy {
             where: { id: transactionId },
             include: { conversation: { select: { id: true } } },
         });
-        if (!existing) throw new Error('Transaction not found');
+        if (!existing) throw new TransactionNotFoundError(transactionId);
 
         assertTransition(existing.status, TransactionStatus.Completed);
 

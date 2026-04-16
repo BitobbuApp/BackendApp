@@ -1,7 +1,7 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { ContactRepository } from "../domain/repositories/contact.repository";
 import Joi from "joi";
-import { ContactNotFoundError } from "../domain/errors/company.errors";
+import { ContactNotFoundError, PrimaryContactDeleteForbiddenError } from "../domain/errors/company.errors";
 
 import { PrismaContactRepository } from "../infrastructure/persistence/PrismaContactRepository";
 
@@ -22,7 +22,7 @@ export class RemoveContactUseCase extends UseCase<string, boolean> {
         if (existing.is_primary) {
             const all = await this.contactRepository.findByCompanyId(existing.company_id);
             if (all.length > 1) {
-                throw new Error("Cannot delete the primary contact. Please assign another contact as primary first.");
+                throw new PrimaryContactDeleteForbiddenError();
             }
         }
 

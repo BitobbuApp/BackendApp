@@ -1,3 +1,5 @@
+import { TransactionNotFoundError } from "../../transactions/domain/errors/transaction.errors";
+import { ReviewNotFoundError, ReviewUnauthorizedActorError, ReviewAlreadySubmittedError, ReviewPeriodExpiredError } from "../domain/errors/review.errors";
 import Joi from 'joi';
 import { UseCase } from '../../../shared/application/useCase';
 import { ApplicationError } from '../../../shared/domain/error';
@@ -52,19 +54,19 @@ export class SubmitBuyerReviewUseCase extends UseCase<SubmitBuyerReviewDto, any>
             where: { id: transactionId },
             include: { conversation: { select: { id: true } } },
         });
-        if (!transaction) throw new ApplicationError(404, 'Transaction not found');
+        if (!transaction) throw new TransactionNotFoundError(transactionId);
         if (transaction.buyer_id !== actorCompanyId) {
-            throw new ApplicationError(403, 'You are not the buyer in this transaction');
+            throw new ReviewUnauthorizedActorError("You are not the buyer in this transaction");
         }
 
         // 2. Find pending review
         const existingReview = await this.repo.findByTransactionAndRole(transactionId, 'buyer');
-        if (!existingReview) throw new ApplicationError(404, 'Pending review not found');
+        if (!existingReview) throw new ReviewNotFoundError("Pending review not found");
         if (existingReview.review_status === 'submitted') {
-            throw new ApplicationError(400, 'You have already submitted your review');
+            throw new ReviewAlreadySubmittedError("You have already submitted your review");
         }
         if (existingReview.review_status === 'expired') {
-            throw new ApplicationError(400, 'The review period has expired');
+            throw new ReviewPeriodExpiredError("The review period has expired");
         }
 
         // 3. Auto-compute rating for seller

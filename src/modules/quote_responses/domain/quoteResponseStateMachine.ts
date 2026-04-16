@@ -47,7 +47,7 @@ export function canTransition(from: string, to: string): boolean {
  */
 export function assertTransition(from: string, to: string): void {
     if (!canTransition(from, to)) {
-        const { InvalidTransitionError } = require('./errors/InvalidTransitionError');
+        const { InvalidTransitionError } = require('./errors/quote_response.errors');
         throw new InvalidTransitionError(from, to);
     }
 }
