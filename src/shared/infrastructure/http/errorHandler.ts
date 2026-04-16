@@ -1,10 +1,36 @@
 // src/shared/infrastructure/http/errorHandler.ts
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { ApplicationError, ValidationError } from '../../domain/error';
+import { parseTelegramConfig } from '../config/telegramConfig';
+import { TelegramErrorNotifierService } from '../notifications/telegramErrorNotifierService';
 import { randomUUID } from 'crypto';
 
 export function errorHandler(app: any) {
+    // Initialize the notifier (will parse config and fail fast if invalid)
+    const telegramConfig = parseTelegramConfig();
+    const notifier = new TelegramErrorNotifierService(telegramConfig);
+
     app.setErrorHandler((error: Error, request: FastifyRequest, reply: FastifyReply) => {
+        // Notify critical error
+        const notificationInput: any = {
+            app: 'BackendApp',
+            environment: process.env.NODE_ENV || 'development',
+            severity: 'error', // default to error severity for 5xx unhandled exceptions
+            route: request.url,
+            method: request.method,
+            errorName: error.name || 'UnknownError',
+            errorMessage: error.message || 'An unexpected error occurred',
+            requestId: request.id,
+            timestamp: new Date().toISOString()
+        };
+
+        if (error.stack) notificationInput.stackTrace = error.stack;
+        if ((request as any).user?.userId) notificationInput.userId = (request as any).user.userId;
+        if ((request as any).user?.companyId) notificationInput.companyId = (request as any).user.companyId;
+
+        
+        
+        
         const traceId = (request.headers['x-trace-id'] as string) || randomUUID();
 
         // Handle custom application errors
@@ -68,9 +94,13 @@ export function errorHandler(app: any) {
             });
             return;
         }
-
+        notifier.notifyCriticalError(notificationInput).catch(err => {
+            // Log notification failures but don't block response
+            app.log.error({ err }, 'Failed to trigger Telegram notification in errorHandler');
+        });
         // Handle unknown errors
         app.log.error({ err: error, traceId, code: "INTERNAL_SERVER_ERROR", category: "INTERNAL" }, 'Unhandled error');
+
         reply.status(500).send({
             success: false,
             error: {
