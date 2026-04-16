@@ -1,3 +1,4 @@
+import { TransactionNotFoundError } from "../../domain/errors/transaction.errors";
 import { TransactionStrategy } from './TransactionStrategy';
 import { PaymentUploadedStrategy } from './PaymentUploadedStrategy';
 import { PaymentApprovedStrategy } from './PaymentApprovedStrategy';

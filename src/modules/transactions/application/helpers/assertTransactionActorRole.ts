@@ -1,7 +1,9 @@
 import { prisma } from '../../../../shared/infrastructure/database';
 import { ActorRole } from '../strategies/TransactionStrategy';
 
-export class UnauthorizedTransactionActorError extends Error {
+import { UnauthorizedActorError } from "../../domain/errors/transaction.errors";
+
+export class UnauthorizedTransactionActorError extends UnauthorizedActorError {
     public readonly statusCode = 403;
     constructor(role: string, action: string) {
         super(`Company role "${role}" is not authorized to perform transaction action "${action}".`);

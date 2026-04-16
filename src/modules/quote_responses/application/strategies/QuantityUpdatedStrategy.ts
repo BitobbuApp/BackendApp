@@ -1,3 +1,4 @@
+import { QuoteResponseNotFoundError } from "../../domain/errors/quote_response.errors";
 import { QuoteRevisionStrategy, QuoteActionParams } from './QuoteRevisionStrategy';
 import { QuoteResponse, ResponseStatus } from '../../domain/entities/quote_response.entity';
 import { assertActorRole } from '../helpers/assertActorRole';
@@ -21,7 +22,7 @@ export class QuantityUpdatedStrategy implements QuoteRevisionStrategy {
         await assertActorRole(quoteResponseId, actorCompanyId, this.allowedActors, this.action);
 
         const existing = await this.repo.findById(quoteResponseId);
-        if (!existing) throw new Error('QuoteResponse not found');
+        if (!existing) throw new QuoteResponseNotFoundError(quoteResponseId);
 
         assertTransition(existing.status as string, ResponseStatus.Negotiating);
 

@@ -1,3 +1,4 @@
+import { TransactionNotFoundError } from "../../domain/errors/transaction.errors";
 import { Transaction } from '../../domain/entities/transaction.entity';
 
 export type ActorRole = 'buyer' | 'supplier' | 'system';
