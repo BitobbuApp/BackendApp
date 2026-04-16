@@ -1,3 +1,5 @@
+import { QuoteResponseNotFoundError } from "../../domain/errors/quote_response.errors";
+import { ApplicationError } from "../../../../shared/domain/error";
 import { QuoteRevisionStrategy } from './QuoteRevisionStrategy';
 import { NegotiationStartedStrategy } from './NegotiationStartedStrategy';
 import { PriceUpdatedStrategy } from './PriceUpdatedStrategy';
@@ -30,7 +32,7 @@ const STRATEGIES: Record<string, QuoteRevisionStrategy> = {
 export function getStrategy(action: string): QuoteRevisionStrategy {
     const strategy = STRATEGIES[action];
     if (!strategy) {
-        throw new Error(`Unknown quote revision action: "${action}". Valid actions: ${Object.keys(STRATEGIES).join(', ')}`);
+        throw new ApplicationError(400, `Unknown quote revision action: "${action}". Valid actions: ${Object.keys(STRATEGIES).join(', ')}`);
     }
     return strategy;
 }

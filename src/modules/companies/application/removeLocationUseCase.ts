@@ -1,7 +1,7 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { LocationRepository } from "../domain/repositories/location.repository";
 import Joi from "joi";
-import { LocationNotFoundError } from "../domain/errors/company.errors";
+import { LocationNotFoundError, MainHeadquartersDeleteForbiddenError } from "../domain/errors/company.errors";
 import { PrismaLocationRepository } from "../infrastructure/persistence/PrismaLocationRepository";
 
 export class RemoveLocationUseCase extends UseCase<string, boolean> {
@@ -22,7 +22,7 @@ export class RemoveLocationUseCase extends UseCase<string, boolean> {
             // No permitimos borrar la sede principal sin asignar otra primero
             const all = await this.locationRepository.findByCompanyId(existing.company_id);
             if (all.length > 1) {
-                throw new Error("Cannot delete the main headquarters. Please assign another location as main first.");
+                throw new MainHeadquartersDeleteForbiddenError();
             }
         }
 

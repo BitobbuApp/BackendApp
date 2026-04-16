@@ -1,3 +1,5 @@
+import { QuoteResponseNotFoundError } from "../../domain/errors/quote_response.errors";
+import { ApplicationError } from "../../../../shared/domain/error";
 import { QuoteRevisionStrategy, QuoteActionParams } from './QuoteRevisionStrategy';
 import { QuoteResponse, ResponseStatus } from '../../domain/entities/quote_response.entity';
 import { assertActorRole } from '../helpers/assertActorRole';
@@ -19,13 +21,13 @@ export class FormalQuoteAttachedStrategy implements QuoteRevisionStrategy {
         const { quoteResponseId, actorCompanyId, payload } = params;
 
         if (!payload?.formal_quote_url) {
-            throw new Error('formal_quote_url is required for this action.');
+            throw new ApplicationError(400, "formal_quote_url is required for this action.", "VALIDATION_ERROR", "VALIDATION");
         }
 
         await assertActorRole(quoteResponseId, actorCompanyId, this.allowedActors, this.action);
 
         const existing = await this.repo.findById(quoteResponseId);
-        if (!existing) throw new Error('QuoteResponse not found');
+        if (!existing) throw new QuoteResponseNotFoundError(quoteResponseId);
 
         assertTransition(existing.status as string, ResponseStatus.FormalApprovalPending);
 

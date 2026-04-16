@@ -1,3 +1,4 @@
+import { QuoteResponseNotFoundError } from "../../domain/errors/quote_response.errors";
 import { QuoteRevisionStrategy, QuoteActionParams } from './QuoteRevisionStrategy';
 import { QuoteResponse, ResponseStatus } from '../../domain/entities/quote_response.entity';
 import { assertTransition } from '../../domain/quoteResponseStateMachine';
@@ -19,7 +20,7 @@ export class ExpiredStrategy implements QuoteRevisionStrategy {
         const { quoteResponseId, actorCompanyId } = params;
 
         const existing = await this.repo.findById(quoteResponseId);
-        if (!existing) throw new Error('QuoteResponse not found');
+        if (!existing) throw new QuoteResponseNotFoundError(quoteResponseId);
 
         assertTransition(existing.status as string, ResponseStatus.Expired);
 

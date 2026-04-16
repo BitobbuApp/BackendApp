@@ -1,3 +1,4 @@
+import { QuoteResponseNotFoundError } from "../../domain/errors/quote_response.errors";
 import { QuoteResponse } from '../../domain/entities/quote_response.entity';
 
 export type ActorRole = 'buyer' | 'supplier' | 'system';
