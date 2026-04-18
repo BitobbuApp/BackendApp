@@ -7,7 +7,7 @@ import { UseCase } from '../../../shared/application/useCase';
 import { registerUserDtoRequestSchema, registerUserDtoResponseSchema } from './dtos/register.dto';
 import { VENEZUELA_COUNTRY_ID } from '../../../shared/constants/geo.constants';
 import { EmailService } from '../../../shared/application/services/email.service';
-import { NodemailerBrevoEmailService } from '../../../shared/infrastructure/notifications/nodemailerBrevoEmailService';
+import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
 
 interface RegisterDto {
     first_name: string;
@@ -39,7 +39,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     constructor() {
         super();
         this.userRepository = new PrismaUserRepository();
-        this.emailService = new NodemailerBrevoEmailService();
+        this.emailService = new MailgunEmailAdapter();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {

@@ -1,20 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NodemailerBrevoEmailService } from '../../../../src/shared/infrastructure/notifications/nodemailerBrevoEmailService';
+import { MailgunEmailAdapter } from '../../../../src/shared/infrastructure/notifications/mailgunEmailAdapter';
 import { EmailMessage } from '../../../../src/shared/domain/notifications/emailMessage';
 
-test('NodemailerBrevoEmailService', async (t) => {
+test('MailgunEmailAdapter', async (t) => {
     const originalEnv = process.env;
 
     await t.test('should instantiate without throwing when disabled', () => {
         process.env = { ...originalEnv, EMAIL_ENABLED: 'false' };
-        const service = new NodemailerBrevoEmailService();
+        const service = new MailgunEmailAdapter();
         assert.ok(service);
     });
 
     await t.test('sendTemplate should not throw when disabled', async () => {
         process.env = { ...originalEnv, EMAIL_ENABLED: 'false' };
-        const service = new NodemailerBrevoEmailService();
+        const service = new MailgunEmailAdapter();
 
         const message: EmailMessage = {
             to: 'test@example.com',
