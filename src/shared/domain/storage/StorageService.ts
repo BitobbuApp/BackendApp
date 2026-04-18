@@ -38,4 +38,15 @@ export interface StorageService {
      * @throws {StorageServiceException} If there's an error deleting the file.
      */
     deleteDocument(fileKey: string): Promise<void>;
+
+    /**
+     * Uploads a file directly to the storage.
+     *
+     * @param buffer The file content buffer.
+     * @param fileKey The full S3 key where the file will be stored.
+     * @param mimeType The MIME type of the file.
+     * @returns A promise that resolves when the file is successfully uploaded.
+     * @throws {StorageServiceException} If there's an error uploading the file.
+     */
+    uploadFile(buffer: Buffer, fileKey: string, mimeType: string): Promise<void>;
 }

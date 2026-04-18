@@ -73,6 +73,21 @@ export class S3StorageAdapter implements StorageService {
         }
     }
 
+    async uploadFile(buffer: Buffer, fileKey: string, mimeType: string): Promise<void> {
+        try {
+            const command = new PutObjectCommand({
+                Bucket: this.bucketName,
+                Key: fileKey,
+                Body: buffer,
+                ContentType: mimeType,
+            });
+
+            await this.client.send(command);
+        } catch (error) {
+            throw new StorageServiceException('Failed to upload file to storage', error);
+        }
+    }
+
     async deleteDocument(fileKey: string): Promise<void> {
         try {
             const command = new DeleteObjectCommand({
