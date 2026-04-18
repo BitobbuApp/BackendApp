@@ -1,7 +1,9 @@
 import { prisma } from '../../../../shared/infrastructure/database';
 import { ActorRole } from '../strategies/QuoteRevisionStrategy';
 
-export class UnauthorizedActorError extends Error {
+import { UnauthorizedActorError as BaseUnauthorizedActorError } from "../../domain/errors/quote_response.errors";
+
+export class UnauthorizedActorError extends BaseUnauthorizedActorError {
     public readonly statusCode = 403;
     constructor(role: string, action: string) {
         super(`Company role "${role}" is not authorized to perform action "${action}".`);

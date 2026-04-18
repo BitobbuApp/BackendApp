@@ -1,3 +1,4 @@
+import { TransactionNotFoundError } from "../../domain/errors/transaction.errors";
 import { TransactionStrategy, TransactionActionParams } from './TransactionStrategy';
 import { Transaction, TransactionStatus } from '../../domain/entities/transaction.entity';
 import { assertTransactionActorRole } from '../helpers/assertTransactionActorRole';
@@ -21,7 +22,7 @@ export class PaymentApprovedStrategy implements TransactionStrategy {
         await assertTransactionActorRole(transactionId, actorCompanyId, this.allowedActors, this.action);
 
         const existing = await this.repo.findById(transactionId);
-        if (!existing) throw new Error('Transaction not found');
+        if (!existing) throw new TransactionNotFoundError(transactionId);
 
         assertTransition(existing.status, TransactionStatus.PreparingOrder);
 
