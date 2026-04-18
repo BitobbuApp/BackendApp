@@ -90,17 +90,23 @@ async create(product: Partial<Product>): Promise<Product> {
 
 ## Update Operations
 
-Use **conditional spreading** to avoid passing `undefined` to Prisma:
+Use **`pickDefined`** from `prismaDataHelpers` to construct update objects cleanly, rather than using manual `undefined` spread checks. This significantly improves readability and reduces visual noise.
 
 ```typescript
+import { pickDefined } from '../../../../shared/infrastructure/database/prismaDataHelpers';
+
 async update(id: string, product: Partial<Product>): Promise<Product> {
+    const rawData = {
+        name: product.name,
+        price: product.price,
+        is_active: product.is_active,
+    };
+
+    const data = pickDefined(rawData) as any;
+
     const updated = await prisma.product.update({
         where: { id },
-        data: {
-            ...(product.name !== undefined && { name: product.name }),
-            ...(product.price !== undefined && { price: product.price }),
-            ...(product.is_active !== undefined && { is_active: product.is_active }),
-        }
+        data
     });
     return this.mapToEntity(updated);
 }
@@ -108,19 +114,21 @@ async update(id: string, product: Partial<Product>): Promise<Product> {
 
 ## Lookup Table Relations (Connect/Disconnect Pattern)
 
-For FK relations to lookup tables, use the Prisma `connect`/`disconnect` pattern:
+For FK relations to lookup tables, use the explicitly provided relation helpers from `prismaDataHelpers`: `connectIfPresent` and `connectOrDisconnect`.
 
 ```typescript
-// In create:
-...(data.sector_id ? { sector_ref: { connect: { id: data.sector_id } } } : {}),
+import { connectOrDisconnect } from '../../../../shared/infrastructure/database/prismaDataHelpers';
 
-// In update (support setting to null):
-...(data.sector_id !== undefined && {
-    sector_ref: data.sector_id === null
-        ? { disconnect: true }
-        : { connect: { id: data.sector_id } }
-}),
+// In update (support setting to null or undefined):
+const data = pickDefined(rawData) as any;
+if (product.sector_id !== undefined) {
+    data.sector_ref = connectOrDisconnect(product.sector_id);
+}
 ```
+
+## PR Checklist
+
+- [ ] Prefer shared data helpers (`pickDefined`, `connectOrDisconnect`) over repeated conditional spread blocks.
 
 ## Error Handling in Repositories
 
