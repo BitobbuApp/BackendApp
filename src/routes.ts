@@ -14,7 +14,6 @@ import { userOnboardingStatusRoutes } from "./modules/userOnboardingStatus/infra
 import { deliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/http/deliveryMethodRoutes";
 import { reviewRoutes } from "./modules/reviews/infrastructure/http/reviewRoutes";
 import { dashboardRoutes } from "./modules/dashboard/infrastructure/http/dashboardRoutes";
-import { documentRoutes } from "./modules/documents/infrastructure/http/routes/documentRoutes";
 
 export async function routes(app: FastifyInstance) {
     app.register(userRoutes, { prefix: '/users' });
@@ -32,5 +31,4 @@ export async function routes(app: FastifyInstance) {
     app.register(dashboardRoutes, { prefix: '/dashboard' });
     app.register(deliveryMethodRoutes, { prefix: '/delivery-methods' });
     app.register(reviewRoutes, { prefix: '/reviews' });
-    app.register(documentRoutes, { prefix: '/documents' });
 }
