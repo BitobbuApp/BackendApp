@@ -21,9 +21,9 @@ test('loadEmailConfig', async (t) => {
         process.env = {
             ...originalEnv,
             EMAIL_ENABLED: 'true',
-            EMAIL_BREVO_SMTP_HOST: 'smtp.test.com',
-            EMAIL_BREVO_SMTP_USER: 'user',
-            EMAIL_BREVO_SMTP_PASS: 'pass',
+            EMAIL_MAILGUN_SMTP_HOST: 'smtp.test.com',
+            EMAIL_MAILGUN_SMTP_USER: 'user',
+            EMAIL_MAILGUN_SMTP_PASS: 'pass',
             EMAIL_FROM_ADDRESS: 'test@example.com'
         };
         const config = loadEmailConfig();
