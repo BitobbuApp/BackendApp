@@ -20,13 +20,8 @@ export const createRequestDtoRequestSchema = Joi.object({
     city_id: Joi.number().integer().min(1).allow(null).optional(),
     reach_service: Joi.string().max(200).allow(null, '').optional(),
     expiration_date: Joi.date().iso().allow(null).optional(),
-    files: Joi.array().items(
-        Joi.object({
-            url: Joi.string().uri().required(),
-            file_name: Joi.string().allow(null, '').optional(),
-        })
-    ).optional()
-});
+    rawFiles: Joi.any().optional()
+}).options({ stripUnknown: true });
 
 export const updateRequestDtoRequestSchema = Joi.object({
     id: Joi.string().uuid().required(),

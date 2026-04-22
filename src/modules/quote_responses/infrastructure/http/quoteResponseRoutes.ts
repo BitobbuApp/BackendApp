@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateQuoteResponseUseCase } from '../../application/createQuoteResponseUseCase';
 import { GetQuoteResponseByIdUseCase } from '../../application/getQuoteResponseByIdUseCase';
 import { GetQuoteResponseWithSupplierUseCase } from '../../application/getQuoteResponseWithSupplierUseCase';
@@ -116,7 +117,7 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
 
     // POST /quote-responses/:id/action (JWT protected — State Machine entry point)
     app.post('/:id/action',
-        { preHandler: [authMiddleware] } as any,
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
             const { action, payload } = request.body;
             const useCase = new PerformQuoteActionUseCase();
@@ -125,6 +126,7 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
                 action,
                 actorCompanyId: request.user.companyId,
                 payload: payload || {},
+                rawFiles: request.uploadedFiles || [],
             });
             return ApiResponse.success(reply, result, `Action "${action}" performed successfully`);
         }

@@ -4,11 +4,9 @@ export interface EmailConfig {
     enabled: boolean;
     fromAddress: string;
     fromName: string;
-    smtp: {
-        host: string;
-        port: number;
-        user: string;
-        pass: string;
+    mailgun: {
+        apiKey: string;
+        domain: string;
     };
     templates: Record<string, string>;
 }
@@ -20,11 +18,9 @@ export function loadEmailConfig(): EmailConfig {
         enabled,
         fromAddress: process.env.EMAIL_FROM_ADDRESS || 'no-reply@bitobbu.com',
         fromName: process.env.EMAIL_FROM_NAME || 'Bitobbu',
-        smtp: {
-            host: process.env.EMAIL_MAILGUN_SMTP_HOST || '',
-            port: parseInt(process.env.EMAIL_MAILGUN_SMTP_PORT || '587', 10),
-            user: process.env.EMAIL_MAILGUN_SMTP_USER || '',
-            pass: process.env.EMAIL_MAILGUN_SMTP_PASS || '',
+        mailgun: {
+            apiKey: process.env.EMAIL_MAILGUN_API_KEY || process.env.MAILGUN_API_KEY || process.env.EMAIL_MAILGUN_SMTP_PASS || '',
+            domain: process.env.EMAIL_MAILGUN_DOMAIN || process.env.EMAIL_MAILGUN_SMTP_USER?.split('@')[1] || '',
         },
         templates: {
             welcome: process.env.EMAIL_TEMPLATE_WELCOME || '',
@@ -35,9 +31,8 @@ export function loadEmailConfig(): EmailConfig {
 
     if (enabled) {
         const missingVars: string[] = [];
-        if (!config.smtp.host) missingVars.push('EMAIL_MAILGUN_SMTP_HOST');
-        if (!config.smtp.user) missingVars.push('EMAIL_MAILGUN_SMTP_USER');
-        if (!config.smtp.pass) missingVars.push('EMAIL_MAILGUN_SMTP_PASS');
+        if (!config.mailgun.apiKey) missingVars.push('EMAIL_MAILGUN_API_KEY');
+        if (!config.mailgun.domain) missingVars.push('EMAIL_MAILGUN_DOMAIN');
         if (!config.fromAddress) missingVars.push('EMAIL_FROM_ADDRESS');
 
         if (missingVars.length > 0) {

@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateTransactionUseCase } from '../../application/createTransactionUseCase';
 import { GetTransactionByIdUseCase } from '../../application/getTransactionByIdUseCase';
 import { UpdateTransactionUseCase } from '../../application/updateTransactionUseCase';
@@ -86,7 +87,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 
     // POST /transactions/:id/action (JWT protected — State Machine entry point)
     app.post('/:id/action',
-        { preHandler: [authMiddleware] } as any,
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
             const { action, payload } = request.body;
             const useCase = new PerformTransactionActionUseCase();
@@ -95,6 +96,7 @@ export async function transactionRoutes(app: FastifyInstance) {
                 action,
                 actorCompanyId: request.user.companyId,
                 payload: payload || {},
+                rawFiles: request.uploadedFiles || [],
             });
             return ApiResponse.success(reply, result, `Transaction action "${action}" performed successfully`);
         }

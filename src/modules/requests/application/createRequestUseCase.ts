@@ -4,6 +4,8 @@ import { RequestRepository } from "../domain/repositories/request.repository";
 import { PrismaRequestRepository } from "../infrastructure/persistence/PrismaRequestRepository";
 import { createRequestDtoRequestSchema, requestDtoResponseSchema } from "./dtos/request.dto";
 import { RFQ_TYPE } from "../../../shared/constants/request/request.contants";
+import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
+import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
 
 interface CreateRequestDto {
     company_id: string;
@@ -21,7 +23,7 @@ interface CreateRequestDto {
     city_id?: number | null;
     reach_service?: string | null;
     expiration_date?: Date | null;
-    files?: Array<{ url: string; file_name?: string | null }>;
+    rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }
 
 interface RequestFileResult {
@@ -61,15 +63,57 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
     protected inputSchema: Joi.Schema = createRequestDtoRequestSchema;
     protected outputSchema: Joi.Schema = requestDtoResponseSchema;
     private readonly requestRepository: RequestRepository;
+    private readonly uploadDocumentUseCase: UploadDocumentUseCase;
 
     constructor() {
         super();
         this.requestRepository = new PrismaRequestRepository();
+        this.uploadDocumentUseCase = new UploadDocumentUseCase(storageService);
     }
 
     protected async implementation(data: CreateRequestDto): Promise<RequestResult> {
+        console.log("CreateRequestUseCase implementation started!");
+        console.log("data.rawFiles length:", data.rawFiles?.length);
+        console.log("data.rawFiles exists:", !!data.rawFiles);
+        if (data.rawFiles) {
+            console.log("Sample rawFile:", data.rawFiles[0]?.file_name, data.rawFiles[0]?.buffer?.length);
+        }
+
         (data as any).type = RFQ_TYPE[data.type as keyof typeof RFQ_TYPE] || 'product';   
-        const created = await this.requestRepository.create(data as any);
+        
+        const files: Array<{ url: string; file_name?: string | null }> = [];
+        
+        if (data.rawFiles && data.rawFiles.length > 0) {
+            console.log("Uploading files to R2 via UploadDocumentUseCase...");
+            const uploadUseCase = new UploadDocumentUseCase(storageService);
+            const publicUrlBase = process.env.S3_PUBLIC_URL || 'https://pub-763f58343d734ddfbcf74e591370f038.r2.dev';
+
+            for (const file of data.rawFiles) {
+                try {
+                    const result = await uploadUseCase.execute({
+                        tenantId: data.company_id,
+                        buffer: file.buffer
+                    });
+                    console.log("File uploaded successfully:", result.fileKey);
+                    files.push({ 
+                        url: `${publicUrlBase}/${result.fileKey}`, 
+                        file_name: file.file_name || null 
+                    });
+                } catch (err) {
+                    console.error("Error uploading file to R2:", err);
+                    throw err;
+                }
+            }
+        } else {
+            console.log("No rawFiles found to upload!");
+        }
+
+        const { rawFiles, ...repoData } = data;
+        if (files.length > 0) {
+            (repoData as any).files = files;
+        }
+
+        const created = await this.requestRepository.create(repoData as any);
         return {
             id: created.id,
             company_id: created.company_id,
@@ -96,3 +140,4 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
         };
     }
 }
+

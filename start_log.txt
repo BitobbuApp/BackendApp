@@ -1,0 +1,4 @@
+[2026-04-18 06:39:58.807 +0000] [32mINFO[39m: [36m📦 Successfully connected to PostgreSQL Database[39m
+[2026-04-18 06:39:58.810 +0000] [32mINFO[39m: [36m🚀 Servidor Socket.io inicializado correctamente[39m
+[2026-04-18 06:39:58.895 +0000] [32mINFO[39m: [36mServer listening at http://127.0.0.1:3000[39m
+[2026-04-18 06:39:58.895 +0000] [32mINFO[39m: [36mServer listening at http://192.168.0.2:3000[39m

@@ -4,12 +4,14 @@ import { getTransactionStrategy } from './strategies/TransactionStrategyFactory'
 import { getIO } from '../../../shared/infrastructure/socket';
 import { prisma } from '../../../shared/infrastructure/database';
 import logger from '../../../shared/infrastructure/logger';
+import { CreateSystemMessageUseCase } from '../../messages/application/createSystemMessageUseCase';
 
 interface PerformTransactionActionDto {
     transactionId: string;
     action: string;
     actorCompanyId: string;
     payload?: Record<string, any>;
+    rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }
 
 const VALID_ACTIONS = [
@@ -27,6 +29,7 @@ const inputSchema = Joi.object({
     action: Joi.string().valid(...VALID_ACTIONS).required(),
     actorCompanyId: Joi.string().uuid().required(),
     payload: Joi.object().optional().default({}),
+    rawFiles: Joi.any().optional(),
 }).options({ stripUnknown: true });
 
 const outputSchema = Joi.object().unknown(true);
@@ -55,6 +58,14 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
     protected inputSchema = inputSchema;
     protected outputSchema = outputSchema;
 
+    // Preserve rawFiles outside of Joi since Buffer objects don't survive validation
+    private _rawFiles: Array<{ file_name: string; buffer: Buffer; mime_type: string }> = [];
+
+    public async execute(data: any): Promise<any> {
+        this._rawFiles = data?.rawFiles || [];
+        return super.execute(data);
+    }
+
     protected async implementation(data: PerformTransactionActionDto): Promise<any> {
         const strategy = getTransactionStrategy(data.action);
 
@@ -62,7 +73,7 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
         const result = await strategy.execute({
             transactionId: data.transactionId,
             actorCompanyId: data.actorCompanyId,
-            payload: data.payload,
+            payload: { ...data.payload, rawFiles: this._rawFiles },
         });
 
         // 2. Emit socket event after successful commit
@@ -120,6 +131,42 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
             });
 
             logger.info(`📡 Socket event "${eventName}" emitted to conversation ${conversation.id}`);
+
+            // Create system message based on new state/action
+            const TRANSACTION_SYSTEM_KEYS: Record<string, string> = {
+                payment_uploaded: 'transaction.payment_uploaded',
+                payment_approved: 'transaction.payment_approved',
+                payment_rejected: 'transaction.payment_rejected',
+                order_shipped: 'transaction.order_shipped',
+                delivery_confirmed: 'transaction.completed',
+                transaction_canceled: 'transaction.canceled',
+                dispute_raised: 'transaction.disputed'
+            };
+
+            const systemEventKey = TRANSACTION_SYSTEM_KEYS[data.action];
+            
+            if (systemEventKey) {
+                let fileUrl: string | undefined;
+                let fileName: string | undefined;
+                if (data.action === 'payment_uploaded') {
+                    fileUrl = result.payment_proof_url;
+                    fileName = 'Comprobante de Pago';
+                }
+
+                const createSystemMessage = new CreateSystemMessageUseCase();
+                await createSystemMessage.execute({
+                    conversationId: conversation.id,
+                    eventKey: systemEventKey,
+                    eventPayload: {
+                        actorId: data.actorCompanyId,
+                        totalAmountUsd: Number(result.total_amount_usd),
+                        fileUrl,
+                        ...data.payload // Include reasons like cancellation or dispute details
+                    },
+                    fileUrl,
+                    fileName,
+                });
+            }
         } catch (err) {
             logger.warn({ err }, `Failed to emit socket event for transaction action "${data.action}"`);
         }

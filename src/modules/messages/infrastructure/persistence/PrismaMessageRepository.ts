@@ -7,8 +7,11 @@ export class PrismaMessageRepository implements IMessageRepository {
         // Build data object avoiding undefined for strict optional property types
         const createData: any = {
             conversation_id: data.conversation_id,
-            sender_id: data.sender_id,
+            sender_id: data.sender_id ?? null,
         };
+        if (data.message_type) createData.message_type = data.message_type;
+        if (data.event_key) createData.event_key = data.event_key;
+        if (data.event_payload !== undefined) createData.event_payload = data.event_payload;
         if (data.client_msg_id) createData.client_msg_id = data.client_msg_id;
         if (data.content !== undefined) createData.content = data.content;
         if (data.file_url) createData.file_url = data.file_url;

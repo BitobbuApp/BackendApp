@@ -1,5 +1,6 @@
 import fastify from 'fastify'
 import cors from '@fastify/cors'
+import multipart from '@fastify/multipart'
 import { routes } from './routes'
 import { connectDatabase } from './shared/infrastructure/database'
 import logger from './shared/infrastructure/logger'
@@ -15,6 +16,13 @@ import { errorHandler } from './shared/infrastructure/http/errorHandler'
 app.register(cors, {
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+});
+
+// Register multipart plugin with strict 5MB limit
+app.register(multipart, {
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    }
 });
 
 errorHandler(app);

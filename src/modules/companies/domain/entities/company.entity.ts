@@ -37,6 +37,7 @@ export class Company {
         public commercial_profile?: any,
         public settings?: any,
         public payment_methods?: any[],
-        public categories_of_interest?: any[]
+        public categories_of_interest?: any[],
+        public verification_info?: any
     ) { }
 }
