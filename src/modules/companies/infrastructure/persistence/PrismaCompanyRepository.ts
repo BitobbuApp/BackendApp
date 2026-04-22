@@ -98,7 +98,9 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 payment_methods: { include: { method: true } },
                 categories_of_interest: { include: { category: true } },
                 sector_ref: true,
-                company_type_ref: true
+                company_type_ref: true,
+                verification: true,
+                verif_documents: { include: { type: true } }
             }
         });
         if (!found) return null;
@@ -123,7 +125,9 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 payment_methods: { include: { method: true } },
                 categories_of_interest: { include: { category: true } },
                 sector_ref: true,
-                company_type_ref: true
+                company_type_ref: true,
+                verification: true,
+                verif_documents: { include: { type: true } }
             }
         });
         if (!found) return null;
@@ -289,6 +293,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
                     categories_of_interest: { include: { category: true } },
                     sector_ref: true,
                     company_type_ref: true,
+                    verification: true,
+                    verif_documents: { include: { type: true } },
                     _count: {
                         select: { offers: true }
                     }
@@ -315,6 +321,25 @@ export class PrismaCompanyRepository implements CompanyRepository {
             id: ci.category.id,
             name: ci.category.name_es,
         })) ?? [];
+
+        let verificationInfo = null;
+        if (db.verification) {
+            verificationInfo = {
+                status: db.verification.status,
+                rejection_reason: db.verification.rejection_reason,
+                verified_at: db.verification.verified_at,
+                documents: db.verif_documents?.map((doc: any) => ({
+                    id: doc.id,
+                    type_id: doc.type_id,
+                    type_name: doc.type?.name_es ?? doc.type?.name_en ?? '',
+                    url: doc.url,
+                    status: doc.status,
+                    notes: doc.notes,
+                    created_at: doc.created_at,
+                    reviewed_at: doc.reviewed_at
+                })) ?? []
+            };
+        }
 
         return new Company(
             db.id,
@@ -351,7 +376,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
             db.commercial_profile,
             db.settings,
             paymentMethods,
-            categoriesOfInterest
+            categoriesOfInterest,
+            verificationInfo
         );
     }
 

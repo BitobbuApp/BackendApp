@@ -4,12 +4,14 @@ import { getStrategy } from './strategies/QuoteRevisionStrategyFactory';
 import { getIO } from '../../../shared/infrastructure/socket';
 import { prisma } from '../../../shared/infrastructure/database';
 import logger from '../../../shared/infrastructure/logger';
+import { CreateSystemMessageUseCase } from '../../messages/application/createSystemMessageUseCase';
 
 interface PerformQuoteActionDto {
     quoteResponseId: string;
     action: string;
     actorCompanyId: string;
     payload?: Record<string, any>;
+    rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }
 
 const VALID_ACTIONS = [
@@ -30,6 +32,7 @@ const inputSchema = Joi.object({
     action: Joi.string().valid(...VALID_ACTIONS).required(),
     actorCompanyId: Joi.string().uuid().required(),
     payload: Joi.object().optional().default({}),
+    rawFiles: Joi.any().optional(),
 }).options({ stripUnknown: true });
 
 const outputSchema = Joi.object().unknown(true);
@@ -68,7 +71,7 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
         const result = await strategy.execute({
             quoteResponseId: data.quoteResponseId,
             actorCompanyId: data.actorCompanyId,
-            payload: data.payload,
+            payload: { ...data.payload, rawFiles: data.rawFiles },
         });
 
         // 2. See if there's a linked transaction (useful when action is 'accepted')
@@ -149,6 +152,47 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
                 // Normal flow: emit strictly strictly to the conversation room
                 io.to(conversation.id).emit(eventName, payload);
                 logger.info(`📡 Socket event "${eventName}" emitted to conversation ${conversation.id}`);
+            }
+
+            // Create system message for ALL quote actions to have a detailed timeline
+            const QUOTE_SYSTEM_KEYS: Record<string, string> = {
+                negotiation_started: 'quote.negotiating',
+                price_updated: 'quote.price_updated',
+                quantity_updated: 'quote.quantity_updated',
+                terms_updated: 'quote.terms_updated',
+                formal_quote_requested: 'quote.formal_request',
+                formal_quote_attached: 'quote.formal_attached',
+                formal_quote_rejected: 'quote.formal_rejected',
+                accepted: 'quote.accepted',
+                canceled: 'quote.canceled',
+                expired: 'quote.expired'
+            };
+
+            const systemEventKey = QUOTE_SYSTEM_KEYS[data.action];
+
+            if (systemEventKey) {
+                // Extraer URL del archivo según la acción
+                let fileUrl: string | undefined;
+                let fileName: string | undefined;
+                if (data.action === 'formal_quote_attached') {
+                    fileUrl = result.formal_quote_url;
+                    fileName = 'Cotización Formal.pdf';
+                }
+
+                const createSystemMessage = new CreateSystemMessageUseCase();
+                await createSystemMessage.execute({
+                    conversationId: conversation.id,
+                    eventKey: systemEventKey,
+                    eventPayload: {
+                        actorId: data.actorCompanyId,
+                        unitPriceUsd: Number(result.unit_price_usd),
+                        quantity: Number(result.quantity),
+                        fileUrl, // También en el payload para el frontend
+                        ...data.payload // Include any specific action payload like new values or reasons
+                    },
+                    fileUrl, // Se persiste en Message.file_url
+                    fileName,
+                });
             }
         } catch (err) {
             // Socket errors should never break the API response

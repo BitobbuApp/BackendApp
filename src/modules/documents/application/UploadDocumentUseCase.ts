@@ -3,6 +3,7 @@ import { UseCase } from '../../../shared/application/useCase';
 import { StorageService } from '../../../shared/domain/storage/StorageService';
 import { ApplicationError } from '../../../shared/domain/error';
 import { randomUUID } from 'crypto';
+import { fromBuffer } from 'file-type';
 
 interface UploadDocumentInput {
     tenantId: string;
@@ -45,7 +46,6 @@ export class UploadDocumentUseCase extends UseCase<UploadDocumentInput, UploadDo
         }
 
         // Validate the file magic numbers securely
-        const { fromBuffer } = await import('file-type');
         const fileTypeResult = await fromBuffer(buffer);
 
         if (!fileTypeResult || !ALLOWED_MIME_TYPES.has(fileTypeResult.mime)) {

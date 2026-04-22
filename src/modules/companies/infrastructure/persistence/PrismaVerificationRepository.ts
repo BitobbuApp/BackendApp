@@ -19,7 +19,7 @@ export class PrismaVerificationRepository implements VerificationRepository {
             },
             create: {
                 company_id: verification.company_id!,
-                status: verification.status as any || 'Pending',
+                status: verification.status as any || 'pending',
             }
         });
         return this.mapVerificationToEntity(updated);
@@ -31,7 +31,7 @@ export class PrismaVerificationRepository implements VerificationRepository {
                 company_id: doc.company_id!,
                 type_id: (doc as any).type_id!,
                 url: doc.file_url!,
-                status: 'Pending',
+                status: 'pending',
             } as any,
             include: { type: true }
         });
@@ -53,14 +53,21 @@ export class PrismaVerificationRepository implements VerificationRepository {
     }
 
     async updateDocument(id: string, doc: Partial<VerificationDocument>): Promise<VerificationDocument> {
+        const dataToUpdate: any = {};
+        if (doc.status !== undefined) dataToUpdate.status = doc.status;
+        if (doc.feedback !== undefined) dataToUpdate.notes = doc.feedback;
+        if (doc.reviewed_by !== undefined) dataToUpdate.reviewed_by = doc.reviewed_by;
+        if (doc.file_url !== undefined) dataToUpdate.url = doc.file_url;
+        
+        if (doc.status === 'approved' || doc.status === 'rejected') {
+            dataToUpdate.reviewed_at = new Date();
+        } else if (doc.status === 'pending') {
+            dataToUpdate.reviewed_at = null;
+        }
+
         const updated = await prisma.verificationDocument.update({
             where: { id },
-            data: {
-                ...(doc.status !== undefined && { status: doc.status as any }),
-                ...(doc.feedback !== undefined && { notes: doc.feedback }),
-                ...(doc.reviewed_by !== undefined && { reviewed_by: doc.reviewed_by }),
-                reviewed_at: new Date()
-            },
+            data: dataToUpdate,
             include: { type: true }
         });
         return this.mapDocumentToEntity(updated);
@@ -82,7 +89,7 @@ export class PrismaVerificationRepository implements VerificationRepository {
             db.id,
             db.company_id,
             db.type_id,
-            db.type?.name ?? '',
+            db.type?.name_es ?? db.type?.name_en ?? '',
             db.url,
             db.status,
             db.notes,

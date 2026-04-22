@@ -90,10 +90,13 @@ export const updateCompanyDtoRequestSchema = Joi.object({
 
     // Arrays
     payment_method_ids: Joi.array().items(Joi.number().integer().min(1)),
-    interest_category_ids: Joi.array().items(Joi.number().integer().min(1))
-}).min(1);
+    interest_category_ids: Joi.array().items(Joi.number().integer().min(1)),
 
-const companyWithRelationsSchema = Joi.object({
+    // File uploads (multipart)
+    rawFiles: Joi.any().optional()
+}).min(1).options({ stripUnknown: true });
+
+export const companyWithRelationsSchema = Joi.object({
     id: Joi.string().required(),
     trade_name: Joi.string().required(),
     legal_name: Joi.string().allow(null, ''),
@@ -159,6 +162,21 @@ const companyWithRelationsSchema = Joi.object({
         id: Joi.number().integer().required(),
         name: Joi.string().required(),
     })).optional(),
+    verification_info: Joi.object({
+        status: Joi.string().required(),
+        rejection_reason: Joi.string().allow(null, '').optional(),
+        verified_at: Joi.date().allow(null).optional(),
+        documents: Joi.array().items(Joi.object({
+            id: Joi.string().required(),
+            type_id: Joi.number().integer().required(),
+            type_name: Joi.string().allow(null, '').optional(),
+            url: Joi.string().uri().required(),
+            status: Joi.string().required(),
+            notes: Joi.string().allow(null, '').optional(),
+            created_at: Joi.date().required(),
+            reviewed_at: Joi.date().allow(null).optional()
+        })).default([])
+    }).allow(null).optional(),
     created_at: Joi.date().required(),
     updated_at: Joi.date().allow(null),
 }).options({ stripUnknown: true });

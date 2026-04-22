@@ -169,17 +169,17 @@ model Company {
   review_count      Int      @default(0)
 
   // As SELLER — evaluated by buyers
-  avg_quality               Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_compliance_seller     Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_communication_seller  Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_price                 Decimal @default(0.00) @db.Decimal(3, 2)
-  seller_review_count       Int     @default(0)
+  avg_quality              Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_compliance_seller    Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_communication_seller Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_price                Decimal @default(0.00) @db.Decimal(3, 2)
+  seller_review_count      Int     @default(0)
 
   // As BUYER — evaluated by sellers
-  avg_compliance_buyer      Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_reliability           Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_communication_buyer   Decimal @default(0.00) @db.Decimal(3, 2)
-  buyer_review_count        Int     @default(0)
+  avg_compliance_buyer    Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_reliability         Decimal @default(0.00) @db.Decimal(3, 2)
+  avg_communication_buyer Decimal @default(0.00) @db.Decimal(3, 2)
+  buyer_review_count      Int     @default(0)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -732,13 +732,13 @@ model Transaction {
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  quote_response    QuoteResponse      @relation(fields: [quote_response_id], references: [id], onDelete: Restrict)
-  buyer             Company            @relation("BuyerTransactions", fields: [buyer_id], references: [id], onDelete: Restrict)
-  supplier          Company            @relation("SupplierTransactions", fields: [supplier_id], references: [id], onDelete: Restrict)
-  payment_method    PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
-  payment_condition PaymentCondition?  @relation("TransactionPaymentCondition", fields: [payment_condition_id], references: [id])
-  exchange_rate     ExchangeRate?      @relation(fields: [exchange_rate_id], references: [id])
-  currency          Currency           @relation(fields: [payment_currency], references: [code])
+  quote_response    QuoteResponse         @relation(fields: [quote_response_id], references: [id], onDelete: Restrict)
+  buyer             Company               @relation("BuyerTransactions", fields: [buyer_id], references: [id], onDelete: Restrict)
+  supplier          Company               @relation("SupplierTransactions", fields: [supplier_id], references: [id], onDelete: Restrict)
+  payment_method    PaymentMethodDict?    @relation(fields: [payment_method_id], references: [id])
+  payment_condition PaymentCondition?     @relation("TransactionPaymentCondition", fields: [payment_condition_id], references: [id])
+  exchange_rate     ExchangeRate?         @relation(fields: [exchange_rate_id], references: [id])
+  currency          Currency              @relation(fields: [payment_currency], references: [code])
   reviews           Review[]
   conversation      Conversation?
   revisions         TransactionRevision[]
@@ -747,15 +747,15 @@ model Transaction {
 }
 
 model TransactionRevision {
-  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transaction_id    String                    @db.Uuid
-  actor_company_id  String                    @db.Uuid
-  action            TransactionRevisionAction
-  snapshot          Json?
-  created_at        DateTime                  @default(now()) @db.Timestamptz
+  id               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id   String                    @db.Uuid
+  actor_company_id String                    @db.Uuid
+  action           TransactionRevisionAction
+  snapshot         Json?
+  created_at       DateTime                  @default(now()) @db.Timestamptz
 
-  transaction   Transaction  @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
-  actor_company Company      @relation("TransactionRevisionActor", fields: [actor_company_id], references: [id], onDelete: Restrict)
+  transaction   Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  actor_company Company     @relation("TransactionRevisionActor", fields: [actor_company_id], references: [id], onDelete: Restrict)
 
   @@index([transaction_id, created_at(sort: Desc)])
   @@map("transaction_revisions")
@@ -766,30 +766,30 @@ model TransactionRevision {
 // ==========================================
 
 model Review {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transaction_id       String    @db.Uuid
-  author_company_id    String    @db.Uuid
-  evaluated_company_id String    @db.Uuid
-  reviewer_role        String    @db.VarChar(10)   // 'buyer' | 'seller'
-  rating               Decimal?  @db.Decimal(3, 2) // auto-computed from dimension scores
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id       String   @db.Uuid
+  author_company_id    String   @db.Uuid
+  evaluated_company_id String   @db.Uuid
+  reviewer_role        String   @db.VarChar(10) // 'buyer' | 'seller'
+  rating               Decimal? @db.Decimal(3, 2) // auto-computed from dimension scores
 
   // Seller dimensions (filled when reviewer_role = 'buyer')
-  score_quality        Int?      @db.SmallInt
-  score_compliance     Int?      @db.SmallInt
-  score_communication  Int?      @db.SmallInt
-  score_price          Int?      @db.SmallInt
+  score_quality       Int? @db.SmallInt
+  score_compliance    Int? @db.SmallInt
+  score_communication Int? @db.SmallInt
+  score_price         Int? @db.SmallInt
 
   // Buyer dimension (filled when reviewer_role = 'seller')
-  score_reliability    Int?      @db.SmallInt
+  score_reliability Int? @db.SmallInt
 
   // Flow control
-  review_status        ReviewStatus @default(pending)
-  comment              String?
-  is_public            Boolean   @default(true)
-  submitted_at         DateTime? @db.Timestamptz
-  expires_at           DateTime? @db.Timestamptz
+  review_status ReviewStatus @default(pending)
+  comment       String?
+  is_public     Boolean      @default(true)
+  submitted_at  DateTime?    @db.Timestamptz
+  expires_at    DateTime?    @db.Timestamptz
 
-  created_at           DateTime  @default(now()) @db.Timestamptz
+  created_at DateTime @default(now()) @db.Timestamptz
 
   transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Restrict)
   author      Company     @relation("ReviewAuthor", fields: [author_company_id], references: [id], onDelete: Restrict)
@@ -831,17 +831,19 @@ model Notification {
 // ==========================================
 
 model Conversation {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  participant_1_id  String    @db.Uuid
-  participant_2_id  String    @db.Uuid
-  request_id        String?   @db.Uuid
-  quote_response_id String?   @db.Uuid
-  transaction_id    String?   @unique @db.Uuid
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  participant_1_id  String             @db.Uuid
+  participant_2_id  String             @db.Uuid
+  request_id        String?            @db.Uuid
+  quote_response_id String?            @db.Uuid
+  transaction_id    String?            @unique @db.Uuid
   status            ConversationStatus @default(active)
   last_message      String?
-  last_message_date DateTime? @db.Timestamptz
-  unread_count_1    Int       @default(0)
-  unread_count_2    Int       @default(0)
+  last_message_date DateTime?          @db.Timestamptz
+  unread_count_1    Int                @default(0)
+  unread_count_2    Int                @default(0)
+  // buyer_review_status    ReviewStatus       @default(pending)
+  // supplier_review_status ReviewStatus       @default(pending)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -860,7 +862,10 @@ model Conversation {
 model Message {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   conversation_id String    @db.Uuid
-  sender_id       String    @db.Uuid
+  sender_id       String?   @db.Uuid
+  message_type    String    @default("user") @db.VarChar(10)
+  event_key       String?   @db.VarChar(60)
+  event_payload   Json?
   client_msg_id   String?   @unique @db.VarChar(100)
   content         String?
   file_url        String?
@@ -871,7 +876,7 @@ model Message {
   created_at DateTime @default(now()) @db.Timestamptz
 
   conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
-  sender       Company      @relation(fields: [sender_id], references: [id], onDelete: Restrict)
+  sender       Company?     @relation(fields: [sender_id], references: [id], onDelete: Restrict)
 
   @@map("messages")
 }
