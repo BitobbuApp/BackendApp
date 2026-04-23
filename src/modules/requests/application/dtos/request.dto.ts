@@ -164,6 +164,8 @@ export const marketplaceRequestDtoResponseSchema = Joi.object({
         buyer_review_count: Joi.number().optional(),
         locations: Joi.array().items(Joi.any()).optional(),
     }).allow(null).optional(),
+    has_responded: Joi.boolean().optional(),
+    my_quote_status: Joi.string().allow(null).optional(),
     created_at: Joi.date().iso().allow(null).optional(),
     updated_at: Joi.date().iso().allow(null).optional(),
 }).options({ stripUnknown: true });

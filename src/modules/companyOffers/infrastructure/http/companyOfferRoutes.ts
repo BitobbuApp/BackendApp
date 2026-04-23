@@ -2,6 +2,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateCompanyOfferUseCase } from '../../application/createCompanyOfferUseCase';
 import { GetCompanyOfferByIdUseCase } from '../../application/getCompanyOfferByIdUseCase';
 import { UpdateCompanyOfferUseCase } from '../../application/updateCompanyOfferUseCase';
@@ -13,7 +14,7 @@ export async function companyOfferRoutes(app: FastifyInstance) {
 
     // POST /company-offers (JWT protected)
     app.post('/',
-        { preHandler: [authMiddleware] } as any,
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
             const useCase = new CreateCompanyOfferUseCase();
             // Assuming the JWT payload has user.company_id
@@ -21,7 +22,8 @@ export async function companyOfferRoutes(app: FastifyInstance) {
             const company_id = request.body.company_id || request.user.companyId;
             const result = await useCase.execute({
                 ...request.body,
-                company_id: company_id
+                company_id: company_id,
+                rawFiles: request.uploadedFiles || []
             });
             return ApiResponse.success(reply, result, "Company offer created", 201);
         }

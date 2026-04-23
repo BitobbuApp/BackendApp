@@ -21,7 +21,9 @@ export const createCompanyOfferDtoRequestSchema = Joi.object({
     video_url: Joi.string().uri().allow(null, '').optional(),
     is_active: Joi.boolean().default(true),
     rating: Joi.number().precision(2).min(0).max(5).allow(null).optional(),
-    photos: Joi.array().items(companyOfferPhotoDtoSchema).optional().default([])
+    photos: Joi.array().items(companyOfferPhotoDtoSchema).optional().default([]),
+    rawFiles: Joi.array().items(Joi.object()).optional(),
+    files: Joi.any().optional()
 });
 
 export const updateCompanyOfferDtoRequestSchema = Joi.object({

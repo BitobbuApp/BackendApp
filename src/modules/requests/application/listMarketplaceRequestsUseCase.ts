@@ -73,6 +73,8 @@ export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceReque
                     avg_reliability: Number(r.company.avg_reliability || 0),
                     avg_communication_buyer: Number(r.company.avg_communication_buyer || 0),
                 } : null,
+                has_responded: (r.quote_responses || []).length > 0,
+                my_quote_status: (r.quote_responses || [])[0]?.status || null,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             })),

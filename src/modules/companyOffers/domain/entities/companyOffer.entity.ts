@@ -22,7 +22,7 @@ export class CompanyOffer {
         public supplier_type: string | null = null,
         public base_price_usd: number | null = null,
         public unit_id: number | null = null,
-        public unit_of_measure: string | null = 'Units',
+        public unit_of_measure: string | null = 'units',
         public moq: number | null = 1,
         public std_delivery_time: string | null = null,
         public video_url: string | null = null,

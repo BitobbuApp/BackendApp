@@ -52,7 +52,11 @@ export class PrismaTransactionRepository implements TransactionRepository {
                 skip: offset,
                 take: limit,
                 orderBy: { created_at: 'desc' },
-                include: { payment_method: true }
+                include: { 
+                    payment_method: true,
+                    buyer: { select: { trade_name: true } },
+                    supplier: { select: { trade_name: true } }
+                }
             }),
             prisma.transaction.count({
                 where: {
@@ -210,6 +214,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
             db.payment_currency ?? 'USD',
             db.buyer_review_status ?? 'pending',
             db.supplier_review_status ?? 'pending',
+            db.buyer?.trade_name ?? null,
+            db.supplier?.trade_name ?? null,
             db.created_at,
             db.updated_at
         );

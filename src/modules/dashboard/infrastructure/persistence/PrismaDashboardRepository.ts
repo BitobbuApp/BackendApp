@@ -3,6 +3,10 @@ import { prisma } from "../../../../shared/infrastructure/database";
 
 export class PrismaDashboardRepository implements DashboardRepository {
     async getStats(companyId: string): Promise<DashboardStats> {
+        // Regla de Negocio: Filtro de 1 semana para todas las estadísticas
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
         // Find company to know permissions
         const company = await prisma.company.findUnique({
             where: { id: companyId },
@@ -28,15 +32,67 @@ export class PrismaDashboardRepository implements DashboardRepository {
 
         if (canBuy) {
             const [solicitudesGeneradas, cotizacionesRecibidas, comprasGeneradas] = await Promise.all([
-                prisma.request.count({ where: { company_id: companyId } }),
-                prisma.quoteResponse.count({ where: { request: { company_id: companyId } } }),
-                prisma.transaction.count({ where: { buyer_id: companyId, status: 'completed' } })
+                prisma.request.count({ 
+                    where: { 
+                        company_id: companyId,
+                        created_at: { gte: oneWeekAgo }
+                    } 
+                }),
+                prisma.quoteResponse.count({ 
+                    where: { 
+                        request: { company_id: companyId },
+                        created_at: { gte: oneWeekAgo }
+                    } 
+                }),
+                prisma.transaction.count({ 
+                    where: { 
+                        buyer_id: companyId, 
+                        status: 'completed',
+                        created_at: { gte: oneWeekAgo }
+                    } 
+                })
             ]);
 
             buyerStats.generated_requests = solicitudesGeneradas;
             buyerStats.received_quotes = cotizacionesRecibidas;
             buyerStats.generated_purchases = comprasGeneradas;
-            // buyerStats.estimated_savings remains 0 (Placeholder for future logic)
+
+            // --- Cálculo de Ahorro Estimado (Semanal) ---
+            // Comparar precio aceptado contra el promedio de otras ofertas para ese mismo RFQ
+            const acceptedQuotes = await prisma.quoteResponse.findMany({
+                where: {
+                    status: 'accepted',
+                    request: { company_id: companyId },
+                    created_at: { gte: oneWeekAgo }
+                },
+                select: {
+                    id: true,
+                    request_id: true,
+                    unit_price_usd: true,
+                    quantity: true
+                }
+            });
+
+            let totalSavings = 0;
+            for (const quote of acceptedQuotes) {
+                const others = await prisma.quoteResponse.aggregate({
+                    where: {
+                        request_id: quote.request_id,
+                        status: { not: 'accepted' },
+                        id: { not: quote.id }
+                    },
+                    _avg: { unit_price_usd: true }
+                });
+
+                const avgOthers = Number(others._avg.unit_price_usd) || 0;
+                const myPrice = Number(quote.unit_price_usd);
+
+                // Si el promedio de las otras ofertas era mayor, calculamos el ahorro
+                if (avgOthers > myPrice) {
+                    totalSavings += (avgOthers - myPrice) * Number(quote.quantity);
+                }
+            }
+            buyerStats.estimated_savings = totalSavings;
         }
 
         if (canSell) {
@@ -51,14 +107,30 @@ export class PrismaDashboardRepository implements DashboardRepository {
                     where: {
                         category_id: { in: catIds },
                         company_id: { not: companyId },
-                        status: 'active'
+                        status: 'active',
+                        created_at: { gte: oneWeekAgo }
                     }
                 }),
-                prisma.quoteResponse.count({ where: { supplier_id: companyId } }),
-                prisma.transaction.count({ where: { supplier_id: companyId, status: 'completed' } }),
+                prisma.quoteResponse.count({ 
+                    where: { 
+                        supplier_id: companyId,
+                        created_at: { gte: oneWeekAgo }
+                    } 
+                }),
+                prisma.transaction.count({ 
+                    where: { 
+                        supplier_id: companyId, 
+                        status: 'completed',
+                        created_at: { gte: oneWeekAgo }
+                    } 
+                }),
                 prisma.transaction.aggregate({
                     _sum: { total_amount_usd: true },
-                    where: { supplier_id: companyId, status: 'completed' }
+                    where: { 
+                        supplier_id: companyId, 
+                        status: 'completed',
+                        created_at: { gte: oneWeekAgo }
+                    }
                 })
             ]);
 
