@@ -90,6 +90,8 @@ export class TransactionCanceledStrategy implements TransactionStrategy {
             updated.payment_currency ?? 'USD',
             updated.buyer_review_status ?? 'pending',
             updated.supplier_review_status ?? 'pending',
+            null, // buyer_name
+            null, // supplier_name
             updated.created_at,
             updated.updated_at,
         );

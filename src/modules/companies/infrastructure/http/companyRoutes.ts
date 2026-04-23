@@ -185,10 +185,11 @@ export async function companyRoutes(app: FastifyInstance) {
     // REVIEWS
     // ==========================================
 
-    app.get('/:id/reviews', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { id: string }, Querystring: { limit?: string } }>, reply: FastifyReply) => {
+    app.get('/:id/reviews', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { id: string }, Querystring: { limit?: string, page?: string } }>, reply: FastifyReply) => {
         const useCase = new GetCompanyReviewsUseCase();
         const limit = request.query.limit ? parseInt(request.query.limit, 10) : 10;
-        const result = await useCase.execute({ id: request.params.id, limit });
+        const page = request.query.page ? parseInt(request.query.page, 10) : 1;
+        const result = await useCase.execute({ id: request.params.id, page, limit });
         return ApiResponse.success(reply, result, "Company reviews found");
     });
 }

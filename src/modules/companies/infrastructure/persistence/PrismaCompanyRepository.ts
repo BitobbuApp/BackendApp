@@ -381,20 +381,25 @@ export class PrismaCompanyRepository implements CompanyRepository {
         );
     }
 
-    async getReviews(id: string, limit: number): Promise<any[]> {
-        const reviews = await prisma.review.findMany({
-            where: { evaluated_company_id: id },
-            take: limit,
-            orderBy: { created_at: 'desc' },
-            include: {
-                author: {
-                    select: {
-                        trade_name: true,
-                        logo_url: true
+    async getReviews(id: string, page: number = 1, limit: number = 10): Promise<{ items: any[], total: number }> {
+        const skip = (page - 1) * limit;
+        const [items, total] = await Promise.all([
+            prisma.review.findMany({
+                where: { evaluated_company_id: id },
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    author: {
+                        select: {
+                            trade_name: true,
+                            logo_url: true
+                        }
                     }
                 }
-            }
-        });
-        return reviews;
+            }),
+            prisma.review.count({ where: { evaluated_company_id: id } })
+        ]);
+        return { items, total };
     }
 }

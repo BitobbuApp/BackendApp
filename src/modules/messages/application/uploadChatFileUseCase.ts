@@ -36,8 +36,15 @@ export class UploadChatFileUseCase extends UseCase<UploadChatFileInput, UploadCh
         super();
     }
 
+    private _rawFiles: any[] = [];
+
+    public async execute(data: any): Promise<UploadChatFileOutput> {
+        this._rawFiles = data?.rawFiles || [];
+        return super.execute(data);
+    }
+
     protected async implementation(data: UploadChatFileInput): Promise<UploadChatFileOutput> {
-        const file = data.rawFiles[0];
+        const file = this._rawFiles[0];
 
         // 1. Validate file size
         if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length > MAX_FILE_SIZE) {

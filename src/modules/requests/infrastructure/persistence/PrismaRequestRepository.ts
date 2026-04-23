@@ -114,6 +114,10 @@ export class PrismaRequestRepository implements RequestRepository {
                     files: true,
                     unit_of_measure: true,
                     category: true,
+                    quote_responses: {
+                        where: { supplier_id: excludeCompanyId },
+                        select: { id: true, status: true }
+                    },
                     company: {
                         select: {
                             id: true,
