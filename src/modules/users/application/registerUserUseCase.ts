@@ -92,7 +92,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
         // Send welcome email (fire and forget / fail-safe)
         await this.emailService.sendTemplate({
             to: newUser.email,
-            templateKey: 'bienvenido',
+            templateKey: 'welcome',
             variables: {
                 first_name: newUser.first_name
             }
