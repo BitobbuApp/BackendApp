@@ -23,6 +23,8 @@ export class PrismaUserRepository implements UserRepository {
                     data: {
                         trade_name: user.trade_name,
                         sector_id: (user as any).sector_id ?? null,
+                        can_buy: (user as any).can_buy ?? true,
+                        can_sell: (user as any).can_sell ?? true,
                         // founding_year is NOT set at registration — updated later via profile
                     }
                 });
@@ -35,6 +37,17 @@ export class PrismaUserRepository implements UserRepository {
                         is_main_headquarters: true,
                     }
                 });
+
+                // Also initialize the operating country for the company based on the selected country
+                if ((user as any).country_id) {
+                    await tx.companyOperatingCountry.create({
+                        data: {
+                            company_id: companyCreated.id,
+                            country_id: (user as any).country_id,
+                        }
+                    });
+                }
+
                 await tx.user.update({
                     where: { id: newUser.id },
                     data: { company_id: companyCreated.id }

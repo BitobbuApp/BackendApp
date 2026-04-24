@@ -9,16 +9,10 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             company_id: offer.company_id!,
             name: offer.name!,
             description: offer.description ?? null,
-            ...(offer.category_id !== undefined && {
-                category: offer.category_id === null ? undefined : { connect: { id: offer.category_id } }
-            }),
-            ...(offer.supplier_type_id !== undefined && {
-                supplier_type: offer.supplier_type_id === null ? undefined : { connect: { id: offer.supplier_type_id } }
-            }),
-            base_price: offer.base_price ?? null,
-            ...(offer.unit_id !== undefined && {
-                unit_of_measure: offer.unit_id === null ? undefined : { connect: { id: offer.unit_id } }
-            }),
+            ...(offer.category_id !== undefined && { category_id: offer.category_id }),
+            ...(offer.supplier_type_id !== undefined && { supplier_type_id: offer.supplier_type_id }),
+            base_price_usd: offer.base_price_usd ?? null,
+            ...(offer.unit_id !== undefined && { unit_id: offer.unit_id }),
             moq: offer.moq ?? 1,
             std_delivery_time: offer.std_delivery_time ?? null,
             video_url: offer.video_url ?? null,
@@ -86,16 +80,10 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
         const dataToUpdate: any = {
             ...(offer.name !== undefined && { name: offer.name }),
             ...(offer.description !== undefined && { description: offer.description }),
-            ...(offer.category_id !== undefined && {
-                category: offer.category_id === null ? { disconnect: true } : { connect: { id: offer.category_id } }
-            }),
-            ...(offer.supplier_type_id !== undefined && {
-                supplier_type: offer.supplier_type_id === null ? { disconnect: true } : { connect: { id: offer.supplier_type_id } }
-            }),
-            ...(offer.base_price !== undefined && { base_price: offer.base_price }),
-            ...(offer.unit_id !== undefined && {
-                unit_of_measure: offer.unit_id === null ? { disconnect: true } : { connect: { id: offer.unit_id } }
-            }),
+            ...(offer.category_id !== undefined && { category_id: offer.category_id }),
+            ...(offer.supplier_type_id !== undefined && { supplier_type_id: offer.supplier_type_id }),
+            ...(offer.base_price_usd !== undefined && { base_price_usd: offer.base_price_usd }),
+            ...(offer.unit_id !== undefined && { unit_id: offer.unit_id }),
             ...(offer.moq !== undefined && { moq: offer.moq }),
             ...(offer.std_delivery_time !== undefined && { std_delivery_time: offer.std_delivery_time }),
             ...(offer.video_url !== undefined && { video_url: offer.video_url }),
@@ -140,9 +128,9 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             db.category?.name_es ?? null,
             db.supplier_type_id,
             db.supplier_type?.name_es ?? null,
-            db.base_price ? Number(db.base_price) : null,
+            db.base_price_usd ? Number(db.base_price_usd) : null,
             db.unit_id,
-            db.unit_of_measure?.name ?? null,
+            db.unit_of_measure?.name_es ?? db.unit_of_measure?.name_en ?? null,
             db.moq,
             db.std_delivery_time,
             db.video_url,

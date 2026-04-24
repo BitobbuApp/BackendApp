@@ -12,6 +12,8 @@ import { countryRoutes } from "./modules/countries/infrastructure/http/countryRo
 import { stateRoutes } from "./modules/states/infrastructure/http/stateRoutes";
 import { userOnboardingStatusRoutes } from "./modules/userOnboardingStatus/infrastructure/http/userOnboardingStatusRoutes";
 import { deliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/http/deliveryMethodRoutes";
+import { reviewRoutes } from "./modules/reviews/infrastructure/http/reviewRoutes";
+import { dashboardRoutes } from "./modules/dashboard/infrastructure/http/dashboardRoutes";
 
 export async function routes(app: FastifyInstance) {
     app.register(userRoutes, { prefix: '/users' });
@@ -26,5 +28,7 @@ export async function routes(app: FastifyInstance) {
     app.register(countryRoutes, { prefix: '/countries' });
     app.register(stateRoutes, { prefix: '/states' });
     app.register(userOnboardingStatusRoutes, { prefix: '/onboarding-status' });
+    app.register(dashboardRoutes, { prefix: '/dashboard' });
     app.register(deliveryMethodRoutes, { prefix: '/delivery-methods' });
+    app.register(reviewRoutes, { prefix: '/reviews' });
 }

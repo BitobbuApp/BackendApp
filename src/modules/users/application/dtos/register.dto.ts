@@ -16,6 +16,8 @@ export const registerUserDtoRequestSchema = Joi.object({
     country_id: Joi.number().integer().min(1).required(),
     state_id: Joi.number().integer().min(1).required(),
     sector_id: Joi.number().integer().min(1).required(),
+    can_buy: Joi.boolean().default(false),
+    can_sell: Joi.boolean().default(false),
 }).options({
     stripUnknown: true
 });

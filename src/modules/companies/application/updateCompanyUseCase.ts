@@ -4,7 +4,9 @@ import { PrismaCompanyRepository } from "../infrastructure/persistence/PrismaCom
 import { updateCompanyDtoRequestSchema, createCompanyDtoResponseSchema } from "./dtos/company.dto";
 import Joi from "joi";
 import { CompanyNotFoundError } from "../domain/errors/company.errors";
-import { Company } from "../domain/entities/company.entity";
+import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
+import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
+
 interface UpdateCompanyInput {
     id: string;
     trade_name?: string;
@@ -40,6 +42,8 @@ interface UpdateCompanyInput {
 
     payment_method_ids?: number[];
     interest_category_ids?: number[];
+
+    rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }
 
 export class UpdateCompanyUseCase extends UseCase<UpdateCompanyInput, any> {
@@ -55,11 +59,26 @@ export class UpdateCompanyUseCase extends UseCase<UpdateCompanyInput, any> {
     }
 
     protected async implementation(data: UpdateCompanyInput): Promise<any> {
-        const { id, ...updateData } = data;
+        const { id, rawFiles, ...updateData } = data;
 
         const existing = await this.companyRepository.findById(id);
         if (!existing) {
             throw new CompanyNotFoundError(id);
+        }
+
+        // Upload logo to R2 if a file was sent
+        if (rawFiles && rawFiles.length > 0) {
+            const logoFile = rawFiles[0]; // Only take the first file as logo
+            if (logoFile && logoFile.buffer) {
+                const uploadUseCase = new UploadDocumentUseCase(storageService);
+                const result = await uploadUseCase.execute({
+                    tenantId: id,
+                    buffer: logoFile.buffer
+                });
+
+                const publicUrlBase = process.env.S3_PUBLIC_URL || '';
+                updateData.logo_url = `${publicUrlBase}/${result.fileKey}`;
+            }
         }
 
         const updatedCompany = await this.companyRepository.update(id, updateData);

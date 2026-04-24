@@ -8,6 +8,8 @@ import { UpdateRequestUseCase } from '../../application/updateRequestUseCase';
 import { DeleteRequestUseCase } from '../../application/deleteRequestUseCase';
 import { ListMarketplaceRequestsUseCase } from '../../application/listMarketplaceRequestsUseCase';
 
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
+
 export async function requestRoutes(app: FastifyInstance) {
 
     // GET /requests/marketplace (JWT protected — lists requests from OTHER companies)
@@ -25,14 +27,14 @@ export async function requestRoutes(app: FastifyInstance) {
         }
     );
 
-
     // POST /requests (JWT protected)
     app.post('/',
-        { preHandler: [authMiddleware] } as any,
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
             const useCase = new CreateRequestUseCase();
             const result = await useCase.execute({
                 ...request.body,
+                rawFiles: request.uploadedFiles || [],
                 company_id: request.user.companyId,
                 user_id: request.user.userId
             });

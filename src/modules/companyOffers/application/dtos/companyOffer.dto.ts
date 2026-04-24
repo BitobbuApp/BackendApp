@@ -14,14 +14,16 @@ export const createCompanyOfferDtoRequestSchema = Joi.object({
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
     supplier_type_id: Joi.number().integer().min(1).allow(null).optional(),
-    base_price: Joi.number().precision(2).min(0).allow(null).optional(),
+    base_price_usd: Joi.number().precision(2).min(0).allow(null).optional(),
     unit_id: Joi.number().integer().min(1).allow(null).optional(),
     moq: Joi.number().integer().min(1).allow(null).optional(),
     std_delivery_time: Joi.string().max(100).allow(null, '').optional(),
     video_url: Joi.string().uri().allow(null, '').optional(),
     is_active: Joi.boolean().default(true),
     rating: Joi.number().precision(2).min(0).max(5).allow(null).optional(),
-    photos: Joi.array().items(companyOfferPhotoDtoSchema).optional().default([])
+    photos: Joi.array().items(companyOfferPhotoDtoSchema).optional().default([]),
+    rawFiles: Joi.array().items(Joi.object()).optional(),
+    files: Joi.any().optional()
 });
 
 export const updateCompanyOfferDtoRequestSchema = Joi.object({
@@ -30,7 +32,7 @@ export const updateCompanyOfferDtoRequestSchema = Joi.object({
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
     supplier_type_id: Joi.number().integer().min(1).allow(null).optional(),
-    base_price: Joi.number().precision(2).min(0).allow(null).optional(),
+    base_price_usd: Joi.number().precision(2).min(0).allow(null).optional(),
     unit_id: Joi.number().integer().min(1).allow(null).optional(),
     moq: Joi.number().integer().min(1).allow(null).optional(),
     std_delivery_time: Joi.string().max(100).allow(null, '').optional(),
@@ -58,7 +60,7 @@ export const companyOfferDtoResponseSchema = Joi.object({
     category: Joi.string().allow(null).optional(),
     supplier_type_id: Joi.number().integer().allow(null).optional(),
     supplier_type: Joi.string().allow(null).optional(),
-    base_price: Joi.number().allow(null).optional(),
+    base_price_usd: Joi.number().allow(null).optional(),
     unit_id: Joi.number().integer().allow(null).optional(),
     unit_of_measure: Joi.string().allow(null).optional(),
     moq: Joi.number().allow(null).optional(),

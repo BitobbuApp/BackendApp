@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateQuoteResponseUseCase } from '../../application/createQuoteResponseUseCase';
 import { GetQuoteResponseByIdUseCase } from '../../application/getQuoteResponseByIdUseCase';
 import { GetQuoteResponseWithSupplierUseCase } from '../../application/getQuoteResponseWithSupplierUseCase';
@@ -9,6 +10,7 @@ import { ListReceivedQuoteResponsesUseCase } from '../../application/listReceive
 import { ListQuoteResponsesByRequestIdUseCase } from '../../application/listQuoteResponsesByRequestIdUseCase';
 import { UpdateQuoteResponseUseCase } from '../../application/updateQuoteResponseUseCase';
 import { DeleteQuoteResponseUseCase } from '../../application/deleteQuoteResponseUseCase';
+import { PerformQuoteActionUseCase } from '../../application/performQuoteActionUseCase';
 
 export async function quoteResponseRoutes(app: FastifyInstance) {
 
@@ -110,6 +112,23 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
             const useCase = new DeleteQuoteResponseUseCase();
             await useCase.execute(request.params.id);
             return ApiResponse.success(reply, null, "Quote response removed");
+        }
+    );
+
+    // POST /quote-responses/:id/action (JWT protected — State Machine entry point)
+    app.post('/:id/action',
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
+        async (request: any, reply: any) => {
+            const { action, payload } = request.body;
+            const useCase = new PerformQuoteActionUseCase();
+            const result = await useCase.execute({
+                quoteResponseId: request.params.id,
+                action,
+                actorCompanyId: request.user.companyId,
+                payload: payload || {},
+                rawFiles: request.uploadedFiles || [],
+            });
+            return ApiResponse.success(reply, result, `Action "${action}" performed successfully`);
         }
     );
 }

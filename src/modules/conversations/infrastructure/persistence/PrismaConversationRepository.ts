@@ -20,7 +20,7 @@ export class PrismaConversationRepository implements IConversationRepository {
     }
 
     async findById(id: string): Promise<Conversation | null> {
-        return await prisma.conversation.findUnique({
+        const db = await prisma.conversation.findUnique({
             where: { id },
             include: {
                 participant_1: {
@@ -28,14 +28,30 @@ export class PrismaConversationRepository implements IConversationRepository {
                 },
                 participant_2: {
                     select: { id: true, trade_name: true, logo_url: true }
+                },
+                request: {
+                    select: {
+                        product_service: true,
+                        quantity: true,
+                        unit_of_measure: {
+                            select: { abbreviation: true }
+                        }
+                    }
+                },
+                quote_response: {
+                    select: {
+                        unit_price_usd: true,
+                        quantity: true
+                    }
                 }
             }
         });
+        return db ? this.mapToEntity(db) : null;
     }
 
     async findByParticipants(participant_1_id: string, participant_2_id: string): Promise<Conversation | null> {
         // Since either could be P1 or P2, we check both orderings
-        return await prisma.conversation.findFirst({
+        const db = await prisma.conversation.findFirst({
             where: {
                 OR: [
                     { participant_1_id, participant_2_id },
@@ -43,20 +59,31 @@ export class PrismaConversationRepository implements IConversationRepository {
                 ]
             }
         });
+        return db ? this.mapToEntity(db) : null;
     }
 
     async findByTransactionId(transactionId: string): Promise<Conversation | null> {
-        return await prisma.conversation.findUnique({
+        const db = await prisma.conversation.findUnique({
             where: { transaction_id: transactionId }
         });
+        return db ? this.mapToEntity(db) : null;
     }
 
     async listByUser(userId: string): Promise<Conversation[]> {
-        return await prisma.conversation.findMany({
+        const list = await prisma.conversation.findMany({
             where: {
-                OR: [
-                    { participant_1_id: userId },
-                    { participant_2_id: userId }
+                AND: [
+                    {
+                        OR: [
+                            { participant_1_id: userId },
+                            { participant_2_id: userId }
+                        ]
+                    },
+                    {
+                        status: {
+                            notIn: ['completed', 'cancelled']
+                        }
+                    }
                 ]
             },
             include: {
@@ -65,12 +92,28 @@ export class PrismaConversationRepository implements IConversationRepository {
                 },
                 participant_2: {
                     select: { id: true, trade_name: true, logo_url: true }
+                },
+                request: {
+                    select: {
+                        product_service: true,
+                        quantity: true,
+                        unit_of_measure: {
+                            select: { abbreviation: true }
+                        }
+                    }
+                },
+                quote_response: {
+                    select: {
+                        unit_price_usd: true,
+                        quantity: true
+                    }
                 }
             },
             orderBy: {
                 last_message_date: 'desc'
             }
         });
+        return list.map(item => this.mapToEntity(item));
     }
 
     async updateLastMessage(id: string, message: string, date: Date, unreadUserId: string): Promise<Conversation> {
@@ -86,10 +129,11 @@ export class PrismaConversationRepository implements IConversationRepository {
         if (senderIsP1) updateData.unread_count_2 = { increment: 1 };
         else updateData.unread_count_1 = { increment: 1 };
 
-        return await prisma.conversation.update({
+        const updated = await prisma.conversation.update({
             where: { id },
             data: updateData
         });
+        return this.mapToEntity(updated);
     }
 
     async resetUnreadCount(id: string, userId: string): Promise<Conversation> {
@@ -101,9 +145,39 @@ export class PrismaConversationRepository implements IConversationRepository {
         if (isP1) updateData.unread_count_1 = 0;
         else updateData.unread_count_2 = 0;
 
-        return await prisma.conversation.update({
+        const updated = await prisma.conversation.update({
             where: { id },
             data: updateData
         });
+        return this.mapToEntity(updated);
+    }
+
+    private mapToEntity(db: any): Conversation {
+        return {
+            id: db.id,
+            participant_1_id: db.participant_1_id,
+            participant_2_id: db.participant_2_id,
+            request_id: db.request_id,
+            quote_response_id: db.quote_response_id,
+            transaction_id: db.transaction_id,
+            status: db.status,
+            last_message: db.last_message,
+            last_message_date: db.last_message_date,
+            unread_count_1: db.unread_count_1,
+            unread_count_2: db.unread_count_2,
+            created_at: db.created_at,
+            updated_at: db.updated_at,
+            participant_1: db.participant_1,
+            participant_2: db.participant_2,
+            request: db.request ? {
+                product_service: db.request.product_service,
+                quantity: Number(db.request.quantity || 0),
+                unit_of_measure: db.request.unit_of_measure,
+            } : undefined,
+            quote_response: db.quote_response ? {
+                unit_price_usd: Number(db.quote_response.unit_price_usd || 0),
+                quantity: Number(db.quote_response.quantity || 0),
+            } : undefined,
+        };
     }
 }

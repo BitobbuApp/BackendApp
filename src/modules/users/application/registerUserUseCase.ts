@@ -6,6 +6,10 @@ import bcrypt from 'bcrypt';
 import { UseCase } from '../../../shared/application/useCase';
 import { registerUserDtoRequestSchema, registerUserDtoResponseSchema } from './dtos/register.dto';
 import { VENEZUELA_COUNTRY_ID } from '../../../shared/constants/geo.constants';
+import { EmailService } from '../../../shared/application/services/email.service';
+import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
+import { PrismaVerificationRepository } from '../../companies/infrastructure/persistence/PrismaVerificationRepository';
+import { VerificationRepository } from '../../companies/domain/repositories/verification.repository';
 
 interface RegisterDto {
     first_name: string;
@@ -16,6 +20,8 @@ interface RegisterDto {
     country_id: number;
     state_id: number;
     sector_id: number;
+    can_buy?: boolean;
+    can_sell?: boolean;
 }
 
 interface RegisterResult {
@@ -30,9 +36,14 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     protected inputSchema: Joi.Schema = registerUserDtoRequestSchema;
     protected outputSchema: Joi.Schema = registerUserDtoResponseSchema;
     private readonly userRepository: UserRepository;
+    private readonly emailService: EmailService;
+    private readonly verificationRepository: VerificationRepository;
+
     constructor() {
         super();
         this.userRepository = new PrismaUserRepository();
+        this.emailService = new MailgunEmailAdapter();
+        this.verificationRepository = new PrismaVerificationRepository();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {
@@ -61,6 +72,22 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             updated_at: new Date(),
             last_access: null
         } as any);
+
+        if (newUser.company_id) {
+            await this.verificationRepository.upsertVerification({
+                company_id: newUser.company_id,
+                status: 'pending'
+            });
+        }
+
+        // Send welcome email (fire and forget / fail-safe)
+        await this.emailService.sendTemplate({
+            to: newUser.email,
+            templateKey: 'bienvenido',
+            variables: {
+                first_name: newUser.first_name
+            }
+        });
 
         return {
             id: newUser.id,

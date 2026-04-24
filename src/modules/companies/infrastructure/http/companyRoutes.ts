@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateCompanyUseCase } from '../../application/createCompanyUseCase';
 import { GetCompanyByIdUseCase } from '../../application/getCompanyByIdUseCase';
 import { GetMyCompanyByIdUseCase } from '../../application/getMyCompanyByIdUseCase';
@@ -25,6 +26,7 @@ import { SubmitVerificationDocumentUseCase } from '../../application/submitVerif
 
 import { GetSettingsUseCase } from '../../application/getSettingsUseCase';
 import { UpdateSettingsUseCase } from '../../application/updateSettingsUseCase';
+import { GetCompanyReviewsUseCase } from '../../application/getCompanyReviewsUseCase';
 
 export async function companyRoutes(app: FastifyInstance) {
 
@@ -50,9 +52,13 @@ export async function companyRoutes(app: FastifyInstance) {
         return ApiResponse.success(reply, result, "Company found");
     });
 
-    app.patch('/:id', { preHandler: [authMiddleware] } as any, async (request: any, reply: any) => {
+    app.patch('/:id', { preHandler: [authMiddleware, multipartParserMiddleware] } as any, async (request: any, reply: any) => {
         const useCase = new UpdateCompanyUseCase();
-        const result = await useCase.execute({ ...request.body as any, id: request.params.id });
+        const result = await useCase.execute({
+            ...request.body as any,
+            rawFiles: request.uploadedFiles || [],
+            id: request.params.id
+        });
         return ApiResponse.success(reply, result, "Company updated");
     });
 
@@ -149,9 +155,13 @@ export async function companyRoutes(app: FastifyInstance) {
         return ApiResponse.success(reply, result, "Verification status found");
     });
 
-    app.post('/:companyId/verification/documents', { preHandler: [authMiddleware] } as any, async (request: any, reply: any) => {
+    app.post('/:companyId/verification/documents', { preHandler: [authMiddleware, multipartParserMiddleware] } as any, async (request: any, reply: any) => {
         const useCase = new SubmitVerificationDocumentUseCase();
-        const result = await useCase.execute({ ...request.body as any, company_id: request.params.companyId });
+        const result = await useCase.execute({
+            ...request.body as any,
+            company_id: request.params.companyId,
+            rawFiles: request.uploadedFiles || [] // Pass rawFiles down
+        });
         return ApiResponse.success(reply, result, "Document submitted", 201);
     });
 
@@ -169,5 +179,17 @@ export async function companyRoutes(app: FastifyInstance) {
         const useCase = new UpdateSettingsUseCase();
         const result = await useCase.execute({ ...request.body as any, company_id: request.params.companyId });
         return ApiResponse.success(reply, result, "Settings updated");
+    });
+
+    // ==========================================
+    // REVIEWS
+    // ==========================================
+
+    app.get('/:id/reviews', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { id: string }, Querystring: { limit?: string, page?: string } }>, reply: FastifyReply) => {
+        const useCase = new GetCompanyReviewsUseCase();
+        const limit = request.query.limit ? parseInt(request.query.limit, 10) : 10;
+        const page = request.query.page ? parseInt(request.query.page, 10) : 1;
+        const result = await useCase.execute({ id: request.params.id, page, limit });
+        return ApiResponse.success(reply, result, "Company reviews found");
     });
 }
