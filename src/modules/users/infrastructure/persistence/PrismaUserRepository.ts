@@ -22,9 +22,9 @@ export class PrismaUserRepository implements UserRepository {
                 const companyCreated = await tx.company.create({
                     data: {
                         trade_name: user.trade_name,
-                        sector_id: (user as any).sector_id ?? null,
-                        can_buy: (user as any).can_buy ?? true,
-                        can_sell: (user as any).can_sell ?? true,
+                        sector_id: user.sector_id ?? null,
+                        can_buy: user.can_buy ?? false,
+                        can_sell: user.can_sell ?? false,
                         // founding_year is NOT set at registration — updated later via profile
                     }
                 });
@@ -67,7 +67,9 @@ export class PrismaUserRepository implements UserRepository {
             null,
             null,
             null,
-            null,
+            null, // state_id
+            null, // can_buy
+            null, // can_sell
             createdUser.is_active, 
             createdUser.last_access,
             createdUser.created_at, 
@@ -93,11 +95,13 @@ export class PrismaUserRepository implements UserRepository {
             found.email, 
             found.password, 
             found.salt, 
-            null, 
-            null,
-            null,
-            null,
-            null,
+            null, // trade_name
+            null, // founding_year
+            null, // country_id
+            null, // sector_id
+            null, // state_id
+            null, // can_buy
+            null, // can_sell
             found.is_active, 
             found.last_access,
             found.created_at, 
@@ -120,11 +124,13 @@ export class PrismaUserRepository implements UserRepository {
             found.email, 
             found.password, 
             found.salt, 
-            null, 
-            null,
-            null,
-            null,
-            null,
+            null, // trade_name
+            null, // founding_year
+            null, // country_id
+            null, // sector_id
+            null, // state_id
+            null, // can_buy
+            null, // can_sell
             found.is_active, 
             found.last_access,
             found.created_at, 
@@ -158,7 +164,9 @@ export class PrismaUserRepository implements UserRepository {
             null,
             null,
             null,
-            null,
+            null, // state_id
+            null, // can_buy
+            null, // can_sell
             updated.is_active, 
             updated.last_access,
             updated.created_at, 
