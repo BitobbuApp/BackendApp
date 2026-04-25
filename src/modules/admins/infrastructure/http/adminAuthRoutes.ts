@@ -1,10 +1,18 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { CreateAdminUseCase } from '../../application/createAdminUseCase';
 import { LoginAdminUseCase } from '../../application/loginAdminUseCase';
 import { GetAdminMeUseCase } from '../../application/getAdminMeUseCase';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { adminAuthMiddleware } from '../../../../shared/infrastructure/http/middlewares/adminAuthMiddleware';
 
 export async function adminAuthRoutes(app: FastifyInstance) {
+    app.post('/',  async (request: FastifyRequest, reply: FastifyReply) => {
+        const useCase = new CreateAdminUseCase();
+        const result = await useCase.execute(request.body);
+        return ApiResponse.success(reply, result, "Admin created successfully");
+    });
+
+
     app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
         const useCase = new LoginAdminUseCase();
         const result = await useCase.execute(request.body);

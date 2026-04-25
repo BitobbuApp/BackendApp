@@ -144,6 +144,11 @@ enum ReviewStatus {
   expired
 }
 
+enum AdminRole {
+  superadmin
+  ops_admin
+}
+
 model Company {
   id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   trade_name String  @db.VarChar(200)
@@ -980,7 +985,7 @@ model Admin {
   email         String    @unique @db.VarChar(150)
   password      String    @db.VarChar(255)
   full_name     String    @db.VarChar(255)
-  role          String    @db.VarChar(50) // 'superadmin', 'ops_admin', etc.
+  role          AdminRole @default(ops_admin)
   status        String    @default("active") @db.VarChar(20) // 'active', 'inactive', 'locked'
   last_login_at DateTime? @db.Timestamptz
   created_at    DateTime  @default(now()) @db.Timestamptz

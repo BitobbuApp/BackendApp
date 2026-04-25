@@ -17,3 +17,9 @@ export class AdminNotFoundError extends ApplicationError {
         super(404, "Admin not found", "RESOURCE_NOT_FOUND", "NOT_FOUND");
     }
 }
+
+export class AdminAlreadyExistsError extends ApplicationError {
+    constructor() {
+        super(409, "Admin already exists", "RESOURCE_ALREADY_EXISTS", "CONFLICT");
+    }
+}

@@ -1,6 +1,7 @@
 import { Admin } from "../entities/admin.entity";
 
 export interface IAdminRepository {
+    create(data: Partial<Admin>): Promise<Admin>;
     findByEmail(email: string): Promise<Admin | null>;
     findById(id: string): Promise<Admin | null>;
     updateLastLogin(id: string): Promise<void>;
