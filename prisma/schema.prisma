@@ -970,3 +970,33 @@ model SubscriptionPlan {
 
   @@map("subscription_plans")
 }
+
+// ==========================================
+// 14. ADMINS
+// ==========================================
+
+model Admin {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String    @unique @db.VarChar(150)
+  password      String    @db.VarChar(255)
+  full_name     String    @db.VarChar(255)
+  role          String    @db.VarChar(50) // 'superadmin', 'ops_admin', etc.
+  status        String    @default("active") @db.VarChar(20) // 'active', 'inactive', 'locked'
+  last_login_at DateTime? @db.Timestamptz
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  updated_at    DateTime  @default(now()) @db.Timestamptz
+
+  @@map("admins")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id    String   @db.Uuid
+  action      String   @db.VarChar(100)
+  resource    String   @db.VarChar(100)
+  resource_id String?  @db.VarChar(100)
+  payload     Json?
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  @@map("admin_audit_logs")
+}
