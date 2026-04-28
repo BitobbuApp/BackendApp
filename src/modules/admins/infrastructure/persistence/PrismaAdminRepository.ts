@@ -27,6 +27,14 @@ export class PrismaAdminRepository implements IAdminRepository {
         });
     }
 
+    async update(id: string, data: Partial<Admin>): Promise<Admin> {
+        const admin = await prisma.admin.update({
+            where: { id },
+            data: data as any
+        });
+        return this.mapToEntity(admin);
+    }
+
     async logAuditAction(adminId: string, action: string, resource: string, resourceId?: string | null, payload?: any): Promise<void> {
         await prisma.adminAuditLog.create({
             data: {

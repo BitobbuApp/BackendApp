@@ -145,4 +145,40 @@ export class PrismaDashboardRepository implements DashboardRepository {
             supplier_stats: supplierStats
         };
     }
+
+    async getAdminKpis(): Promise<any> {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const [
+            total_users,
+            active_users,
+            pending_verifications,
+            total_companies,
+            rfqs_last_30_days,
+            quotes_last_30_days,
+            gmv_aggregate
+        ] = await Promise.all([
+            prisma.user.count(),
+            prisma.user.count({ where: { is_active: true } }),
+            prisma.companyVerification.count({ where: { status: 'pending' } }),
+            prisma.company.count(),
+            prisma.request.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
+            prisma.quoteResponse.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
+            prisma.transaction.aggregate({
+                _sum: { total_amount_usd: true },
+                where: { status: 'completed' }
+            })
+        ]);
+
+        return {
+            total_users,
+            active_users,
+            pending_verifications,
+            total_companies,
+            rfqs_last_30_days,
+            quotes_last_30_days,
+            total_gmv_usd: Number(gmv_aggregate._sum.total_amount_usd || 0)
+        };
+    }
 }

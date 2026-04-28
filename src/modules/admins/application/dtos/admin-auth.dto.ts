@@ -52,3 +52,18 @@ export const adminMeResponseSchema = Joi.object({
         status: Joi.string().required()
     }).required()
 });
+
+export const updateAdminDtoSchema = Joi.object({
+    password: Joi.string()
+        .min(8)
+        .max(100)
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!#%*?&])[A-Za-z\d@$!#%*?&]{8,}$/)
+        .optional()
+        .messages({
+            'string.min': 'La contraseña debe tener al menos 8 caracteres',
+            'string.pattern.base': 'La contraseña debe incluir mayúsculas, minúsculas, un número y un carácter especial (@$!#%*?&)'
+        }),
+    full_name: Joi.string().optional(),
+    role: Joi.string().valid('superadmin', 'ops_admin').optional(),
+    status: Joi.string().valid('active', 'inactive', 'locked').optional()
+});

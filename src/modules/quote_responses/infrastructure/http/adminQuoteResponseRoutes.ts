@@ -1,21 +1,26 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { adminAuthMiddleware } from '../../../../shared/infrastructure/http/middlewares/adminAuthMiddleware';
+import { AdminListQuotesUseCase } from '../../application/adminListQuotesUseCase';
+
+interface AdminQuoteQuery {
+    page?: string;
+    limit?: string;
+    status?: string;
+    request_id?: string;
+    supplier_id?: string;
+}
 
 export async function adminQuoteResponseRoutes(app: FastifyInstance) {
-    app.get('/', { preHandler: [adminAuthMiddleware] as any }, async (request: FastifyRequest, reply: FastifyReply) => {
-        // Mock data for MVP
-        const data = [
-            {
-                id: "qr-1",
-                rfq_id: "rfq-1",
-                supplier_company: "Proveedor",
-                price_usd: 120.5,
-                quantity: 50,
-                status: "negotiating",
-                created_at: "2026-04-01T00:00:00.000Z"
-            }
-        ];
-        return ApiResponse.success(reply, data, "Quote responses retrieved successfully");
+    app.get('/', { preHandler: [adminAuthMiddleware] as any }, async (request: FastifyRequest<{ Querystring: AdminQuoteQuery }>, reply: FastifyReply) => {
+        const useCase = new AdminListQuotesUseCase();
+        const result = await useCase.execute({
+            page: request.query.page ? Number(request.query.page) : 1,
+            limit: request.query.limit ? Number(request.query.limit) : 10,
+            status: request.query.status,
+            request_id: request.query.request_id,
+            supplier_id: request.query.supplier_id
+        });
+        return ApiResponse.success(reply, result, "Quote responses retrieved successfully");
     });
 }
