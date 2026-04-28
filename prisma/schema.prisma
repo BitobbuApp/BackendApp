@@ -287,6 +287,7 @@ model State {
   country_id Int               @db.SmallInt
   name       String            @db.VarChar(100)
   code       String?           @db.VarChar(10)
+  is_active  Boolean           @default(true)
   country    Country           @relation(fields: [country_id], references: [id])
   cities     City[]
   locations  CompanyLocation[]
