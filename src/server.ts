@@ -13,8 +13,12 @@ const app = fastify({
 import { errorHandler } from './shared/infrastructure/http/errorHandler'
 
 // Allow requests from the frontend dev server (and production URL when deployed)
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
+    : ['http://localhost:5173'];
+
 app.register(cors, {
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 
