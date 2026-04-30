@@ -4,7 +4,7 @@ import { PrismaAdminRepository } from "../infrastructure/persistence/PrismaAdmin
 import { adminLoginDtoSchema, adminLoginResponseSchema } from "./dtos/admin-auth.dto";
 import { AdminInvalidCredentialsError, AdminInactiveError } from "../domain/errors/admin.errors";
 import { JwtService } from "../../../shared/application/services/jwtService";
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 
 export class LoginAdminUseCase extends UseCase<any, any> {
     protected inputSchema = adminLoginDtoSchema;

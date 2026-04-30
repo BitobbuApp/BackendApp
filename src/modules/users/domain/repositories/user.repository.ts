@@ -6,4 +6,15 @@ export interface UserRepository {
     findById(id: string): Promise<User | null>;
     update(user: User): Promise<User>;
     delete(id: string): Promise<void>;
+    
+    // Admin methods
+    findAllAdmin(params: { 
+        page: number, 
+        limit: number, 
+        search?: string, 
+        status?: string,
+        company_id?: string
+    }): Promise<{ items: any[], total: number }>;
+
+    findByIdAdmin(id: string): Promise<any>;
 }

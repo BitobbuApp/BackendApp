@@ -1,101 +1,160 @@
 import { VerificationRepository } from "../../domain/repositories/verification.repository";
-import { CompanyVerification, VerificationDocument } from "../../domain/entities/verification.entity";
-import { prisma } from '../../../../shared/infrastructure/database';
+import { prisma } from "../../../../shared/infrastructure/database";
+import { VerifDocStatus, VerificationStatus } from "@prisma/client";
 
 export class PrismaVerificationRepository implements VerificationRepository {
-    async getVerification(companyId: string): Promise<CompanyVerification | null> {
-        const found = await prisma.companyVerification.findUnique({ where: { company_id: companyId } });
-        if (!found) return null;
-        return this.mapVerificationToEntity(found);
-    }
+    async listPendingVerifications(params: { page: number, limit: number, search?: string }): Promise<{ items: any[], total: number }> {
+        const { page, limit, search } = params;
+        const skip = (page - 1) * limit;
 
-    async upsertVerification(verification: Partial<CompanyVerification>): Promise<CompanyVerification> {
-        const updated = await prisma.companyVerification.upsert({
-            where: { company_id: verification.company_id! },
-            update: {
-                status: verification.status as any,
-                ...(verification.verified_at !== undefined && { verified_at: verification.verified_at }),
-                ...(verification.rejection_reason !== undefined && { rejection_reason: verification.rejection_reason }),
-            },
-            create: {
-                company_id: verification.company_id!,
-                status: verification.status as any || 'pending',
-            }
-        });
-        return this.mapVerificationToEntity(updated);
-    }
+        const where: any = {
+            OR: [
+                { verification: null },
+                { verification: { status: { in: ['pending', 'under_review', 'rejected'] } } }
+            ]
+        };
 
-    async addDocument(doc: Partial<VerificationDocument>): Promise<VerificationDocument> {
-        const created = await prisma.verificationDocument.create({
-            data: {
-                company_id: doc.company_id!,
-                type_id: (doc as any).type_id!,
-                url: doc.file_url!,
-                status: 'pending',
-            } as any,
-            include: { type: true }
-        });
-        return this.mapDocumentToEntity(created);
-    }
-
-    async getDocuments(companyId: string): Promise<VerificationDocument[]> {
-        const list = await prisma.verificationDocument.findMany({
-            where: { company_id: companyId },
-            include: { type: true }
-        });
-        return list.map((item: any) => this.mapDocumentToEntity(item));
-    }
-
-    async findDocumentById(id: string): Promise<VerificationDocument | null> {
-        const found = await prisma.verificationDocument.findUnique({ where: { id }, include: { type: true } });
-        if (!found) return null;
-        return this.mapDocumentToEntity(found);
-    }
-
-    async updateDocument(id: string, doc: Partial<VerificationDocument>): Promise<VerificationDocument> {
-        const dataToUpdate: any = {};
-        if (doc.status !== undefined) dataToUpdate.status = doc.status;
-        if (doc.feedback !== undefined) dataToUpdate.notes = doc.feedback;
-        if (doc.reviewed_by !== undefined) dataToUpdate.reviewed_by = doc.reviewed_by;
-        if (doc.file_url !== undefined) dataToUpdate.url = doc.file_url;
-        
-        if (doc.status === 'approved' || doc.status === 'rejected') {
-            dataToUpdate.reviewed_at = new Date();
-        } else if (doc.status === 'pending') {
-            dataToUpdate.reviewed_at = null;
+        if (search) {
+            const searchCondition = {
+                OR: [
+                    { trade_name: { contains: search, mode: 'insensitive' } },
+                    { legal_name: { contains: search, mode: 'insensitive' } },
+                    { tax_id: { contains: search, mode: 'insensitive' } },
+                ]
+            };
+            // Combine with existing where
+            where.AND = [searchCondition];
         }
 
-        const updated = await prisma.verificationDocument.update({
-            where: { id },
-            data: dataToUpdate,
-            include: { type: true }
+        const [items, total] = await Promise.all([
+            prisma.company.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { updated_at: 'desc' },
+                include: {
+                    verification: true,
+                    _count: {
+                        select: { verif_documents: true }
+                    }
+                }
+            }),
+            prisma.company.count({ where })
+        ]);
+
+        return {
+            items: items.map(item => ({
+                company_id: item.id,
+                trade_name: item.trade_name,
+                legal_name: item.legal_name,
+                tax_id: item.tax_id,
+                status: (item as any).verification?.status || 'pending',
+                document_count: (item as any)._count.verif_documents,
+                updated_at: item.updated_at
+            })),
+            total
+        };
+    }
+
+    async findDocumentsByCompanyId(companyId: string): Promise<any[]> {
+        return await prisma.verificationDocument.findMany({
+            where: { company_id: companyId },
+            include: { type: true },
+            orderBy: { created_at: 'asc' }
         });
-        return this.mapDocumentToEntity(updated);
     }
 
-    private mapVerificationToEntity(db: any): CompanyVerification {
-        return new CompanyVerification(
-            db.company_id,
-            db.status,
-            null, // last_submission_at not in Prisma schema
-            db.verified_at,
-            null, // rejected_at not in Prisma schema
-            db.rejection_reason
-        );
+    async updateDocumentStatus(documentId: string, status: VerifDocStatus, reviewerId: string, notes?: string): Promise<any> {
+        return await prisma.verificationDocument.update({
+            where: { id: documentId },
+            data: {
+                status,
+                reviewed_by: reviewerId,
+                reviewed_at: new Date(),
+                notes: notes || null
+            }
+        });
     }
 
-    private mapDocumentToEntity(db: any): VerificationDocument {
-        return new VerificationDocument(
-            db.id,
-            db.company_id,
-            db.type_id,
-            db.type?.name_es ?? db.type?.name_en ?? '',
-            db.url,
-            db.status,
-            db.notes,
-            db.reviewed_by,
-            db.created_at,
-            db.reviewed_at
-        );
+    async updateCompanyVerificationStatus(companyId: string, status: VerificationStatus, reason?: string): Promise<void> {
+        await prisma.companyVerification.upsert({
+            where: { company_id: companyId },
+            update: {
+                status,
+                rejection_reason: reason || null,
+                verified_at: status === 'verified' ? new Date() : null,
+                updated_at: new Date()
+            },
+            create: {
+                company_id: companyId,
+                status,
+                rejection_reason: reason || null,
+                verified_at: status === 'verified' ? new Date() : null
+            }
+        });
+    }
+
+    async getVerificationSummary(companyId: string): Promise<{ total_docs: number; approved_docs: number; rejected_docs: number; pending_docs: number; }> {
+        const docs = await prisma.verificationDocument.findMany({
+            where: { company_id: companyId }
+        });
+
+        return {
+            total_docs: docs.length,
+            approved_docs: docs.filter((d: any) => d.status === 'approved').length,
+            rejected_docs: docs.filter((d: any) => d.status === 'rejected').length,
+            pending_docs: docs.filter((d: any) => d.status === 'pending').length
+        };
+    }
+
+    // User/Existing methods
+    async getVerification(companyId: string): Promise<any> {
+        return await prisma.companyVerification.findUnique({
+            where: { company_id: companyId }
+        });
+    }
+
+    async upsertVerification(data: any): Promise<any> {
+        return await prisma.companyVerification.upsert({
+            where: { company_id: data.company_id },
+            update: {
+                status: data.status,
+                updated_at: new Date()
+            },
+            create: {
+                company_id: data.company_id,
+                status: data.status
+            }
+        });
+    }
+
+    async getDocuments(companyId: string): Promise<any[]> {
+        return await prisma.verificationDocument.findMany({
+            where: { company_id: companyId }
+        });
+    }
+
+    async addDocument(data: any): Promise<any> {
+        return await prisma.verificationDocument.create({
+            data: {
+                company_id: data.company_id,
+                type_id: data.type_id,
+                url: data.file_url,
+                status: 'pending'
+            }
+        });
+    }
+
+    async updateDocument(id: string, data: any): Promise<any> {
+        return await prisma.verificationDocument.update({
+            where: { id },
+            data: {
+                url: data.file_url,
+                status: data.status,
+                notes: data.feedback || null,
+                reviewed_by: data.reviewed_by || null,
+                reviewed_at: data.reviewed_at || null
+            }
+        });
     }
 }

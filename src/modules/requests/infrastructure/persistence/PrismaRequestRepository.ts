@@ -186,6 +186,59 @@ export class PrismaRequestRepository implements RequestRepository {
         await prisma.request.delete({ where: { id } });
     }
 
+    async findAllAdmin(filters: any, page: number, limit: number): Promise<RequestListResult> {
+        const skip = (page - 1) * limit;
+        const where: any = {};
+
+        if (filters.status) {
+            where.status = filters.status;
+        }
+
+        if (filters.search) {
+            where.product_service = { contains: filters.search, mode: 'insensitive' };
+        }
+
+        if (filters.company_id) {
+            where.company_id = filters.company_id;
+        }
+
+        if (filters.category_id) {
+            where.category_id = filters.category_id;
+        }
+
+        const [total, data] = await Promise.all([
+            prisma.request.count({ where }),
+            prisma.request.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    unit_of_measure: true,
+                    category: true,
+                    company: {
+                        select: {
+                            id: true,
+                            trade_name: true,
+                            logo_url: true
+                        }
+                    },
+                    _count: {
+                        select: { quote_responses: true }
+                    }
+                }
+            })
+        ]);
+
+        return {
+            data: data.map((item: any) => this.mapToEntity(item)),
+            total,
+            page,
+            limit,
+            _raw: data
+        };
+    }
+
     private mapToEntity(db: any): RequestEntity {
         const files: RequestFileEntity[] = db.files ? db.files.map((f: any) => ({
             id: f.id,

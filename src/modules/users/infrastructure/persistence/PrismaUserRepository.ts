@@ -177,4 +177,118 @@ export class PrismaUserRepository implements UserRepository {
     async delete(id: string): Promise<void> {
         await prisma.user.delete({ where: { id } });
     }
+
+    async findAllAdmin(params: { 
+        page: number, 
+        limit: number, 
+        search?: string, 
+        status?: string,
+        company_id?: string
+    }): Promise<{ items: any[], total: number }> {
+        const { page, limit, search, status, company_id } = params;
+        const skip = (page - 1) * limit;
+
+        const where: any = {};
+
+        if (status) {
+            where.is_active = status === 'active';
+        }
+
+        if (company_id) {
+            where.company_id = company_id;
+        }
+
+        if (search) {
+            where.OR = [
+                { first_name: { contains: search, mode: 'insensitive' } },
+                { last_name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+                { company: { trade_name: { contains: search, mode: 'insensitive' } } },
+                { company: { legal_name: { contains: search, mode: 'insensitive' } } },
+            ];
+        }
+
+        const [items, total] = await Promise.all([
+            prisma.user.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    company: {
+                        include: {
+                            verification: {
+                                select: { status: true }
+                            }
+                        }
+                    }
+                }
+            }) as Promise<any[]>,
+            prisma.user.count({ where })
+        ]);
+
+        return {
+            items: items.map(item => ({
+                id: item.id,
+                first_name: item.first_name,
+                last_name: item.last_name,
+                full_name: `${item.first_name} ${item.last_name}`,
+                email: item.email,
+                company_id: item.company?.id,
+                company_name: item.company?.legal_name || item.company?.trade_name,
+                status: item.is_active ? 'active' : 'inactive',
+                verification_status: item.company?.verification?.status || 'pending',
+                created_at: item.created_at
+            })),
+            total
+        };
+    }
+
+    async findByIdAdmin(id: string): Promise<any> {
+        const found = await prisma.user.findUnique({
+            where: { id },
+            include: {
+                company: {
+                    include: {
+                        locations: {
+                            include: {
+                                country: true,
+                                state: true
+                            }
+                        },
+                        contacts: true,
+                        payment_methods: {
+                            include: {
+                                method: true
+                            }
+                        },
+                        verification: true
+                    }
+                }
+            }
+        }) as any;
+
+        if (!found) return null;
+
+        return {
+            id: found.id,
+            first_name: found.first_name,
+            last_name: found.last_name,
+            full_name: `${found.first_name} ${found.last_name}`,
+            email: found.email,
+            status: found.is_active ? 'active' : 'inactive',
+            registration_date: found.created_at,
+            company: found.company ? {
+                id: found.company.id,
+                company_name: found.company.legal_name,
+                trade_name: found.company.trade_name,
+                status: found.company.verification?.status || 'pending',
+                tax_id: found.company.tax_id,
+                bio: found.company.bio,
+                locations: found.company.locations,
+                contacts: found.company.contacts,
+                payment_methods: found.company.payment_methods
+            } : null
+        };
+    }
 }

@@ -292,6 +292,56 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         await prisma.quoteResponse.delete({ where: { id } });
     }
 
+    async findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedResult<any>> {
+        const skip = (page - 1) * limit;
+        const where: any = {};
+
+        if (filters.status) {
+            where.status = filters.status;
+        }
+
+        if (filters.request_id) {
+            where.request_id = filters.request_id;
+        }
+
+        if (filters.supplier_id) {
+            where.supplier_id = filters.supplier_id;
+        }
+
+        const [total, items] = await Promise.all([
+            prisma.quoteResponse.count({ where }),
+            prisma.quoteResponse.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    supplier: { select: { id: true, trade_name: true, logo_url: true } },
+                    request: { select: { id: true, product_service: true } }
+                }
+            })
+        ]);
+
+        return {
+            items: items.map((item: any) => ({
+                id: item.id,
+                request_id: item.request_id,
+                supplier_id: item.supplier_id,
+                unit_price_usd: Number(item.unit_price_usd),
+                quantity: Number(item.quantity),
+                total_amount_usd: Number(item.total_amount_usd),
+                status: item.status,
+                created_at: item.created_at,
+                supplier_name: item.supplier?.trade_name,
+                request_product: item.request?.product_service
+            })),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
     async updateWithRevision(
         id: string,
         data: Partial<QuoteResponse>,

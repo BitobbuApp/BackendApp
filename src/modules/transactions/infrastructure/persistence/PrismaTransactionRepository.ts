@@ -113,6 +113,50 @@ export class PrismaTransactionRepository implements TransactionRepository {
         await prisma.transaction.delete({ where: { id } });
     }
 
+    async findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedTransactions> {
+        const offset = (page - 1) * limit;
+        const where: any = {};
+
+        if (filters.status) {
+            where.status = filters.status;
+        }
+
+        if (filters.buyer_id) {
+            where.buyer_id = filters.buyer_id;
+        }
+
+        if (filters.supplier_id) {
+            where.supplier_id = filters.supplier_id;
+        }
+
+        if (filters.search) {
+            where.product_description = { contains: filters.search, mode: 'insensitive' };
+        }
+
+        const [items, total] = await Promise.all([
+            prisma.transaction.findMany({
+                where,
+                skip: offset,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: { 
+                    payment_method: true,
+                    buyer: { select: { trade_name: true } },
+                    supplier: { select: { trade_name: true } }
+                }
+            }),
+            prisma.transaction.count({ where })
+        ]);
+
+        return {
+            items: items.map((item: any) => this.mapToEntity(item)),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
     async updateWithRevision(
         id: string,
         transactionData: Partial<Transaction>,

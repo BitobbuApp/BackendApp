@@ -13,6 +13,17 @@ export interface DashboardStats {
     };
 }
 
+export interface AdminDashboardKpis {
+    total_users: number;
+    active_users: number;
+    pending_verifications: number;
+    total_companies: number;
+    rfqs_last_30_days: number;
+    quotes_last_30_days: number;
+    total_gmv_usd: number;
+}
+
 export interface DashboardRepository {
     getStats(companyId: string): Promise<DashboardStats>;
+    getAdminKpis(): Promise<AdminDashboardKpis>;
 }

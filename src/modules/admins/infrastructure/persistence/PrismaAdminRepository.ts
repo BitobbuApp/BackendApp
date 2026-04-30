@@ -3,6 +3,11 @@ import { Admin } from "../../domain/entities/admin.entity";
 import { prisma } from "../../../../shared/infrastructure/database";
 
 export class PrismaAdminRepository implements IAdminRepository {
+    async create(data: any): Promise<Admin> {
+        const admin = await prisma.admin.create({ data });
+        return this.mapToEntity(admin);
+    }
+
     async findByEmail(email: string): Promise<Admin | null> {
         const admin = await prisma.admin.findUnique({ where: { email } });
         if (!admin) return null;
@@ -20,6 +25,14 @@ export class PrismaAdminRepository implements IAdminRepository {
             where: { id },
             data: { last_login_at: new Date() }
         });
+    }
+
+    async update(id: string, data: Partial<Admin>): Promise<Admin> {
+        const admin = await prisma.admin.update({
+            where: { id },
+            data: data as any
+        });
+        return this.mapToEntity(admin);
     }
 
     async logAuditAction(adminId: string, action: string, resource: string, resourceId?: string | null, payload?: any): Promise<void> {
