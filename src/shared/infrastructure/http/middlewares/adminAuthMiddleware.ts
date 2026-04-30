@@ -2,20 +2,23 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtService } from '../../../application/services/jwtService';
 import { ApiResponse } from '../responseFormatter';
 import logger from '../../logger';
+import { PrismaClient } from '@prisma/client';
+import { ApplicationError } from '../../../domain/error';
 
 const jwtService = new JwtService();
+const prisma = new PrismaClient();
 
 declare module 'fastify' {
     interface FastifyRequest {
-        user?: {
-            userId?: string;
-            companyId?: string | null;
+        admin?: {
+            adminId: string;
             email: string;
+            role: string;
         }
     }
 }
 
-export const authMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
+export const adminAuthMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const authHeader = request.headers.authorization;
 
@@ -34,9 +37,25 @@ export const authMiddleware = async (request: FastifyRequest, reply: FastifyRepl
             return ApiResponse.error(reply, "Invalid or expired token", 401, undefined, "AUTH_INVALID_TOKEN", "AUTHENTICATION");
         }
 
-        request.user = decoded;
+        if (decoded.actorType !== 'admin' || !decoded.adminId) {
+            return ApiResponse.error(reply, "Unauthorized access", 403, undefined, "AUTHORIZATION_ERROR", "AUTHORIZATION");
+        }
+
+        const admin = await prisma.admin.findUnique({
+            where: { id: decoded.adminId }
+        });
+
+        if (!admin || admin.status !== 'active') {
+            return ApiResponse.error(reply, "Admin inactive or locked", 403, undefined, "AUTHORIZATION_ERROR", "AUTHORIZATION");
+        }
+
+        request.admin = {
+            adminId: admin.id,
+            email: admin.email,
+            role: admin.role
+        };
     } catch (error) {
-        logger.error(error, 'Auth Error');
+        logger.error(error, 'Admin Auth Error');
         return ApiResponse.error(reply, "Internal authentication error", 500, undefined, "INTERNAL_SERVER_ERROR", "INTERNAL");
     }
 };
