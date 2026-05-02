@@ -42,6 +42,7 @@ interface UpdateCompanyInput {
 
     payment_method_ids?: number[];
     interest_category_ids?: number[];
+    social_media_links?: Array<{ platform: string; url: string }>;
 
     rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }

@@ -20,6 +20,7 @@ export class QuoteResponse {
         public payment_condition_id: string | null = null,
         public delivery_method_id: string | null = null,
         public delivery_time: string | null = null,
+        public estimated_delivery_hours: number | null = null,
         public notes: string | null = null,
         public has_guarantee: boolean = false,
         public status: ResponseStatus | string = 'pending',
@@ -28,6 +29,7 @@ export class QuoteResponse {
         public exchange_rate_id: string | null = null,
         public payment_currency: string = 'USD',
         public formal_quote_url: string | null = null,
+        public serial_number: number | null = null,
         public created_at: Date | null = null,
         public updated_at: Date | null = null
     ) { }

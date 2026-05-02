@@ -292,6 +292,7 @@ export class PrismaRequestRepository implements RequestRepository {
                 locations: db.company.locations ?? [],
             } : null,
             files,
+            db.serial_number,
             db.created_at,
             db.updated_at
         );

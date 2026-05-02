@@ -33,6 +33,7 @@ export class PrismaConversationRepository implements IConversationRepository {
                     select: {
                         product_service: true,
                         quantity: true,
+                        serial_number: true,
                         unit_of_measure: {
                             select: { abbreviation: true }
                         }
@@ -41,7 +42,13 @@ export class PrismaConversationRepository implements IConversationRepository {
                 quote_response: {
                     select: {
                         unit_price_usd: true,
-                        quantity: true
+                        quantity: true,
+                        serial_number: true
+                    }
+                },
+                transaction: {
+                    select: {
+                        serial_number: true
                     }
                 }
             }
@@ -97,6 +104,7 @@ export class PrismaConversationRepository implements IConversationRepository {
                     select: {
                         product_service: true,
                         quantity: true,
+                        serial_number: true,
                         unit_of_measure: {
                             select: { abbreviation: true }
                         }
@@ -105,7 +113,13 @@ export class PrismaConversationRepository implements IConversationRepository {
                 quote_response: {
                     select: {
                         unit_price_usd: true,
-                        quantity: true
+                        quantity: true,
+                        serial_number: true
+                    }
+                },
+                transaction: {
+                    select: {
+                        serial_number: true
                     }
                 }
             },
@@ -172,11 +186,16 @@ export class PrismaConversationRepository implements IConversationRepository {
             request: db.request ? {
                 product_service: db.request.product_service,
                 quantity: Number(db.request.quantity || 0),
+                serial_number: db.request.serial_number,
                 unit_of_measure: db.request.unit_of_measure,
             } : undefined,
             quote_response: db.quote_response ? {
                 unit_price_usd: Number(db.quote_response.unit_price_usd || 0),
                 quantity: Number(db.quote_response.quantity || 0),
+                serial_number: db.quote_response.serial_number,
+            } : undefined,
+            transaction: db.transaction ? {
+                serial_number: db.transaction.serial_number,
             } : undefined,
         };
     }
