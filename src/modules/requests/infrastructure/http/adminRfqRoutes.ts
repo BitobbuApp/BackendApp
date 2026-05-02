@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { adminAuthMiddleware } from '../../../../shared/infrastructure/http/middlewares/adminAuthMiddleware';
 import { AdminListRfqsUseCase } from '../../application/adminListRfqsUseCase';
+import { AdminExportRfqsUseCase } from '../../application/adminExportRfqsUseCase';
 
 interface AdminRfqQuery {
     page?: string;
@@ -10,9 +11,30 @@ interface AdminRfqQuery {
     status?: string;
     company_id?: string;
     category_id?: string;
+    serial_number?: string;
+    from_date?: string;
+    to_date?: string;
 }
 
 export async function adminRfqRoutes(app: FastifyInstance) {
+    app.get('/export', { preHandler: [adminAuthMiddleware] as any }, async (request: FastifyRequest<{ Querystring: AdminRfqQuery }>, reply: FastifyReply) => {
+        const useCase = new AdminExportRfqsUseCase();
+        const csvStream = await useCase.execute({
+            search: request.query.search,
+            status: request.query.status,
+            company_id: request.query.company_id,
+            category_id: request.query.category_id ? Number(request.query.category_id) : undefined,
+            serial_number: request.query.serial_number ? Number(request.query.serial_number) : undefined,
+            from_date: request.query.from_date,
+            to_date: request.query.to_date,
+        });
+
+        reply.header('Content-Type', 'text/csv; charset=utf-8');
+        reply.header('Content-Disposition', 'attachment; filename="rfqs.csv"');
+
+        return reply.send(csvStream);
+    });
+
     app.get('/', { preHandler: [adminAuthMiddleware] as any }, async (request: FastifyRequest<{ Querystring: AdminRfqQuery }>, reply: FastifyReply) => {
         const useCase = new AdminListRfqsUseCase();
         const result = await useCase.execute({
@@ -21,7 +43,10 @@ export async function adminRfqRoutes(app: FastifyInstance) {
             search: request.query.search,
             status: request.query.status,
             company_id: request.query.company_id,
-            category_id: request.query.category_id ? Number(request.query.category_id) : undefined
+            category_id: request.query.category_id ? Number(request.query.category_id) : undefined,
+            serial_number: request.query.serial_number ? Number(request.query.serial_number) : undefined,
+            from_date: request.query.from_date,
+            to_date: request.query.to_date
         });
         return ApiResponse.success(reply, result, "RFQs retrieved successfully");
     });

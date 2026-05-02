@@ -5,6 +5,7 @@ import { CategoryRepository } from "../../domain/repositories/category.repositor
 export class PrismaCategoryRepository implements CategoryRepository {
     async list(): Promise<Category[]> {
         const items = await prisma.category.findMany({
+            where: { is_active: true },
             orderBy: { name_es: "asc" }
         });
 

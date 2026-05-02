@@ -9,7 +9,10 @@ export class AdminListQuotesUseCase extends UseCase<any, any> {
         limit: Joi.number().integer().min(1).max(100).default(10),
         status: Joi.string().allow('').optional(),
         request_id: Joi.string().uuid().optional(),
-        supplier_id: Joi.string().uuid().optional()
+        supplier_id: Joi.string().uuid().optional(),
+        serial_number: Joi.number().optional(),
+        from_date: Joi.date().optional(),
+        to_date: Joi.date().optional()
     });
     protected outputSchema = Joi.any();
 

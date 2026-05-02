@@ -5,6 +5,7 @@ import { adminScopeMiddleware } from '../../../../shared/infrastructure/http/mid
 import { AdminListUsersUseCase } from '../../application/adminListUsersUseCase';
 import { AdminGetUserDetailsUseCase } from '../../application/adminGetUserDetailsUseCase';
 import { AdminUpdateUserStatusUseCase } from '../../application/adminUpdateUserStatusUseCase';
+import { AdminExportUsersUseCase } from '../../application/adminExportUsersUseCase';
 
 interface AdminUserQuery {
     page?: string;
@@ -12,6 +13,7 @@ interface AdminUserQuery {
     search?: string;
     status?: string;
     company_id?: string;
+    profile_type?: string;
 }
 
 export async function adminUserRoutes(app: FastifyInstance) {
@@ -22,9 +24,25 @@ export async function adminUserRoutes(app: FastifyInstance) {
             limit: request.query.limit ? Number(request.query.limit) : 10,
             search: request.query.search,
             status: request.query.status,
-            company_id: request.query.company_id
+            company_id: request.query.company_id,
+            profile_type: request.query.profile_type,
         });
         return ApiResponse.success(reply, result, "Users retrieved successfully");
+    });
+
+    app.get('/export', { preHandler: [adminAuthMiddleware] as any }, async (request: FastifyRequest<{ Querystring: AdminUserQuery }>, reply: FastifyReply) => {
+        const useCase = new AdminExportUsersUseCase();
+        const csvStream = await useCase.execute({
+            search: request.query.search,
+            status: request.query.status,
+            company_id: request.query.company_id,
+            profile_type: request.query.profile_type,
+        });
+
+        reply.header('Content-Type', 'text/csv; charset=utf-8');
+        reply.header('Content-Disposition', 'attachment; filename="usuarios.csv"');
+
+        return reply.send(csvStream);
     });
 
     app.get('/:id', { preHandler: [adminAuthMiddleware] as any }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {

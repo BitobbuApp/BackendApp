@@ -10,6 +10,9 @@ export class AdminListTransactionsUseCase extends UseCase<any, any> {
         status: Joi.string().allow('').optional(),
         buyer_id: Joi.string().uuid().optional(),
         supplier_id: Joi.string().uuid().optional(),
+        serial_number: Joi.number().optional(),
+        from_date: Joi.date().optional(),
+        to_date: Joi.date().optional(),
         search: Joi.string().allow('').optional()
     });
     protected outputSchema = Joi.any();

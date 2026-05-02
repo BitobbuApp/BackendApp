@@ -25,4 +25,5 @@ export interface QuoteResponseRepository {
     updateWithRevision(id: string, data: Partial<QuoteResponse>, revision: RevisionData): Promise<QuoteResponse>;
     delete(id: string): Promise<void>;
     findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedResult<any>>;
+    findAdminExportBatch(filters: any, limit: number, cursor?: string): Promise<any[]>;
 }

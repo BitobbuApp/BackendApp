@@ -5,6 +5,7 @@ import { PaymentMethodRepository } from "../../domain/repositories/paymentMethod
 export class PrismaPaymentMethodRepository implements PaymentMethodRepository {
     async list(): Promise<PaymentMethod[]> {
         const items = await prisma.paymentMethodDict.findMany({
+            where: { is_active: true },
             orderBy: { name_es: "asc" }
         });
 

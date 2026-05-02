@@ -10,7 +10,10 @@ export class AdminListRfqsUseCase extends UseCase<any, any> {
         search: Joi.string().allow('').optional(),
         status: Joi.string().allow('').optional(),
         company_id: Joi.string().uuid().optional(),
-        category_id: Joi.number().integer().optional()
+        category_id: Joi.number().integer().optional(),
+        serial_number: Joi.number().optional(),
+        from_date: Joi.date().optional(),
+        to_date: Joi.date().optional()
     });
     protected outputSchema = Joi.any();
 
@@ -28,13 +31,14 @@ export class AdminListRfqsUseCase extends UseCase<any, any> {
         return {
             items: result.data.map(item => ({
                 id: item.id,
+                serial_number: item.serial_number,
                 product_service: item.product_service,
                 quantity: item.quantity,
                 unit: item.unit_of_measure,
                 status: item.status,
                 created_at: item.created_at,
                 expiration_date: item.expiration_date,
-                response_count: (item as any)._raw?._count?.quote_responses ?? 0,
+                response_count: item.response_count || 0,
                 company: item.company ? {
                     id: item.company.id,
                     trade_name: item.company.trade_name

@@ -1,38 +1,40 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { IAdminRepository } from "../domain/repositories/admin.repository";
 import { PrismaAdminRepository } from "../infrastructure/persistence/PrismaAdminRepository";
-import { AdminAlreadyExistsError } from "../domain/errors/admin.errors";
-import { createAdminDtoSchema, createAdminResponseSchema } from "./dtos/admin-auth.dto";
-import bcrypt from 'bcrypt';
-
+import Joi from "joi";
+import bcrypt from "bcrypt";
 
 export class CreateAdminUseCase extends UseCase<any, any> {
-    protected inputSchema = createAdminDtoSchema;
-    protected outputSchema = createAdminResponseSchema;
+    protected inputSchema = Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().min(6).required(),
+        full_name: Joi.string().required(),
+        role: Joi.string().valid('superadmin', 'ops_admin', 'catalog_admin').required(),
+        status: Joi.string().valid('active', 'inactive').default('active')
+    });
+    protected outputSchema = Joi.any();
 
     private readonly adminRepository: IAdminRepository;
 
-    constructor() {
+    constructor(adminRepository?: IAdminRepository) {
         super();
-        this.adminRepository = new PrismaAdminRepository();
+        this.adminRepository = adminRepository || new PrismaAdminRepository();
     }
 
-    protected async implementation(data: any): Promise<any> {
-        const { email, password } = data;
+    protected async implementation(input: any): Promise<any> {
+        const hashedPassword = await bcrypt.hash(input.password, 10);
+        
+        const admin = await this.adminRepository.create({
+            ...input,
+            password: hashedPassword
+        });
 
-        const admin = await this.adminRepository.findByEmail(email);
-        if (admin) {
-            throw new AdminAlreadyExistsError();
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newAdmin = await this.adminRepository.create({ ...data, password: hashedPassword, email });
-        const result = {
-            full_name: newAdmin.full_name,
-            email: newAdmin.email,
-            role: newAdmin.role,
-            status: newAdmin.status,
-        }
-        return { admin: result };
+        return {
+            id: admin.id,
+            email: admin.email,
+            full_name: admin.full_name,
+            role: admin.role,
+            status: admin.status
+        };
     }
 }
