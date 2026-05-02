@@ -11,12 +11,13 @@ import { ListQuoteResponsesByRequestIdUseCase } from '../../application/listQuot
 import { UpdateQuoteResponseUseCase } from '../../application/updateQuoteResponseUseCase';
 import { DeleteQuoteResponseUseCase } from '../../application/deleteQuoteResponseUseCase';
 import { PerformQuoteActionUseCase } from '../../application/performQuoteActionUseCase';
+import { requireBuyer, requireSeller } from '../../../../shared/infrastructure/http/middlewares/roleMiddleware';
 
 export async function quoteResponseRoutes(app: FastifyInstance) {
 
-    // POST /quote-responses (JWT protected)
+    // POST /quote-responses (JWT protected — only sellers can submit a quote)
     app.post('/',
-        { preHandler: [authMiddleware] } as any,
+        { preHandler: [authMiddleware, requireSeller] } as any,
         async (request: any, reply: any) => {
             const useCase = new CreateQuoteResponseUseCase();
             const result = await useCase.execute({

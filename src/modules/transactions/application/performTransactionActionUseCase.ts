@@ -5,6 +5,8 @@ import { getIO } from '../../../shared/infrastructure/socket';
 import { prisma } from '../../../shared/infrastructure/database';
 import logger from '../../../shared/infrastructure/logger';
 import { CreateSystemMessageUseCase } from '../../messages/application/createSystemMessageUseCase';
+import { CreateNotificationUseCase } from '../../notifications/application/createNotificationUseCase';
+import { NOTIFICATION_TYPE } from '../../notifications/domain/notificationTypes.constants';
 
 interface PerformTransactionActionDto {
     transactionId: string;
@@ -132,7 +134,60 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
 
             logger.info(`📡 Socket event "${eventName}" emitted to conversation ${conversation.id}`);
 
-            // Create system message based on new state/action
+            // 🔔 Push notification to the OTHER party
+            const notifUC = new CreateNotificationUseCase();
+
+            if (data.action === 'payment_uploaded') {
+                // Actor = buyer, notify = supplier
+                const notif = await notifUC.execute({
+                    companyId: result.supplier_id,
+                    typeId: NOTIFICATION_TYPE.PAYMENT_UPLOADED,
+                    title: 'Pago recibido',
+                    message: 'Un comprador subió el comprobante de pago. Por favor revísalo.',
+                    link: `/Negotiations/${conversation.id}`,
+                    entityType: 'transaction',
+                    entityId: data.transactionId,
+                });
+                io.to(`company_${result.supplier_id}`).emit('notification:new', {
+                    id: notif.id, title: notif.title, message: notif.message,
+                    link: notif.link, createdAt: notif.createdAt,
+                });
+                logger.info(`🔔 Notification → supplier ${result.supplier_id} (payment_uploaded)`);
+
+            } else if (data.action === 'order_shipped') {
+                // Actor = supplier, notify = buyer
+                const notif = await notifUC.execute({
+                    companyId: result.buyer_id,
+                    typeId: NOTIFICATION_TYPE.ORDER_SHIPPED,
+                    title: 'Pedido enviado',
+                    message: 'El proveedor ha marcado tu pedido como enviado.',
+                    link: `/Negotiations/${conversation.id}`,
+                    entityType: 'transaction',
+                    entityId: data.transactionId,
+                });
+                io.to(`company_${result.buyer_id}`).emit('notification:new', {
+                    id: notif.id, title: notif.title, message: notif.message,
+                    link: notif.link, createdAt: notif.createdAt,
+                });
+                logger.info(`🔔 Notification → buyer ${result.buyer_id} (order_shipped)`);
+
+            } else if (data.action === 'delivery_confirmed') {
+                // Actor = buyer, notify = supplier
+                const notif = await notifUC.execute({
+                    companyId: result.supplier_id,
+                    typeId: NOTIFICATION_TYPE.DELIVERY_CONFIRMED,
+                    title: 'Entrega confirmada ✅',
+                    message: 'El comprador ha confirmado la recepción del pedido.',
+                    link: `/Negotiations/${conversation.id}`,
+                    entityType: 'transaction',
+                    entityId: data.transactionId,
+                });
+                io.to(`company_${result.supplier_id}`).emit('notification:new', {
+                    id: notif.id, title: notif.title, message: notif.message,
+                    link: notif.link, createdAt: notif.createdAt,
+                });
+                logger.info(`🔔 Notification → supplier ${result.supplier_id} (delivery_confirmed)`);
+            }
             const TRANSACTION_SYSTEM_KEYS: Record<string, string> = {
                 payment_uploaded: 'transaction.payment_uploaded',
                 payment_approved: 'transaction.payment_approved',

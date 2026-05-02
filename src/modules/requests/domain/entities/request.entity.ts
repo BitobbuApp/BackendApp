@@ -53,6 +53,7 @@ export class RequestEntity {
         public reach_service: string | null = null,
         public company: RequestCompanyEntity | null = null,
         public files: RequestFileEntity[] = [],
+        public serial_number: number | null = null,
         public created_at: Date | null = null,
         public updated_at: Date | null = null
     ) { }

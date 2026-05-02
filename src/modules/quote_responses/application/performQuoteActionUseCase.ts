@@ -5,6 +5,8 @@ import { getIO } from '../../../shared/infrastructure/socket';
 import { prisma } from '../../../shared/infrastructure/database';
 import logger from '../../../shared/infrastructure/logger';
 import { CreateSystemMessageUseCase } from '../../messages/application/createSystemMessageUseCase';
+import { CreateNotificationUseCase } from '../../notifications/application/createNotificationUseCase';
+import { NOTIFICATION_TYPE } from '../../notifications/domain/notificationTypes.constants';
 
 interface PerformQuoteActionDto {
     quoteResponseId: string;
@@ -148,8 +150,54 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
                 const supplierGlobalRoom = `company_${result.supplier_id}`;
                 io.to(supplierGlobalRoom).emit(eventName, payload);
                 logger.info(`📡 Socket event "${eventName}" emitted to supplier global room: ${supplierGlobalRoom}`);
+
+                // 🔔 Notify the supplier
+                const notifUC = new CreateNotificationUseCase();
+                const notif = await notifUC.execute({
+                    companyId: result.supplier_id,
+                    typeId: NOTIFICATION_TYPE.NEGOTIATION,
+                    title: 'Nueva negociación',
+                    message: 'Un comprador quiere negociar tu oferta.',
+                    link: `/Negotiations/${conversation.id}`,
+                    entityType: 'quote_response',
+                    entityId: data.quoteResponseId,
+                });
+                io.to(supplierGlobalRoom).emit('notification:new', {
+                    id: notif.id,
+                    title: notif.title,
+                    message: notif.message,
+                    link: notif.link,
+                    createdAt: notif.createdAt,
+                });
+                logger.info(`🔔 Notification created for supplier ${result.supplier_id} (negotiation_started)`);
+
+            } else if (data.action === 'accepted') {
+                io.to(conversation.id).emit(eventName, payload);
+                logger.info(`📡 Socket event "${eventName}" emitted to conversation ${conversation.id}`);
+
+                // 🔔 Notify the supplier that the buyer accepted
+                const supplierRoom = `company_${result.supplier_id}`;
+                const notifUC = new CreateNotificationUseCase();
+                const notif = await notifUC.execute({
+                    companyId: result.supplier_id,
+                    typeId: NOTIFICATION_TYPE.QUOTE_ACCEPTED,
+                    title: '¡Cotización aceptada!',
+                    message: 'Un comprador aceptó tu propuesta de negociación.',
+                    link: `/Negotiations/${conversation.id}`,
+                    entityType: 'quote_response',
+                    entityId: data.quoteResponseId,
+                });
+                io.to(supplierRoom).emit('notification:new', {
+                    id: notif.id,
+                    title: notif.title,
+                    message: notif.message,
+                    link: notif.link,
+                    createdAt: notif.createdAt,
+                });
+                logger.info(`🔔 Notification created for supplier ${result.supplier_id} (quote_accepted)`);
+
             } else {
-                // Normal flow: emit strictly strictly to the conversation room
+                // Normal flow: emit strictly to the conversation room
                 io.to(conversation.id).emit(eventName, payload);
                 logger.info(`📡 Socket event "${eventName}" emitted to conversation ${conversation.id}`);
             }

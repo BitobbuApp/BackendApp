@@ -92,6 +92,14 @@ export const updateCompanyDtoRequestSchema = Joi.object({
     payment_method_ids: Joi.array().items(Joi.number().integer().min(1)),
     interest_category_ids: Joi.array().items(Joi.number().integer().min(1)),
 
+    // Social media links
+    social_media_links: Joi.array().items(
+        Joi.object({
+            platform: Joi.string().valid('instagram', 'tiktok', 'facebook', 'website', 'google_business', 'linkedin', 'twitter').required(),
+            url: Joi.string().uri().allow('', null).optional()
+        })
+    ).optional(),
+
     // File uploads (multipart)
     rawFiles: Joi.any().optional()
 }).min(1).options({ stripUnknown: true });
@@ -177,6 +185,11 @@ export const companyWithRelationsSchema = Joi.object({
             reviewed_at: Joi.date().allow(null).optional()
         })).default([])
     }).allow(null).optional(),
+    social_media: Joi.array().items(Joi.object({
+        id: Joi.string().required(),
+        platform: Joi.string().required(),
+        url: Joi.string().required(),
+    })).optional(),
     created_at: Joi.date().required(),
     updated_at: Joi.date().allow(null),
 }).options({ stripUnknown: true });

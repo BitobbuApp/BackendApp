@@ -260,6 +260,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
             db.supplier_review_status ?? 'pending',
             db.buyer?.trade_name ?? null,
             db.supplier?.trade_name ?? null,
+            db.serial_number ?? null,
             db.created_at,
             db.updated_at
         );

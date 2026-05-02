@@ -128,6 +128,7 @@ export class AcceptedStrategy implements QuoteRevisionStrategy {
                 updated.payment_condition_id,
                 updated.delivery_method_id,
                 updated.delivery_time,
+                updated.estimated_delivery_hours,
                 updated.notes,
                 updated.has_guarantee,
                 updated.status,
@@ -136,6 +137,7 @@ export class AcceptedStrategy implements QuoteRevisionStrategy {
                 updated.exchange_rate_id,
                 updated.payment_currency,
                 updated.formal_quote_url,
+                (updated as any).serial_number,
                 updated.created_at,
                 updated.updated_at,
             );

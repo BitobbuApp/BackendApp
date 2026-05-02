@@ -100,7 +100,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 sector_ref: true,
                 company_type_ref: true,
                 verification: true,
-                verif_documents: { include: { type: true } }
+                verif_documents: { include: { type: true } },
+                social_media: true
             }
         });
         if (!found) return null;
@@ -255,6 +256,19 @@ export class PrismaCompanyRepository implements CompanyRepository {
             };
         }
 
+        // social_media: full replace (deleteMany + recreate)
+        if (data.social_media_links && Array.isArray(data.social_media_links)) {
+            updatePayload.social_media = {
+                deleteMany: {},
+                create: data.social_media_links
+                    .filter((item: any) => item.url && item.url.trim() !== '')
+                    .map((item: any) => ({
+                        platform: item.platform,
+                        url: item.url.trim()
+                    }))
+            };
+        }
+
         const updated = await prisma.company.update({
             where: { id },
             data: updatePayload,
@@ -262,7 +276,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 sector_ref: true,
                 company_type_ref: true,
                 payment_methods: { include: { method: true } },
-                categories_of_interest: { include: { category: true } }
+                categories_of_interest: { include: { category: true } },
+                social_media: true
             }
         });
         return this.mapToEntity(updated);
@@ -341,6 +356,12 @@ export class PrismaCompanyRepository implements CompanyRepository {
             };
         }
 
+        const socialMedia = db.social_media?.map((sm: any) => ({
+            id: sm.id,
+            platform: sm.platform,
+            url: sm.url,
+        })) ?? [];
+
         return new Company(
             db.id,
             db.trade_name,
@@ -377,7 +398,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
             db.settings,
             paymentMethods,
             categoriesOfInterest,
-            verificationInfo
+            verificationInfo,
+            socialMedia
         );
     }
 
