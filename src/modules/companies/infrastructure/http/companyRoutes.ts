@@ -77,7 +77,7 @@ export async function companyRoutes(app: FastifyInstance) {
     // LOCATIONS
     // ==========================================
 
-    app.get('/:companyId/locations', async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
+    app.get('/:companyId/locations', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
         const useCase = new GetLocationsByCompanyUseCase();
         const result = await useCase.execute(request.params.companyId);
         return ApiResponse.success(reply, result, "Locations found");
@@ -105,7 +105,7 @@ export async function companyRoutes(app: FastifyInstance) {
     // CONTACTS
     // ==========================================
 
-    app.get('/:companyId/contacts', async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
+    app.get('/:companyId/contacts', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
         const useCase = new GetContactsByCompanyUseCase();
         const result = await useCase.execute(request.params.companyId);
         return ApiResponse.success(reply, result, "Contacts found");
@@ -133,7 +133,7 @@ export async function companyRoutes(app: FastifyInstance) {
     // COMMERCIAL PROFILE
     // ==========================================
 
-    app.get('/:companyId/commercial-profile', async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
+    app.get('/:companyId/commercial-profile', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
         const useCase = new GetCommercialProfileUseCase();
         const result = await useCase.execute(request.params.companyId);
         return ApiResponse.success(reply, result, "Commercial profile found");
@@ -149,7 +149,7 @@ export async function companyRoutes(app: FastifyInstance) {
     // VERIFICATION
     // ==========================================
 
-    app.get('/:companyId/verification', async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
+    app.get('/:companyId/verification', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
         const useCase = new GetVerificationStatusUseCase();
         const result = await useCase.execute(request.params.companyId);
         return ApiResponse.success(reply, result, "Verification status found");
@@ -169,7 +169,7 @@ export async function companyRoutes(app: FastifyInstance) {
     // SETTINGS
     // ==========================================
 
-    app.get('/:companyId/settings', async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
+    app.get('/:companyId/settings', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
         const useCase = new GetSettingsUseCase();
         const result = await useCase.execute(request.params.companyId);
         return ApiResponse.success(reply, result, "Settings found");

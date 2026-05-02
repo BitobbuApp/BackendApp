@@ -6,5 +6,7 @@ export interface IAdminRepository {
     findById(id: string): Promise<Admin | null>;
     updateLastLogin(id: string): Promise<void>;
     update(id: string, data: Partial<Admin>): Promise<Admin>;
+    findAll(): Promise<Admin[]>;
+    delete(id: string): Promise<void>;
     logAuditAction(adminId: string, action: string, resource: string, resourceId?: string | null, payload?: any): Promise<void>;
 }

@@ -5,6 +5,37 @@ import { Prisma } from "@prisma/client";
 import { DuplicateQuoteResponseError } from "../../domain/errors/quote_response.errors";
 
 export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
+    private buildAdminWhere(filters: any) {
+        const where: any = {};
+
+        if (filters.status) {
+            where.status = filters.status;
+        }
+
+        if (filters.serial_number) {
+            where.serial_number = Number(filters.serial_number);
+        }
+
+        if (filters.from_date || filters.to_date) {
+            where.created_at = {};
+            if (filters.from_date) {
+                where.created_at.gte = new Date(filters.from_date);
+            }
+            if (filters.to_date) {
+                where.created_at.lte = new Date(filters.to_date);
+            }
+        }
+
+        if (filters.request_id) {
+            where.request_id = filters.request_id;
+        }
+
+        if (filters.supplier_id) {
+            where.supplier_id = filters.supplier_id;
+        }
+
+        return where;
+    }
     async create(response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         try {
             const created = await prisma.$transaction(async (tx) => {
@@ -298,56 +329,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         await prisma.quoteResponse.delete({ where: { id } });
     }
 
-    async findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedResult<any>> {
-        const skip = (page - 1) * limit;
-        const where: any = {};
 
-        if (filters.status) {
-            where.status = filters.status;
-        }
-
-        if (filters.request_id) {
-            where.request_id = filters.request_id;
-        }
-
-        if (filters.supplier_id) {
-            where.supplier_id = filters.supplier_id;
-        }
-
-        const [total, items] = await Promise.all([
-            prisma.quoteResponse.count({ where }),
-            prisma.quoteResponse.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { created_at: 'desc' },
-                include: {
-                    supplier: { select: { id: true, trade_name: true, logo_url: true } },
-                    request: { select: { id: true, product_service: true } }
-                }
-            })
-        ]);
-
-        return {
-            items: items.map((item: any) => ({
-                id: item.id,
-                request_id: item.request_id,
-                supplier_id: item.supplier_id,
-                unit_price_usd: Number(item.unit_price_usd),
-                quantity: Number(item.quantity),
-                total_amount_usd: Number(item.total_amount_usd),
-                status: item.status,
-                serial_number: item.serial_number,
-                created_at: item.created_at,
-                supplier_name: item.supplier?.trade_name,
-                request_product: item.request?.product_service
-            })),
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit)
-        };
-    }
 
     async updateWithRevision(
         id: string,
@@ -479,6 +461,68 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             },
             request: found.request
         };
+    }
+
+    async findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedResult<any>> {
+        const skip = (page - 1) * limit;
+        const where = this.buildAdminWhere(filters);
+
+        const [total, data] = await Promise.all([
+            prisma.quoteResponse.count({ where }),
+            prisma.quoteResponse.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    supplier: { select: { trade_name: true, logo_url: true } },
+                    request: { select: { product_service: true, serial_number: true } }
+                }
+            })
+        ]);
+
+        return {
+            items: data.map((item: any) => {
+                const entity = this.mapToEntity(item);
+                return {
+                    ...entity,
+                    supplier_name: item.supplier?.trade_name || 'N/A',
+                    request_product: item.request?.product_service || 'N/A',
+                    request_serial: item.request?.serial_number || 'N/A',
+                };
+            }),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
+    async findAdminExportBatch(filters: any, limit: number, cursor?: string): Promise<any[]> {
+        const where = this.buildAdminWhere(filters);
+        const data = await prisma.quoteResponse.findMany({
+            where,
+            take: limit,
+            ...(cursor && {
+                skip: 1,
+                cursor: { id: cursor },
+            }),
+            orderBy: { id: 'asc' },
+            include: {
+                supplier: { select: { trade_name: true, logo_url: true } },
+                request: { select: { product_service: true, serial_number: true } }
+            }
+        });
+
+        return data.map((item: any) => {
+            const entity = this.mapToEntity(item);
+            return {
+                ...entity,
+                supplier_name: item.supplier?.trade_name || 'N/A',
+                request_product: item.request?.product_service || 'N/A',
+                request_serial: item.request?.serial_number || 'N/A',
+            };
+        });
     }
 
     private mapToEntity(db: Prisma.QuoteResponseGetPayload<{}>): QuoteResponse {

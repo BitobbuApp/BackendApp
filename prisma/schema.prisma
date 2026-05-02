@@ -35,7 +35,6 @@ model User {
   updated_at         DateTime  @updatedAt @db.Timestamptz
 
   company             Company?               @relation(fields: [company_id], references: [id], onDelete: Restrict)
-  reviewed_docs       VerificationDocument[] @relation("DocReviewer")
   requests            Request[]
   notifications       Notification[]
   onboarding_statuses UserOnboardingStatus[]
@@ -340,6 +339,7 @@ model CompanyTypeDict {
   name_en     String         @db.VarChar(100)
   name_es     String         @db.VarChar(100)
   description String?
+  is_active   Boolean        @default(true)
   companies   Company[]      @relation("CompanyCompanyType")
   offers      CompanyOffer[] @relation("OfferCompanyType")
 
@@ -364,6 +364,7 @@ model UnitOfMeasureDict {
   name_en      String         @db.VarChar(100)
   name_es      String?        @db.VarChar(100)
   abbreviation String         @db.VarChar(20)
+  is_active    Boolean        @default(true)
   offers       CompanyOffer[]
   requests     Request[]
 
@@ -374,6 +375,7 @@ model NotificationTypeDict {
   id            Int            @id @default(autoincrement()) @db.SmallInt
   name          String         @db.VarChar(100)
   icon          String?        @db.VarChar(100)
+  is_active     Boolean        @default(true)
   notifications Notification[]
 
   @@map("notification_types")
@@ -384,6 +386,7 @@ model VerifDocTypeDict {
   name_en                String                 @db.VarChar(100)
   name_es                String?                @db.VarChar(100)
   instructions           String?
+  is_active              Boolean                @default(true)
   verification_documents VerificationDocument[]
 
   @@map("verif_doc_types")
@@ -569,7 +572,7 @@ model VerificationDocument {
   created_at  DateTime       @default(now()) @db.Timestamptz
 
   company  Company          @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  reviewer User?            @relation("DocReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
+  reviewer Admin?           @relation("DocReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
   type     VerifDocTypeDict @relation(fields: [type_id], references: [id])
 
   @@map("verification_documents")
@@ -958,6 +961,7 @@ model EstimatedMonthlyTransaction {
   range_name     String  @unique @db.VarChar(50)
   description    String?
   description_es String?
+  is_active      Boolean @default(true)
 
   companies Company[]
 
@@ -1021,6 +1025,8 @@ model Admin {
   last_login_at DateTime? @db.Timestamptz
   created_at    DateTime  @default(now()) @db.Timestamptz
   updated_at    DateTime  @default(now()) @db.Timestamptz
+
+  reviewed_docs VerificationDocument[] @relation("DocReviewer")
 
   @@map("admins")
 }

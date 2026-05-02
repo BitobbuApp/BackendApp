@@ -3,6 +3,41 @@ import { RequestEntity, RequestFileEntity } from "../../domain/entities/request.
 import { prisma } from '../../../../shared/infrastructure/database';
 
 export class PrismaRequestRepository implements RequestRepository {
+    private buildAdminWhere(filters: any) {
+        const where: any = {};
+
+        if (filters.status) {
+            where.status = filters.status;
+        }
+
+        if (filters.search) {
+            where.product_service = { contains: filters.search, mode: 'insensitive' };
+        }
+
+        if (filters.serial_number) {
+            where.serial_number = Number(filters.serial_number);
+        }
+
+        if (filters.from_date || filters.to_date) {
+            where.created_at = {};
+            if (filters.from_date) {
+                where.created_at.gte = new Date(filters.from_date);
+            }
+            if (filters.to_date) {
+                where.created_at.lte = new Date(filters.to_date);
+            }
+        }
+
+        if (filters.company_id) {
+            where.company_id = filters.company_id;
+        }
+
+        if (filters.category_id) {
+            where.category_id = filters.category_id;
+        }
+
+        return where;
+    }
     async create(request: Partial<RequestEntity>): Promise<RequestEntity> {
         const dataPayload: any = {
             company_id: request.company_id!,
@@ -188,23 +223,7 @@ export class PrismaRequestRepository implements RequestRepository {
 
     async findAllAdmin(filters: any, page: number, limit: number): Promise<RequestListResult> {
         const skip = (page - 1) * limit;
-        const where: any = {};
-
-        if (filters.status) {
-            where.status = filters.status;
-        }
-
-        if (filters.search) {
-            where.product_service = { contains: filters.search, mode: 'insensitive' };
-        }
-
-        if (filters.company_id) {
-            where.company_id = filters.company_id;
-        }
-
-        if (filters.category_id) {
-            where.category_id = filters.category_id;
-        }
+        const where = this.buildAdminWhere(filters);
 
         const [total, data] = await Promise.all([
             prisma.request.count({ where }),
@@ -237,6 +256,35 @@ export class PrismaRequestRepository implements RequestRepository {
             limit,
             _raw: data
         };
+    }
+
+    async findAdminExportBatch(filters: any, limit: number, cursor?: string): Promise<RequestEntity[]> {
+        const where = this.buildAdminWhere(filters);
+        const data = await prisma.request.findMany({
+            where,
+            take: limit,
+            ...(cursor && {
+                skip: 1,
+                cursor: { id: cursor },
+            }),
+            orderBy: { id: 'asc' },
+            include: {
+                unit_of_measure: true,
+                category: true,
+                company: {
+                    select: {
+                        id: true,
+                        trade_name: true,
+                        logo_url: true,
+                    }
+                },
+                _count: {
+                    select: { quote_responses: true }
+                }
+            }
+        });
+
+        return data.map((item: any) => this.mapToEntity(item));
     }
 
     private mapToEntity(db: any): RequestEntity {

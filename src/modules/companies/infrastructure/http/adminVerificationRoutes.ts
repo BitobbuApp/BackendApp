@@ -33,7 +33,7 @@ export async function adminVerificationRoutes(app: FastifyInstance) {
             document_id: request.params.documentId,
             status: request.body.status,
             notes: request.body.notes,
-            reviewer_id: (request as any).admin.id // From adminAuthMiddleware
+            reviewer_id: (request as any).admin.adminId // From adminAuthMiddleware
         });
         return ApiResponse.success(reply, result, "Document reviewed successfully");
     });

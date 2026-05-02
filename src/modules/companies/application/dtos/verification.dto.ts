@@ -19,9 +19,10 @@ export const documentDtoResponseSchema = Joi.object({
     id: Joi.string().required(),
     company_id: Joi.string().required(),
     type_id: Joi.number().integer().required(),
-    type: Joi.string().required(),
-    file_url: Joi.string().required(),
+    type: Joi.string().optional(),
+    url: Joi.string().required(),
     status: Joi.string().required(),
-    feedback: Joi.string().allow(null),
+    feedback: Joi.string().allow(null).optional(),
+    notes: Joi.string().allow(null).optional(),
     created_at: Joi.date().required()
 }).options({ stripUnknown: true });

@@ -47,6 +47,17 @@ export class PrismaAdminRepository implements IAdminRepository {
         });
     }
 
+    async findAll(): Promise<Admin[]> {
+        const admins = await prisma.admin.findMany({
+            orderBy: { created_at: 'desc' }
+        });
+        return admins.map(admin => this.mapToEntity(admin));
+    }
+
+    async delete(id: string): Promise<void> {
+        await prisma.admin.delete({ where: { id } });
+    }
+
     private mapToEntity(dbAdmin: any): Admin {
         return new Admin(
             dbAdmin.id,

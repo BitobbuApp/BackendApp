@@ -5,6 +5,7 @@ import { EstimatedMonthlyTransactionRepository } from "../../domain/repositories
 export class PrismaEstimatedMonthlyTransactionRepository implements EstimatedMonthlyTransactionRepository {
     async list(): Promise<EstimatedMonthlyTransaction[]> {
         const items = await prisma.estimatedMonthlyTransaction.findMany({
+            where: { is_active: true },
             orderBy: { range_name: "asc" },
         });
         return items.map((item) => this.mapToEntity(item));
@@ -16,6 +17,7 @@ export class PrismaEstimatedMonthlyTransactionRepository implements EstimatedMon
             db.range_name,
             db.description,
             db.description_es,
+            db.is_active
         );
     }
 }

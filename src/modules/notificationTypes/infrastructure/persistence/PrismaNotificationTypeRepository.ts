@@ -5,6 +5,7 @@ import { NotificationTypeRepository } from "../../domain/repositories/notificati
 export class PrismaNotificationTypeRepository implements NotificationTypeRepository {
     async list(): Promise<NotificationType[]> {
         const items = await prisma.notificationTypeDict.findMany({
+            where: { is_active: true },
             orderBy: { name: "asc" }
         });
 
@@ -15,6 +16,7 @@ export class PrismaNotificationTypeRepository implements NotificationTypeReposit
         return new NotificationType(
             db.id,
             db.name,
+            db.is_active,
             db.icon ?? null
         );
     }

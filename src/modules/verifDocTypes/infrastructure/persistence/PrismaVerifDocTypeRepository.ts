@@ -5,6 +5,7 @@ import { VerifDocTypeRepository } from "../../domain/repositories/verifDocType.r
 export class PrismaVerifDocTypeRepository implements VerifDocTypeRepository {
     async list(): Promise<VerifDocType[]> {
         const items = await prisma.verifDocTypeDict.findMany({
+            where: { is_active: true },
             orderBy: { name_es: "asc" }
         });
 
@@ -16,6 +17,7 @@ export class PrismaVerifDocTypeRepository implements VerifDocTypeRepository {
             db.id,
             db.name_en,
             db.name_es ?? null,
+            db.is_active,
             db.instructions ?? null
         );
     }

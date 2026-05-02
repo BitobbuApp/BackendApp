@@ -13,8 +13,17 @@ export interface UserRepository {
         limit: number, 
         search?: string, 
         status?: string,
-        company_id?: string
+        company_id?: string,
+        profile_type?: string,
     }): Promise<{ items: any[], total: number }>;
 
     findByIdAdmin(id: string): Promise<any>;
+    findAdminExportBatch(params: {
+        limit: number,
+        cursor?: string,
+        search?: string,
+        status?: string,
+        company_id?: string,
+        profile_type?: string,
+    }): Promise<any[]>;
 }

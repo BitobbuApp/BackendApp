@@ -5,6 +5,7 @@ import { UnitOfMeasureRepository } from "../../domain/repositories/unitOfMeasure
 export class PrismaUnitOfMeasureRepository implements UnitOfMeasureRepository {
     async list(): Promise<UnitOfMeasure[]> {
         const items = await prisma.unitOfMeasureDict.findMany({
+            where: { is_active: true },
             orderBy: { name_es: "asc" }
         });
 
@@ -16,7 +17,8 @@ export class PrismaUnitOfMeasureRepository implements UnitOfMeasureRepository {
             db.id,
             db.name_en,
             db.name_es ?? null,
-            db.abbreviation
+            db.abbreviation,
+            db.is_active
         );
     }
 }

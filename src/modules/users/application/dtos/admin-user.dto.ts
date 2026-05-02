@@ -6,6 +6,7 @@ export const adminListUsersInputSchema = Joi.object({
     search: Joi.string().allow('').optional(),
     status: Joi.string().valid('active', 'inactive').optional(),
     company_id: Joi.string().uuid().optional(),
+    profile_type: Joi.string().valid('buyer', 'supplier', 'both').optional(),
 });
 
 export const adminListUsersResponseSchema = Joi.object({
@@ -17,6 +18,7 @@ export const adminListUsersResponseSchema = Joi.object({
         email: Joi.string().email().required(),
         company_id: Joi.string().uuid().allow(null).required(),
         company_name: Joi.string().allow(null, '').required(),
+        profile_type: Joi.string().valid('buyer', 'supplier', 'both', 'unknown').required(),
         status: Joi.string().required(),
         verification_status: Joi.string().allow(null).required(),
         created_at: Joi.date().required()
