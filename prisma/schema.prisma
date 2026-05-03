@@ -480,10 +480,10 @@ model CompanyContact {
 }
 
 model CompanySocialMedia {
-  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String          @db.Uuid
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String         @db.Uuid
   platform   SocialPlatform
-  url        String          @db.VarChar(500)
+  url        String         @db.VarChar(500)
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -546,6 +546,12 @@ model Subscription {
   expires_at        DateTime? @db.Timestamptz
   is_active         Boolean   @default(true)
 
+  trial_ends_at        DateTime? @db.Timestamptz
+  current_period_start DateTime  @default(now()) @db.Timestamptz
+  current_period_end   DateTime  @default(now()) @db.Timestamptz
+  rfq_count_current    Int       @default(0)
+  quotes_count_current Int       @default(0)
+
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
@@ -553,6 +559,9 @@ model Subscription {
   plan           SubscriptionPlan   @relation(fields: [plan_id], references: [id])
   payment_method PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
 
+  @@index([company_id, is_active])
+  // Prisma doesn't support conditional uniqueness, this must be handled in raw SQL
+  // @@unique([company_id], name: "subscriptions_one_active_per_company") where is_active = true
   @@map("subscriptions")
 }
 
@@ -683,26 +692,26 @@ model CompanyOfferPhoto {
 // ==========================================
 
 model QuoteResponse {
-  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  serial_number        Int            @unique @default(autoincrement())
-  request_id           String         @db.Uuid
-  supplier_id          String         @db.Uuid
-  company_offer_id     String?        @db.Uuid
-  unit_price_usd       Decimal        @db.Decimal(12, 2)
-  quantity             Decimal        @db.Decimal(12, 2)
-  payment_conditions   String?        @db.VarChar(200)
-  payment_condition_id String?        @db.Uuid
-  delivery_method_id   String?        @db.Uuid
-  delivery_time        String?        @db.VarChar(100)
+  id                       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serial_number            Int            @unique @default(autoincrement())
+  request_id               String         @db.Uuid
+  supplier_id              String         @db.Uuid
+  company_offer_id         String?        @db.Uuid
+  unit_price_usd           Decimal        @db.Decimal(12, 2)
+  quantity                 Decimal        @db.Decimal(12, 2)
+  payment_conditions       String?        @db.VarChar(200)
+  payment_condition_id     String?        @db.Uuid
+  delivery_method_id       String?        @db.Uuid
+  delivery_time            String?        @db.VarChar(100)
   estimated_delivery_hours Int?
-  notes                String?
-  has_guarantee        Boolean        @default(false)
-  status               ResponseStatus @default(pending)
-  rejection_reason     String?
-  total_amount_usd     Decimal        @db.Decimal(14, 2) // Computed in DB, mapping required but Prisma supports reading computed 
-  exchange_rate_id     String?        @db.Uuid
-  payment_currency     String         @default("USD") @db.Char(3)
-  formal_quote_url     String?
+  notes                    String?
+  has_guarantee            Boolean        @default(false)
+  status                   ResponseStatus @default(pending)
+  rejection_reason         String?
+  total_amount_usd         Decimal        @db.Decimal(14, 2) // Computed in DB, mapping required but Prisma supports reading computed
+  exchange_rate_id         String?        @db.Uuid
+  payment_currency         String         @default("USD") @db.Char(3)
+  formal_quote_url         String?
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
@@ -1002,6 +1011,12 @@ model SubscriptionPlan {
   price         Decimal @db.Decimal(10, 2)
   billing_cycle Int // number of days
   is_active     Boolean @default(true)
+
+  name_es              String @default("") @db.VarChar(50)
+  trial_days           Int    @default(0) @db.SmallInt
+  max_rfq_per_month    Int?
+  max_quotes_per_month Int?
+  max_active_offers    Int?
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
