@@ -6,6 +6,7 @@ import { createRequestDtoRequestSchema, requestDtoResponseSchema } from "./dtos/
 import { RFQ_TYPE } from "../../../shared/constants/request/request.contants";
 import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
 import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
+import { matchingQueue } from "../../../infrastructure/queue/matching.queue";
 
 interface CreateRequestDto {
     company_id: string;
@@ -114,6 +115,9 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
         }
 
         const created = await this.requestRepository.create(repoData as any);
+
+        await matchingQueue.add('match-rfq', { rfqId: created.id }, { delay: 1000 });
+
         return {
             id: created.id,
             company_id: created.company_id,
