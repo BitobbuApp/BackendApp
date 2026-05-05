@@ -12,6 +12,8 @@ import { UpdateQuoteResponseUseCase } from '../../application/updateQuoteRespons
 import { DeleteQuoteResponseUseCase } from '../../application/deleteQuoteResponseUseCase';
 import { PerformQuoteActionUseCase } from '../../application/performQuoteActionUseCase';
 import { requireBuyer, requireSeller } from '../../../../shared/infrastructure/http/middlewares/roleMiddleware';
+import { SubscriptionGuardService } from '../../../subscriptions/application/subscription-guard.service';
+import { PrismaSubscriptionRepository } from '../../../subscriptions/infrastructure/persistence/PrismaSubscriptionRepository';
 
 export async function quoteResponseRoutes(app: FastifyInstance) {
 
@@ -19,11 +21,15 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
     app.post('/',
         { preHandler: [authMiddleware, requireSeller] } as any,
         async (request: any, reply: any) => {
+            const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
+            await guard.authorize(request.user.companyId, 'quote');
+
             const useCase = new CreateQuoteResponseUseCase();
             const result = await useCase.execute({
                 ...request.body,
                 supplier_id: request.user.companyId
             });
+            await guard.incrementUsage(request.user.companyId, 'quote');
             return ApiResponse.success(reply, result, "Quote response created", 201);
         }
     );
