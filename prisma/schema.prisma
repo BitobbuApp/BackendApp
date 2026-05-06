@@ -1006,14 +1006,14 @@ model DeliveryMethod {
 // ==========================================
 
 model SubscriptionPlan {
-  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  plan_name     String  @unique @db.VarChar(100)
-  price         Decimal @db.Decimal(10, 2)
-  billing_cycle Int // number of days
-  is_active     Boolean @default(true)
-
-  name_es              String @default("") @db.VarChar(50)
-  trial_days           Int    @default(0) @db.SmallInt
+  id                   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plan_name            String  @unique @db.VarChar(100)
+  price                Decimal @db.Decimal(10, 2)
+  billing_cycle        Int // number of days
+  is_active            Boolean @default(true)
+  is_default           Boolean @default(false)
+  name_es              String  @default("") @db.VarChar(50)
+  trial_days           Int     @default(0) @db.SmallInt
   max_rfq_per_month    Int?
   max_quotes_per_month Int?
   max_active_offers    Int?
