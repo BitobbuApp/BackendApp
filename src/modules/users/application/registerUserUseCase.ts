@@ -10,6 +10,8 @@ import { EmailService } from '../../../shared/application/services/email.service
 import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
 import { PrismaVerificationRepository } from '../../companies/infrastructure/persistence/PrismaVerificationRepository';
 import { VerificationRepository } from '../../companies/domain/repositories/verification.repository';
+import { CreateSubscriptionUseCase } from '../../subscriptions/application/createSubscriptionUseCase';
+import { GetSubscriptionPlanUseCase } from '../../subscriptions/application/getSubscriptionPlanUseCase';
 
 interface RegisterDto {
     first_name: string;
@@ -38,12 +40,16 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     private readonly userRepository: UserRepository;
     private readonly emailService: EmailService;
     private readonly verificationRepository: VerificationRepository;
+    private readonly getSubscriptionPlanUseCase: GetSubscriptionPlanUseCase;
+    private readonly createSubscriptionUseCase: CreateSubscriptionUseCase;
 
     constructor() {
         super();
         this.userRepository = new PrismaUserRepository();
         this.emailService = new MailgunEmailAdapter();
         this.verificationRepository = new PrismaVerificationRepository();
+        this.getSubscriptionPlanUseCase = new GetSubscriptionPlanUseCase();
+        this.createSubscriptionUseCase = new CreateSubscriptionUseCase();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {
@@ -87,6 +93,18 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
                 company_id: newUser.company_id,
                 status: 'pending'
             });
+
+            // Assign default plan (Free)
+            const defaultPlan = await this.getSubscriptionPlanUseCase.execute({
+                is_default: true
+            });
+            
+            if (defaultPlan) {
+                await this.createSubscriptionUseCase.execute({
+                    company_id: newUser.company_id,
+                    plan_id: defaultPlan.id
+                });
+            }
         }
 
         // Send welcome email (fire and forget / fail-safe)

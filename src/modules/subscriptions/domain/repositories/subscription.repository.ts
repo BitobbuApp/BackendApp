@@ -5,4 +5,5 @@ export interface SubscriptionRepository {
     findActiveByCompanyId(companyId: string): Promise<any | null>;
     deactivateActive(companyId: string): Promise<void>;
     create(data: any): Promise<any>;
+    hasHadTrial(companyId: string): Promise<boolean>;
 }

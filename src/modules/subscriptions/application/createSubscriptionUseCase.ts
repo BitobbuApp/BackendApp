@@ -44,7 +44,9 @@ export class CreateSubscriptionUseCase extends UseCase<CreateSubscriptionDTO, an
         const currentPeriodEnd = new Date(now.getTime() + plan.billing_cycle * 24 * 60 * 60 * 1000);
 
         let trialEndsAt = null;
-        if (plan.trial_days > 0) {
+        const hasHadTrial = await this.subscriptionRepo.hasHadTrial(data.company_id);
+
+        if (plan.trial_days > 0 && !hasHadTrial) {
             trialEndsAt = new Date(now.getTime() + plan.trial_days * 24 * 60 * 60 * 1000);
         }
 

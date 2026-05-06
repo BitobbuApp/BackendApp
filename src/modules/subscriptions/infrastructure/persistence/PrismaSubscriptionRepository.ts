@@ -117,6 +117,16 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
         });
     }
 
+    async hasHadTrial(companyId: string): Promise<boolean> {
+        const count = await prisma.subscription.count({
+            where: {
+                company_id: companyId,
+                trial_ends_at: { not: null }
+            }
+        });
+        return count > 0;
+    }
+
     private calculateStatus(item: any): string {
         if (!item.is_active) return 'inactive';
         if (item.expires_at && new Date(item.expires_at) < new Date()) return 'expired';

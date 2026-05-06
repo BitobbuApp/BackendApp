@@ -13,4 +13,16 @@ export class PrismaPlanRepository implements PlanRepository {
             where: { is_active: true }
         });
     }
+
+    async findDefault(): Promise<any | null> {
+        return await prisma.subscriptionPlan.findFirst({
+            where: { is_default: true, is_active: true }
+        });
+    }
+
+    async findOne(filters: any): Promise<any | null> {
+        return await prisma.subscriptionPlan.findFirst({
+            where: { ...filters, is_active: true }
+        });
+    }
 }

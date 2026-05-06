@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["relationJoins"]
@@ -13,38 +7,810 @@ datasource db {
   provider = "postgresql"
 }
 
-// ==========================================
-// 1. User (Identity Layer)
-// Handles authentication and basic account data.
-// A user can exist without a Company.
-// ==========================================
-
 model User {
-  id                 String    @id @default(uuid()) @db.Uuid
-  company_id         String?   @db.Uuid
-  first_name         String
-  last_name          String
-  email              String    @unique @db.Text
-  password           String
-  salt               Int
-  preferred_language String    @default("es") @db.Char(2)
-  timezone           String    @default("America/Caracas") @db.VarChar(50)
-  is_active          Boolean   @default(true)
-  last_access        DateTime? @db.Timestamptz
-  created_at         DateTime  @default(now()) @db.Timestamptz
-  updated_at         DateTime  @updatedAt @db.Timestamptz
-
-  company             Company?               @relation(fields: [company_id], references: [id], onDelete: Restrict)
-  requests            Request[]
+  id                  String                 @id @default(uuid()) @db.Uuid
+  company_id          String?                @db.Uuid
+  first_name          String
+  last_name           String
+  email               String                 @unique
+  password            String
+  salt                Int
+  is_active           Boolean                @default(true)
+  last_access         DateTime?              @db.Timestamptz(6)
+  created_at          DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime               @updatedAt @db.Timestamptz(6)
+  preferred_language  String                 @default("es") @db.Char(2)
+  timezone            String                 @default("America/Caracas") @db.VarChar(50)
   notifications       Notification[]
+  requests            Request[]
   onboarding_statuses UserOnboardingStatus[]
+  company             Company?               @relation(fields: [company_id], references: [id], onDelete: Restrict)
 
   @@map("users")
 }
 
-// ==========================================
-// ENUMS FROM SQL
-// ==========================================
+model Company {
+  id                       String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trade_name               String                       @db.VarChar(200)
+  legal_name               String?                      @db.VarChar(200)
+  tax_id                   String?                      @unique @db.VarChar(20)
+  founding_year            Int?                         @db.SmallInt
+  bio                      String?
+  logo_url                 String?
+  sector_id                Int?                         @db.SmallInt
+  company_type_id          Int?                         @db.SmallInt
+  can_buy                  Boolean                      @default(false)
+  can_sell                 Boolean                      @default(false)
+  average_rating           Decimal?                     @default(0.00) @db.Decimal(3, 2)
+  transaction_count        Int                          @default(0)
+  review_count             Int                          @default(0)
+  created_at               DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                     @default(now()) @db.Timestamptz(6)
+  is_founder_badge         Boolean                      @default(false)
+  monthly_transactions_id  String?                      @db.Uuid
+  company_size_id          String?                      @db.Uuid
+  default_currency         String?                      @default("USD") @db.Char(3)
+  preferred_language       String                       @default("es") @db.Char(2)
+  avg_communication_buyer  Decimal                      @default(0.00) @db.Decimal(3, 2)
+  avg_communication_seller Decimal                      @default(0.00) @db.Decimal(3, 2)
+  avg_compliance_buyer     Decimal                      @default(0.00) @db.Decimal(3, 2)
+  avg_compliance_seller    Decimal                      @default(0.00) @db.Decimal(3, 2)
+  avg_price                Decimal                      @default(0.00) @db.Decimal(3, 2)
+  avg_quality              Decimal                      @default(0.00) @db.Decimal(3, 2)
+  avg_reliability          Decimal                      @default(0.00) @db.Decimal(3, 2)
+  buyer_review_count       Int                          @default(0)
+  seller_review_count      Int                          @default(0)
+  company_size             CompanySize?                 @relation(fields: [company_size_id], references: [id])
+  company_type_ref         CompanyTypeDict?             @relation("CompanyCompanyType", fields: [company_type_id], references: [id])
+  currency                 Currency?                    @relation(fields: [default_currency], references: [code])
+  monthly_transactions     EstimatedMonthlyTransaction? @relation(fields: [monthly_transactions_id], references: [id])
+  sector_ref               Category?                    @relation("CompanySector", fields: [sector_id], references: [id])
+  categories_of_interest   CompanyCategoryOfInterest[]
+  commercial_profile       CompanyCommercialProfile?
+  contacts                 CompanyContact[]
+  locations                CompanyLocation[]
+  offers                   CompanyOffer[]
+  operating_countries      CompanyOperatingCountry[]
+  payment_methods          CompanyPaymentMethod[]
+  settings                 CompanySettings?
+  social_media             CompanySocialMedia[]
+  verification             CompanyVerification?
+  conversations_p1         Conversation[]               @relation("ConversationP1")
+  conversations_p2         Conversation[]               @relation("ConversationP2")
+  messages                 Message[]
+  notifications            Notification[]
+  quote_response_revisions QuoteResponseRevision[]      @relation("QuoteResponseRevisionActor")
+  quote_responses          QuoteResponse[]
+  requests                 Request[]
+  authored_reviews         Review[]                     @relation("ReviewAuthor")
+  received_reviews         Review[]                     @relation("ReviewTarget")
+  subscriptions            Subscription[]
+  transaction_revisions    TransactionRevision[]        @relation("TransactionRevisionActor")
+  purchases                Transaction[]                @relation("BuyerTransactions")
+  sales                    Transaction[]                @relation("SupplierTransactions")
+  onboarding_statuses      UserOnboardingStatus[]
+  users                    User[]
+  verif_documents          VerificationDocument[]
+
+  @@map("companies")
+}
+
+model Country {
+  id                          Int                       @id @default(autoincrement()) @db.SmallInt
+  name_es                     String                    @db.VarChar(100)
+  iso_code                    String                    @unique @db.Char(2)
+  phone_code                  String?                   @db.VarChar(10)
+  is_active                   Boolean                   @default(true)
+  name_en                     String                    @db.VarChar(100)
+  currency_code               String?                   @db.Char(3)
+  default_language            String                    @default("es") @db.Char(2)
+  timezone                    String?                   @db.VarChar(50)
+  date_format                 String?                   @default("DD/MM/YYYY") @db.VarChar(20)
+  locations                   CompanyLocation[]
+  company_operating_countries CompanyOperatingCountry[]
+  currency                    Currency?                 @relation(fields: [currency_code], references: [code])
+  country_payment_methods     CountryPaymentMethod[]
+  delivery_methods            DeliveryMethod[]
+  requests                    Request[]                 @relation("RequestCountry")
+  states                      State[]
+
+  @@map("countries")
+}
+
+model Currency {
+  code            String          @id @db.Char(3)
+  name_en         String          @db.VarChar(100)
+  name_es         String          @db.VarChar(100)
+  symbol          String          @db.VarChar(10)
+  decimal_places  Int             @default(2) @db.SmallInt
+  is_active       Boolean         @default(true)
+  companies       Company[]
+  countries       Country[]
+  rates_from      ExchangeRate[]  @relation("ExchangeRateFromCurrency")
+  rates_to        ExchangeRate[]  @relation("ExchangeRateToCurrency")
+  quote_responses QuoteResponse[]
+  transactions    Transaction[]
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id                String          @id @default(uuid()) @db.Uuid
+  from_currency     String          @db.Char(3)
+  to_currency       String          @db.Char(3)
+  rate              Decimal         @db.Decimal(18, 4)
+  source            String          @db.VarChar(20)
+  effective_date    DateTime        @db.Date
+  created_at        DateTime        @default(now()) @db.Timestamptz(6)
+  from_currency_ref Currency        @relation("ExchangeRateFromCurrency", fields: [from_currency], references: [code])
+  to_currency_ref   Currency        @relation("ExchangeRateToCurrency", fields: [to_currency], references: [code])
+  quote_responses   QuoteResponse[]
+  transactions      Transaction[]
+
+  @@unique([from_currency, to_currency, source, effective_date])
+  @@index([from_currency, to_currency, source, effective_date(sort: Desc)])
+  @@map("exchange_rates")
+}
+
+model State {
+  id         Int               @id @default(autoincrement()) @db.SmallInt
+  country_id Int               @db.SmallInt
+  name       String            @db.VarChar(100)
+  code       String?           @db.VarChar(10)
+  is_active  Boolean           @default(true)
+  cities     City[]
+  locations  CompanyLocation[]
+  requests   Request[]         @relation("RequestState")
+  country    Country           @relation(fields: [country_id], references: [id])
+
+  @@unique([country_id, name])
+  @@map("states")
+}
+
+model City {
+  id        Int               @id @default(autoincrement())
+  state_id  Int               @db.SmallInt
+  name      String            @db.VarChar(100)
+  state     State             @relation(fields: [state_id], references: [id])
+  locations CompanyLocation[]
+  requests  Request[]         @relation("RequestCity")
+
+  @@unique([state_id, name])
+  @@map("cities")
+}
+
+model Category {
+  id                     Int                         @id @default(autoincrement()) @db.SmallInt
+  slug                   String                      @unique @db.VarChar(100)
+  icon                   String?                     @db.VarChar(100)
+  is_active              Boolean                     @default(true)
+  name_en                String                      @db.VarChar(100)
+  name_es                String                      @db.VarChar(100)
+  companies              Company[]                   @relation("CompanySector")
+  categories_of_interest CompanyCategoryOfInterest[]
+  offers                 CompanyOffer[]              @relation("OfferCategory")
+  requests               Request[]                   @relation("RequestCategory")
+
+  @@map("categories")
+}
+
+model CompanyTypeDict {
+  id          Int            @id @default(autoincrement()) @db.SmallInt
+  description String?
+  name_en     String         @db.VarChar(100)
+  name_es     String         @db.VarChar(100)
+  is_active   Boolean        @default(true)
+  companies   Company[]      @relation("CompanyCompanyType")
+  offers      CompanyOffer[] @relation("OfferCompanyType")
+
+  @@map("company_types")
+}
+
+model PaymentMethodDict {
+  id                      Int                    @id @default(autoincrement()) @db.SmallInt
+  is_active               Boolean                @default(true)
+  name_en                 String                 @db.VarChar(100)
+  name_es                 String                 @db.VarChar(100)
+  company_payment_methods CompanyPaymentMethod[]
+  country_payment_methods CountryPaymentMethod[]
+  subscriptions           Subscription[]
+  transactions            Transaction[]
+
+  @@map("payment_methods")
+}
+
+model UnitOfMeasureDict {
+  id           Int            @id @default(autoincrement()) @db.SmallInt
+  name_en      String         @db.VarChar(100)
+  abbreviation String         @db.VarChar(20)
+  name_es      String?        @db.VarChar(100)
+  is_active    Boolean        @default(true)
+  offers       CompanyOffer[]
+  requests     Request[]
+
+  @@map("units_of_measure")
+}
+
+model NotificationTypeDict {
+  id            Int            @id @default(autoincrement()) @db.SmallInt
+  name          String         @db.VarChar(100)
+  icon          String?        @db.VarChar(100)
+  is_active     Boolean        @default(true)
+  notifications Notification[]
+
+  @@map("notification_types")
+}
+
+model VerifDocTypeDict {
+  id                     Int                    @id @default(autoincrement()) @db.SmallInt
+  name_en                String                 @db.VarChar(100)
+  instructions           String?
+  name_es                String?                @db.VarChar(100)
+  is_active              Boolean                @default(true)
+  verification_documents VerificationDocument[]
+
+  @@map("verif_doc_types")
+}
+
+model CompanyPaymentMethod {
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String            @db.Uuid
+  method_id  Int               @db.SmallInt
+  created_at DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at DateTime          @default(now()) @db.Timestamptz(6)
+  company    Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  method     PaymentMethodDict @relation(fields: [method_id], references: [id])
+
+  @@unique([company_id, method_id], name: "uq_company_method")
+  @@map("company_payment_methods")
+}
+
+model CountryPaymentMethod {
+  country_id Int               @db.SmallInt
+  method_id  Int               @db.SmallInt
+  is_active  Boolean           @default(true)
+  country    Country           @relation(fields: [country_id], references: [id])
+  method     PaymentMethodDict @relation(fields: [method_id], references: [id])
+
+  @@id([country_id, method_id])
+  @@map("country_payment_methods")
+}
+
+model CompanyCategoryOfInterest {
+  company_id  String   @db.Uuid
+  category_id Int      @db.SmallInt
+  category    Category @relation(fields: [category_id], references: [id])
+  company     Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@id([company_id, category_id])
+  @@map("company_categories_of_interest")
+}
+
+model CompanyOperatingCountry {
+  company_id String  @db.Uuid
+  country_id Int     @db.SmallInt
+  company    Company @relation(fields: [company_id], references: [id])
+  country    Country @relation(fields: [country_id], references: [id])
+
+  @@id([company_id, country_id])
+  @@map("company_operating_countries")
+}
+
+model CompanyLocation {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String   @db.Uuid
+  is_main_headquarters Boolean  @default(true)
+  country_id           Int?     @db.SmallInt
+  state_id             Int?     @db.SmallInt
+  city_id              Int?
+  tax_address          String?
+  national_coverage    Boolean  @default(false)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime @default(now()) @db.Timestamptz(6)
+  city                 City?    @relation(fields: [city_id], references: [id])
+  company              Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  country              Country? @relation(fields: [country_id], references: [id])
+  state                State?   @relation(fields: [state_id], references: [id])
+
+  @@map("company_locations")
+}
+
+model CompanyContact {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id      String   @db.Uuid
+  contact_person  String?  @db.VarChar(200)
+  position        String?  @db.VarChar(100)
+  whatsapp        String?  @db.VarChar(20)
+  corporate_email String?  @db.VarChar(254)
+  is_primary      Boolean  @default(true)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  company         Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_contacts")
+}
+
+model CompanySocialMedia {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String         @db.Uuid
+  platform   SocialPlatform
+  url        String         @db.VarChar(500)
+  created_at DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at DateTime       @default(now()) @db.Timestamptz(6)
+  company    Company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@unique([company_id, platform], name: "uq_company_platform")
+  @@map("company_social_media")
+}
+
+model CompanyCommercialProfile {
+  company_id        String   @id @db.Uuid
+  retention_agent   Boolean  @default(false)
+  works_with_credit Boolean  @default(false)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  company           Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_commercial_profiles")
+}
+
+model CompanyVerification {
+  company_id       String             @id @db.Uuid
+  status           VerificationStatus @default(pending)
+  rejection_reason String?
+  verified_at      DateTime?          @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  company          Company            @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_verifications")
+}
+
+model CompanySettings {
+  company_id             String   @id @db.Uuid
+  email_notifications    Boolean  @default(true)
+  web_notifications      Boolean  @default(true)
+  whatsapp_notifications Boolean  @default(false)
+  updated_at             DateTime @default(now()) @db.Timestamptz(6)
+  created_at             DateTime @default(now()) @db.Timestamptz(6)
+  company                Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_settings")
+}
+
+model Subscription {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String             @db.Uuid
+  amount               Decimal            @default(0.00) @db.Decimal(8, 2)
+  payment_method_id    Int?               @db.SmallInt
+  payment_reference    String?            @db.VarChar(100)
+  starts_at            DateTime           @default(now()) @db.Timestamptz(6)
+  expires_at           DateTime?          @db.Timestamptz(6)
+  is_active            Boolean            @default(true)
+  created_at           DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime           @default(now()) @db.Timestamptz(6)
+  plan_id              String             @db.Uuid
+  current_period_end   DateTime           @default(now()) @db.Timestamptz(6)
+  current_period_start DateTime           @default(now()) @db.Timestamptz(6)
+  quotes_count_current Int                @default(0)
+  rfq_count_current    Int                @default(0)
+  trial_ends_at        DateTime?          @db.Timestamptz(6)
+  company              Company            @relation(fields: [company_id], references: [id])
+  payment_method       PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
+  plan                 SubscriptionPlan   @relation(fields: [plan_id], references: [id])
+
+  @@index([company_id, is_active])
+  @@map("subscriptions")
+}
+
+model VerificationDocument {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id  String           @db.Uuid
+  type_id     Int              @db.SmallInt
+  url         String
+  status      VerifDocStatus   @default(pending)
+  notes       String?
+  reviewed_at DateTime?        @db.Timestamptz(6)
+  reviewed_by String?          @db.Uuid
+  created_at  DateTime         @default(now()) @db.Timestamptz(6)
+  company     Company          @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  reviewer    Admin?           @relation("DocReviewer", fields: [reviewed_by], references: [id])
+  type        VerifDocTypeDict @relation(fields: [type_id], references: [id])
+
+  @@map("verification_documents")
+}
+
+model Request {
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String            @db.Uuid
+  user_id              String?           @db.Uuid
+  product_service      String            @db.VarChar(200)
+  quantity             Decimal           @db.Decimal(12, 2)
+  unit_id              Int               @default(1) @db.SmallInt
+  description          String?
+  category_id          Int?              @db.SmallInt
+  status               RequestStatus     @default(active)
+  expiration_date      DateTime?         @db.Date
+  response_count       Int               @default(0)
+  created_at           DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime          @default(now()) @db.Timestamptz(6)
+  type                 RequestType       @default(product)
+  payment_condition_id String?           @db.Uuid
+  city_id              Int?              @db.SmallInt
+  country_id           Int?              @db.SmallInt
+  reach_service        String?           @db.VarChar(200)
+  state_id             Int?              @db.SmallInt
+  serial_number        Int               @unique @default(autoincrement())
+  conversations        Conversation[]
+  quote_responses      QuoteResponse[]
+  files                RequestFile[]
+  category             Category?         @relation("RequestCategory", fields: [category_id], references: [id])
+  city                 City?             @relation("RequestCity", fields: [city_id], references: [id])
+  company              Company           @relation(fields: [company_id], references: [id])
+  country              Country?          @relation("RequestCountry", fields: [country_id], references: [id])
+  payment_condition    PaymentCondition? @relation("RequestPaymentCondition", fields: [payment_condition_id], references: [id])
+  state                State?            @relation("RequestState", fields: [state_id], references: [id])
+  unit_of_measure      UnitOfMeasureDict @relation(fields: [unit_id], references: [id])
+  user                 User?             @relation(fields: [user_id], references: [id])
+
+  @@map("requests")
+}
+
+model RequestFile {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  request_id String   @db.Uuid
+  url        String
+  file_name  String?  @db.VarChar(200)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  request    Request  @relation(fields: [request_id], references: [id], onDelete: Cascade)
+
+  @@map("request_files")
+}
+
+model CompanyOffer {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String              @db.Uuid
+  name              String              @db.VarChar(200)
+  description       String?
+  category_id       Int?                @db.SmallInt
+  supplier_type_id  Int?                @db.SmallInt
+  base_price_usd    Decimal?            @db.Decimal(12, 2)
+  unit_id           Int?                @db.SmallInt
+  moq               Int?                @default(1)
+  std_delivery_time String?             @db.VarChar(100)
+  video_url         String?
+  is_active         Boolean             @default(true)
+  rating            Decimal?            @default(0.00) @db.Decimal(3, 2)
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  photos            CompanyOfferPhoto[]
+  category          Category?           @relation("OfferCategory", fields: [category_id], references: [id])
+  company           Company             @relation(fields: [company_id], references: [id])
+  supplier_type     CompanyTypeDict?    @relation("OfferCompanyType", fields: [supplier_type_id], references: [id])
+  unit_of_measure   UnitOfMeasureDict?  @relation(fields: [unit_id], references: [id])
+  quote_responses   QuoteResponse[]
+
+  @@map("company_offers")
+}
+
+model CompanyOfferPhoto {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  offer_id   String       @db.Uuid
+  url        String
+  sort_order Int          @default(0) @db.SmallInt
+  created_at DateTime     @default(now()) @db.Timestamptz(6)
+  offer      CompanyOffer @relation(fields: [offer_id], references: [id], onDelete: Cascade)
+
+  @@map("company_offer_photos")
+}
+
+model QuoteResponse {
+  id                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  request_id               String                  @db.Uuid
+  supplier_id              String                  @db.Uuid
+  company_offer_id         String?                 @db.Uuid
+  unit_price_usd           Decimal                 @db.Decimal(12, 2)
+  quantity                 Decimal                 @db.Decimal(12, 2)
+  payment_conditions       String?                 @db.VarChar(200)
+  delivery_time            String?                 @db.VarChar(100)
+  notes                    String?
+  status                   ResponseStatus          @default(pending)
+  rejection_reason         String?
+  total_amount_usd         Decimal                 @db.Decimal(14, 2)
+  created_at               DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                @default(now()) @db.Timestamptz(6)
+  payment_condition_id     String?                 @db.Uuid
+  delivery_method_id       String?                 @db.Uuid
+  has_guarantee            Boolean                 @default(false)
+  exchange_rate_id         String?                 @db.Uuid
+  payment_currency         String                  @default("USD") @db.Char(3)
+  formal_quote_url         String?
+  serial_number            Int                     @unique @default(autoincrement())
+  estimated_delivery_hours Int?
+  conversations            Conversation[]
+  revisions                QuoteResponseRevision[]
+  offer                    CompanyOffer?           @relation(fields: [company_offer_id], references: [id])
+  delivery_method          DeliveryMethod?         @relation(fields: [delivery_method_id], references: [id])
+  exchange_rate            ExchangeRate?           @relation(fields: [exchange_rate_id], references: [id])
+  payment_condition        PaymentCondition?       @relation("QuoteResponsePaymentCondition", fields: [payment_condition_id], references: [id])
+  currency                 Currency                @relation(fields: [payment_currency], references: [code])
+  request                  Request                 @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  supplier                 Company                 @relation(fields: [supplier_id], references: [id])
+  transaction              Transaction?
+
+  @@unique([request_id, supplier_id], name: "uq_response_per_request")
+  @@map("quote_responses")
+}
+
+model QuoteResponseRevision {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quote_response_id String              @db.Uuid
+  actor_company_id  String              @db.Uuid
+  action            QuoteRevisionAction
+  snapshot          Json?
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  actor_company     Company             @relation("QuoteResponseRevisionActor", fields: [actor_company_id], references: [id])
+  quote_response    QuoteResponse       @relation(fields: [quote_response_id], references: [id], onDelete: Cascade)
+
+  @@index([quote_response_id, created_at(sort: Desc)])
+  @@map("quote_response_revisions")
+}
+
+model Transaction {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quote_response_id       String                @unique @db.Uuid
+  buyer_id                String                @db.Uuid
+  supplier_id             String                @db.Uuid
+  product_description     String                @db.VarChar(300)
+  unit_price_usd          Decimal               @db.Decimal(12, 2)
+  quantity                Decimal               @db.Decimal(12, 2)
+  total_amount_usd        Decimal               @db.Decimal(14, 2)
+  payment_method_id       Int?                  @db.SmallInt
+  payment_conditions      String?               @db.VarChar(200)
+  delivery_time           String?               @db.VarChar(100)
+  status                  TransactionStatus     @default(awaiting_payment)
+  estimated_delivery_date DateTime?             @db.Date
+  actual_delivery_date    DateTime?             @db.Date
+  cancellation_reason     String?
+  buyer_confirmed         Boolean               @default(false)
+  supplier_confirmed      Boolean               @default(false)
+  buyer_confirmed_at      DateTime?             @db.Timestamptz(6)
+  supplier_confirmed_at   DateTime?             @db.Timestamptz(6)
+  created_at              DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime              @default(now()) @db.Timestamptz(6)
+  payment_condition_id    String?               @db.Uuid
+  exchange_rate_id        String?               @db.Uuid
+  payment_currency        String                @default("USD") @db.Char(3)
+  buyer_review_status     ReviewStatus          @default(pending)
+  supplier_review_status  ReviewStatus          @default(pending)
+  serial_number           Int                   @unique @default(autoincrement())
+  conversation            Conversation?
+  reviews                 Review[]
+  revisions               TransactionRevision[]
+  buyer                   Company               @relation("BuyerTransactions", fields: [buyer_id], references: [id])
+  exchange_rate           ExchangeRate?         @relation(fields: [exchange_rate_id], references: [id])
+  payment_condition       PaymentCondition?     @relation("TransactionPaymentCondition", fields: [payment_condition_id], references: [id])
+  currency                Currency              @relation(fields: [payment_currency], references: [code])
+  payment_method          PaymentMethodDict?    @relation(fields: [payment_method_id], references: [id])
+  quote_response          QuoteResponse         @relation(fields: [quote_response_id], references: [id])
+  supplier                Company               @relation("SupplierTransactions", fields: [supplier_id], references: [id])
+
+  @@map("transactions")
+}
+
+model TransactionRevision {
+  id               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id   String                    @db.Uuid
+  actor_company_id String                    @db.Uuid
+  action           TransactionRevisionAction
+  snapshot         Json?
+  created_at       DateTime                  @default(now()) @db.Timestamptz(6)
+  actor_company    Company                   @relation("TransactionRevisionActor", fields: [actor_company_id], references: [id])
+  transaction      Transaction               @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  @@index([transaction_id, created_at(sort: Desc)])
+  @@map("transaction_revisions")
+}
+
+model Review {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id       String       @db.Uuid
+  author_company_id    String       @db.Uuid
+  evaluated_company_id String       @db.Uuid
+  rating               Decimal?     @db.Decimal(3, 2)
+  comment              String?
+  is_public            Boolean      @default(true)
+  created_at           DateTime     @default(now()) @db.Timestamptz(6)
+  expires_at           DateTime?    @db.Timestamptz(6)
+  review_status        ReviewStatus @default(pending)
+  reviewer_role        String       @db.VarChar(10)
+  score_communication  Int?         @db.SmallInt
+  score_compliance     Int?         @db.SmallInt
+  score_price          Int?         @db.SmallInt
+  score_quality        Int?         @db.SmallInt
+  score_reliability    Int?         @db.SmallInt
+  submitted_at         DateTime?    @db.Timestamptz(6)
+  author               Company      @relation("ReviewAuthor", fields: [author_company_id], references: [id])
+  evaluated            Company      @relation("ReviewTarget", fields: [evaluated_company_id], references: [id])
+  transaction          Transaction  @relation(fields: [transaction_id], references: [id])
+
+  @@unique([transaction_id, author_company_id], name: "uq_review_per_transaction")
+  @@index([author_company_id, review_status])
+  @@map("reviews")
+}
+
+model Notification {
+  id          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id  String               @db.Uuid
+  user_id     String?              @db.Uuid
+  type_id     Int                  @db.SmallInt
+  title       String               @db.VarChar(200)
+  message     String
+  link        String?
+  is_read     Boolean              @default(false)
+  read_at     DateTime?            @db.Timestamptz(6)
+  entity_type String?              @db.VarChar(50)
+  entity_id   String?              @db.Uuid
+  created_at  DateTime             @default(now()) @db.Timestamptz(6)
+  company     Company              @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  type        NotificationTypeDict @relation(fields: [type_id], references: [id])
+  user        User?                @relation(fields: [user_id], references: [id])
+
+  @@map("notifications")
+}
+
+model Conversation {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  participant_1_id  String             @db.Uuid
+  participant_2_id  String             @db.Uuid
+  request_id        String?            @db.Uuid
+  quote_response_id String?            @db.Uuid
+  transaction_id    String?            @unique @db.Uuid
+  last_message      String?
+  last_message_date DateTime?          @db.Timestamptz(6)
+  unread_count_1    Int                @default(0)
+  unread_count_2    Int                @default(0)
+  created_at        DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime           @default(now()) @db.Timestamptz(6)
+  status            ConversationStatus @default(active)
+  participant_1     Company            @relation("ConversationP1", fields: [participant_1_id], references: [id])
+  participant_2     Company            @relation("ConversationP2", fields: [participant_2_id], references: [id])
+  quote_response    QuoteResponse?     @relation(fields: [quote_response_id], references: [id])
+  request           Request?           @relation(fields: [request_id], references: [id])
+  transaction       Transaction?       @relation(fields: [transaction_id], references: [id])
+  messages          Message[]
+
+  @@unique([request_id, quote_response_id], name: "uq_conversation")
+  @@map("conversations")
+}
+
+model Message {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversation_id String       @db.Uuid
+  sender_id       String?      @db.Uuid
+  client_msg_id   String?      @unique @db.VarChar(100)
+  content         String?
+  file_url        String?
+  file_name       String?      @db.VarChar(200)
+  is_read         Boolean      @default(false)
+  read_at         DateTime?    @db.Timestamptz(6)
+  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+  event_key       String?      @db.VarChar(60)
+  event_payload   Json?
+  message_type    String       @default("user") @db.VarChar(10)
+  conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender          Company?     @relation(fields: [sender_id], references: [id], onDelete: Restrict)
+
+  @@map("messages")
+}
+
+model UserOnboardingStatus {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String   @db.Uuid
+  company_id             String   @db.Uuid
+  module_name            String   @db.VarChar(100)
+  has_completed_tutorial Boolean  @default(false)
+  created_at             DateTime @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime @default(now()) @db.Timestamptz(6)
+  company                Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  user                   User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, company_id, module_name])
+  @@map("user_onboarding_status")
+}
+
+model PaymentCondition {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name_en         String          @unique @db.VarChar(100)
+  name_es         String          @unique @db.VarChar(100)
+  days_to_due     Int
+  description     String?
+  is_active       Boolean         @default(true)
+  quote_responses QuoteResponse[] @relation("QuoteResponsePaymentCondition")
+  requests        Request[]       @relation("RequestPaymentCondition")
+  transactions    Transaction[]   @relation("TransactionPaymentCondition")
+
+  @@map("payment_conditions")
+}
+
+model EstimatedMonthlyTransaction {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  range_name     String    @unique @db.VarChar(50)
+  description    String?
+  description_es String?
+  is_active      Boolean   @default(true)
+  companies      Company[]
+
+  @@map("estimated_monthly_transactions")
+}
+
+model CompanySize {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  size_name        String    @unique @db.VarChar(50)
+  display_label    String    @db.VarChar(100)
+  display_label_es String    @db.VarChar(100)
+  is_active        Boolean   @default(true)
+  companies        Company[]
+
+  @@map("company_sizes")
+}
+
+model DeliveryMethod {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  country_id      Int             @db.SmallInt
+  name            String          @db.VarChar(100)
+  is_active       Boolean         @default(true)
+  country         Country         @relation(fields: [country_id], references: [id], onDelete: Cascade)
+  quote_responses QuoteResponse[]
+
+  @@map("delivery_methods")
+}
+
+model SubscriptionPlan {
+  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plan_name            String         @unique @db.VarChar(100)
+  price                Decimal        @db.Decimal(10, 2)
+  billing_cycle        Int
+  is_active            Boolean        @default(true)
+  created_at           DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime       @default(now()) @db.Timestamptz(6)
+  max_active_offers    Int?
+  max_quotes_per_month Int?
+  max_rfq_per_month    Int?
+  name_es              String         @default("") @db.VarChar(50)
+  trial_days           Int            @default(0) @db.SmallInt
+  is_default           Boolean        @default(false)
+  subscriptions        Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Admin {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String                 @unique @db.VarChar(150)
+  password      String                 @db.VarChar(255)
+  full_name     String                 @db.VarChar(255)
+  status        String                 @default("active") @db.VarChar(20)
+  last_login_at DateTime?              @db.Timestamptz(6)
+  created_at    DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime               @default(now()) @db.Timestamptz(6)
+  role          AdminRole              @default(ops_admin)
+  reviewed_docs VerificationDocument[] @relation("DocReviewer")
+
+  @@map("admins")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id    String   @db.Uuid
+  action      String   @db.VarChar(100)
+  resource    String   @db.VarChar(100)
+  resource_id String?  @db.VarChar(100)
+  payload     Json?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("admin_audit_logs")
+}
 
 enum CompanyVolume {
   small
@@ -59,8 +825,6 @@ enum VerificationStatus {
   rejected
 }
 
-// PlanType enum removed — replaced by subscription_plans table (FK: plan_id)
-
 enum RequestStatus {
   active
   paused
@@ -72,12 +836,12 @@ enum RequestStatus {
 
 enum ResponseStatus {
   pending
-  negotiating
-  formal_request_pending
-  formal_approval_pending
   accepted
   rejected
+  negotiating
   expired
+  formal_request_pending
+  formal_approval_pending
 }
 
 enum TransactionStatus {
@@ -103,7 +867,6 @@ enum RequestType {
 
 enum QuoteRevisionAction {
   created
-  negotiation_started
   price_updated
   quantity_updated
   terms_updated
@@ -113,6 +876,7 @@ enum QuoteRevisionAction {
   accepted
   canceled
   expired
+  negotiation_started
 }
 
 enum TransactionRevisionAction {
@@ -125,10 +889,6 @@ enum TransactionRevisionAction {
   transaction_canceled
   dispute_raised
 }
-
-// ==========================================
-// 2. COMPANIES & PROFILES
-// ==========================================
 
 enum ConversationStatus {
   active
@@ -156,904 +916,4 @@ enum SocialPlatform {
   google_business
   linkedin
   twitter
-}
-
-model Company {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  trade_name String  @db.VarChar(200)
-  legal_name String? @db.VarChar(200)
-  tax_id     String? @unique @db.VarChar(20)
-  bio        String?
-  logo_url   String?
-
-  sector_id        Int?    @db.SmallInt
-  company_type_id  Int?    @db.SmallInt
-  can_buy          Boolean @default(false)
-  can_sell         Boolean @default(false)
-  is_founder_badge Boolean @default(false)
-  founding_year    Int?    @db.SmallInt
-
-  monthly_transactions_id String? @db.Uuid
-  company_size_id         String? @db.Uuid
-  default_currency        String? @default("USD") @db.Char(3)
-  preferred_language      String  @default("es") @db.Char(2)
-
-  average_rating    Decimal? @default(0.00) @db.Decimal(3, 2)
-  transaction_count Int      @default(0)
-  review_count      Int      @default(0)
-
-  // As SELLER — evaluated by buyers
-  avg_quality              Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_compliance_seller    Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_communication_seller Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_price                Decimal @default(0.00) @db.Decimal(3, 2)
-  seller_review_count      Int     @default(0)
-
-  // As BUYER — evaluated by sellers
-  avg_compliance_buyer    Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_reliability         Decimal @default(0.00) @db.Decimal(3, 2)
-  avg_communication_buyer Decimal @default(0.00) @db.Decimal(3, 2)
-  buyer_review_count      Int     @default(0)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  locations                CompanyLocation[]
-  contacts                 CompanyContact[]
-  commercial_profile       CompanyCommercialProfile?
-  verification             CompanyVerification?
-  settings                 CompanySettings?
-  subscriptions            Subscription[]
-  users                    User[]
-  payment_methods          CompanyPaymentMethod[]
-  categories_of_interest   CompanyCategoryOfInterest[]
-  verif_documents          VerificationDocument[]
-  requests                 Request[]
-  offers                   CompanyOffer[]
-  quote_responses          QuoteResponse[]
-  quote_response_revisions QuoteResponseRevision[]      @relation("QuoteResponseRevisionActor")
-  transaction_revisions    TransactionRevision[]        @relation("TransactionRevisionActor")
-  purchases                Transaction[]                @relation("BuyerTransactions")
-  sales                    Transaction[]                @relation("SupplierTransactions")
-  authored_reviews         Review[]                     @relation("ReviewAuthor")
-  received_reviews         Review[]                     @relation("ReviewTarget")
-  notifications            Notification[]
-  conversations_p1         Conversation[]               @relation("ConversationP1")
-  conversations_p2         Conversation[]               @relation("ConversationP2")
-  messages                 Message[]
-  onboarding_statuses      UserOnboardingStatus[]
-  sector_ref               Category?                    @relation("CompanySector", fields: [sector_id], references: [id])
-  company_type_ref         CompanyTypeDict?             @relation("CompanyCompanyType", fields: [company_type_id], references: [id])
-  monthly_transactions     EstimatedMonthlyTransaction? @relation(fields: [monthly_transactions_id], references: [id])
-  company_size             CompanySize?                 @relation(fields: [company_size_id], references: [id])
-  currency                 Currency?                    @relation(fields: [default_currency], references: [code])
-  operating_countries      CompanyOperatingCountry[]
-  social_media             CompanySocialMedia[]
-
-  @@map("companies")
-}
-
-model Country {
-  id                          Int                       @id @default(autoincrement()) @db.SmallInt
-  name_es                     String                    @db.VarChar(100)
-  name_en                     String                    @db.VarChar(100)
-  iso_code                    String                    @unique @db.Char(2)
-  phone_code                  String?                   @db.VarChar(10)
-  currency_code               String?                   @db.Char(3)
-  default_language            String                    @default("es") @db.Char(2)
-  timezone                    String?                   @db.VarChar(50)
-  date_format                 String?                   @default("DD/MM/YYYY") @db.VarChar(20)
-  is_active                   Boolean                   @default(true)
-  states                      State[]
-  locations                   CompanyLocation[]
-  requests                    Request[]                 @relation("RequestCountry")
-  delivery_methods            DeliveryMethod[]
-  currency                    Currency?                 @relation(fields: [currency_code], references: [code])
-  country_payment_methods     CountryPaymentMethod[]
-  company_operating_countries CompanyOperatingCountry[]
-
-  @@map("countries")
-}
-
-model Currency {
-  code           String  @id @db.Char(3)
-  name_en        String  @db.VarChar(100)
-  name_es        String  @db.VarChar(100)
-  symbol         String  @db.VarChar(10)
-  decimal_places Int     @default(2) @db.SmallInt
-  is_active      Boolean @default(true)
-
-  countries       Country[]
-  companies       Company[]
-  quote_responses QuoteResponse[]
-  transactions    Transaction[]
-  rates_from      ExchangeRate[]  @relation("ExchangeRateFromCurrency")
-  rates_to        ExchangeRate[]  @relation("ExchangeRateToCurrency")
-
-  @@map("currencies")
-}
-
-model ExchangeRate {
-  id             String   @id @default(uuid()) @db.Uuid
-  from_currency  String   @db.Char(3)
-  to_currency    String   @db.Char(3)
-  rate           Decimal  @db.Decimal(18, 4)
-  source         String   @db.VarChar(20)
-  effective_date DateTime @db.Date
-  created_at     DateTime @default(now()) @db.Timestamptz
-
-  from_currency_ref Currency        @relation("ExchangeRateFromCurrency", fields: [from_currency], references: [code])
-  to_currency_ref   Currency        @relation("ExchangeRateToCurrency", fields: [to_currency], references: [code])
-  quote_responses   QuoteResponse[]
-  transactions      Transaction[]
-
-  @@unique([from_currency, to_currency, source, effective_date])
-  @@index([from_currency, to_currency, source, effective_date(sort: Desc)])
-  @@map("exchange_rates")
-}
-
-model State {
-  id         Int               @id @default(autoincrement()) @db.SmallInt
-  country_id Int               @db.SmallInt
-  name       String            @db.VarChar(100)
-  code       String?           @db.VarChar(10)
-  is_active  Boolean           @default(true)
-  country    Country           @relation(fields: [country_id], references: [id])
-  cities     City[]
-  locations  CompanyLocation[]
-  requests   Request[]         @relation("RequestState")
-
-  @@unique([country_id, name])
-  @@map("states")
-}
-
-model City {
-  id        Int               @id @default(autoincrement())
-  state_id  Int               @db.SmallInt
-  name      String            @db.VarChar(100)
-  state     State             @relation(fields: [state_id], references: [id])
-  locations CompanyLocation[]
-  requests  Request[]         @relation("RequestCity")
-
-  @@unique([state_id, name])
-  @@map("cities")
-}
-
-model Category {
-  id                     Int                         @id @default(autoincrement()) @db.SmallInt
-  name_en                String                      @db.VarChar(100)
-  name_es                String                      @db.VarChar(100)
-  slug                   String                      @unique @db.VarChar(100)
-  icon                   String?                     @db.VarChar(100)
-  is_active              Boolean                     @default(true)
-  companies              Company[]                   @relation("CompanySector")
-  offers                 CompanyOffer[]              @relation("OfferCategory")
-  requests               Request[]                   @relation("RequestCategory")
-  categories_of_interest CompanyCategoryOfInterest[]
-
-  @@map("categories")
-}
-
-model CompanyTypeDict {
-  id          Int            @id @default(autoincrement()) @db.SmallInt
-  name_en     String         @db.VarChar(100)
-  name_es     String         @db.VarChar(100)
-  description String?
-  is_active   Boolean        @default(true)
-  companies   Company[]      @relation("CompanyCompanyType")
-  offers      CompanyOffer[] @relation("OfferCompanyType")
-
-  @@map("company_types")
-}
-
-model PaymentMethodDict {
-  id                      Int                    @id @default(autoincrement()) @db.SmallInt
-  name_en                 String                 @db.VarChar(100)
-  name_es                 String                 @db.VarChar(100)
-  is_active               Boolean                @default(true)
-  company_payment_methods CompanyPaymentMethod[]
-  country_payment_methods CountryPaymentMethod[]
-  subscriptions           Subscription[]
-  transactions            Transaction[]
-
-  @@map("payment_methods")
-}
-
-model UnitOfMeasureDict {
-  id           Int            @id @default(autoincrement()) @db.SmallInt
-  name_en      String         @db.VarChar(100)
-  name_es      String?        @db.VarChar(100)
-  abbreviation String         @db.VarChar(20)
-  is_active    Boolean        @default(true)
-  offers       CompanyOffer[]
-  requests     Request[]
-
-  @@map("units_of_measure")
-}
-
-model NotificationTypeDict {
-  id            Int            @id @default(autoincrement()) @db.SmallInt
-  name          String         @db.VarChar(100)
-  icon          String?        @db.VarChar(100)
-  is_active     Boolean        @default(true)
-  notifications Notification[]
-
-  @@map("notification_types")
-}
-
-model VerifDocTypeDict {
-  id                     Int                    @id @default(autoincrement()) @db.SmallInt
-  name_en                String                 @db.VarChar(100)
-  name_es                String?                @db.VarChar(100)
-  instructions           String?
-  is_active              Boolean                @default(true)
-  verification_documents VerificationDocument[]
-
-  @@map("verif_doc_types")
-}
-
-model CompanyPaymentMethod {
-  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String @db.Uuid
-  method_id  Int    @db.SmallInt
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  method  PaymentMethodDict @relation(fields: [method_id], references: [id])
-
-  @@unique([company_id, method_id], name: "uq_company_method")
-  @@map("company_payment_methods")
-}
-
-model CountryPaymentMethod {
-  country_id Int     @db.SmallInt
-  method_id  Int     @db.SmallInt
-  is_active  Boolean @default(true)
-
-  country Country           @relation(fields: [country_id], references: [id])
-  method  PaymentMethodDict @relation(fields: [method_id], references: [id])
-
-  @@id([country_id, method_id])
-  @@map("country_payment_methods")
-}
-
-model CompanyCategoryOfInterest {
-  company_id  String @db.Uuid
-  category_id Int    @db.SmallInt
-
-  company  Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [category_id], references: [id])
-
-  @@id([company_id, category_id])
-  @@map("company_categories_of_interest")
-}
-
-model CompanyOperatingCountry {
-  company_id String @db.Uuid
-  country_id Int    @db.SmallInt
-
-  company Company @relation(fields: [company_id], references: [id])
-  country Country @relation(fields: [country_id], references: [id])
-
-  @@id([company_id, country_id])
-  @@map("company_operating_countries")
-}
-
-model CompanyLocation {
-  id                   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id           String  @db.Uuid
-  is_main_headquarters Boolean @default(true)
-  country_id           Int?    @db.SmallInt
-  state_id             Int?    @db.SmallInt
-  city_id              Int?
-  tax_address          String?
-  national_coverage    Boolean @default(false)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  country Country? @relation(fields: [country_id], references: [id])
-  state   State?   @relation(fields: [state_id], references: [id])
-  city    City?    @relation(fields: [city_id], references: [id])
-
-  @@map("company_locations")
-}
-
-model CompanyContact {
-  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id      String  @db.Uuid
-  contact_person  String? @db.VarChar(200)
-  position        String? @db.VarChar(100)
-  whatsapp        String? @db.VarChar(20)
-  corporate_email String? @db.VarChar(254)
-  is_primary      Boolean @default(true)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@map("company_contacts")
-}
-
-model CompanySocialMedia {
-  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String         @db.Uuid
-  platform   SocialPlatform
-  url        String         @db.VarChar(500)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@unique([company_id, platform], name: "uq_company_platform")
-  @@map("company_social_media")
-}
-
-model CompanyCommercialProfile {
-  company_id        String  @id @db.Uuid
-  retention_agent   Boolean @default(false)
-  works_with_credit Boolean @default(false)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@map("company_commercial_profiles")
-}
-
-model CompanyVerification {
-  company_id       String             @id @db.Uuid
-  status           VerificationStatus @default(pending)
-  rejection_reason String?
-  verified_at      DateTime?          @db.Timestamptz
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@map("company_verifications")
-}
-
-model CompanySettings {
-  company_id             String  @id @db.Uuid
-  email_notifications    Boolean @default(true)
-  web_notifications      Boolean @default(true)
-  whatsapp_notifications Boolean @default(false)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@map("company_settings")
-}
-
-model Subscription {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String    @db.Uuid
-  plan_id           String    @db.Uuid
-  amount            Decimal   @default(0.00) @db.Decimal(8, 2)
-  payment_method_id Int?      @db.SmallInt
-  payment_reference String?   @db.VarChar(100)
-  starts_at         DateTime  @default(now()) @db.Timestamptz
-  expires_at        DateTime? @db.Timestamptz
-  is_active         Boolean   @default(true)
-
-  trial_ends_at        DateTime? @db.Timestamptz
-  current_period_start DateTime  @default(now()) @db.Timestamptz
-  current_period_end   DateTime  @default(now()) @db.Timestamptz
-  rfq_count_current    Int       @default(0)
-  quotes_count_current Int       @default(0)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company        Company            @relation(fields: [company_id], references: [id], onDelete: Restrict)
-  plan           SubscriptionPlan   @relation(fields: [plan_id], references: [id])
-  payment_method PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
-
-  @@index([company_id, is_active])
-  // Prisma doesn't support conditional uniqueness, this must be handled in raw SQL
-  // @@unique([company_id], name: "subscriptions_one_active_per_company") where is_active = true
-  @@map("subscriptions")
-}
-
-// ==========================================
-// 4. VERIFICATION DOCUMENTS
-// ==========================================
-
-model VerificationDocument {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id  String         @db.Uuid
-  type_id     Int            @db.SmallInt
-  url         String
-  status      VerifDocStatus @default(pending)
-  notes       String?
-  reviewed_at DateTime?      @db.Timestamptz
-  reviewed_by String?        @db.Uuid
-  created_at  DateTime       @default(now()) @db.Timestamptz
-
-  company  Company          @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  reviewer Admin?           @relation("DocReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
-  type     VerifDocTypeDict @relation(fields: [type_id], references: [id])
-
-  @@map("verification_documents")
-}
-
-// ==========================================
-// 5. REQUESTS (RFQ)
-// ==========================================
-
-model Request {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  serial_number   Int           @unique @default(autoincrement())
-  company_id      String        @db.Uuid
-  user_id         String?       @db.Uuid
-  product_service String        @db.VarChar(200)
-  quantity        Decimal       @db.Decimal(12, 2)
-  unit_id         Int           @default(1) @db.SmallInt
-  description     String?
-  reach_service   String?       @db.VarChar(200)
-  category_id     Int?          @db.SmallInt
-  status          RequestStatus @default(active)
-  type            RequestType   @default(product)
-  expiration_date DateTime?     @db.Date
-  response_count  Int           @default(0)
-
-  payment_condition_id String? @db.Uuid
-
-  country_id Int? @db.SmallInt
-  state_id   Int? @db.SmallInt
-  city_id    Int? @db.SmallInt
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company           Company           @relation(fields: [company_id], references: [id], onDelete: Restrict)
-  user              User?             @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  unit_of_measure   UnitOfMeasureDict @relation(fields: [unit_id], references: [id])
-  category          Category?         @relation("RequestCategory", fields: [category_id], references: [id])
-  payment_condition PaymentCondition? @relation("RequestPaymentCondition", fields: [payment_condition_id], references: [id])
-  files             RequestFile[]
-  quote_responses   QuoteResponse[]
-  conversations     Conversation[]
-  country           Country?          @relation("RequestCountry", fields: [country_id], references: [id])
-  state             State?            @relation("RequestState", fields: [state_id], references: [id])
-  city              City?             @relation("RequestCity", fields: [city_id], references: [id])
-
-  @@map("requests")
-}
-
-model RequestFile {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  request_id String   @db.Uuid
-  url        String
-  file_name  String?  @db.VarChar(200)
-  created_at DateTime @default(now()) @db.Timestamptz
-
-  request Request @relation(fields: [request_id], references: [id], onDelete: Cascade)
-
-  @@map("request_files")
-}
-
-// ==========================================
-// 6. COMPANY OFFERS (Supplier Catalog)
-// ==========================================
-
-model CompanyOffer {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String   @db.Uuid
-  name              String   @db.VarChar(200)
-  description       String?
-  category_id       Int?     @db.SmallInt
-  supplier_type_id  Int?     @db.SmallInt
-  base_price_usd    Decimal? @db.Decimal(12, 2)
-  unit_id           Int?     @db.SmallInt
-  moq               Int?     @default(1)
-  std_delivery_time String?  @db.VarChar(100)
-  video_url         String?
-  is_active         Boolean  @default(true)
-  rating            Decimal? @default(0.00) @db.Decimal(3, 2)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  company         Company             @relation(fields: [company_id], references: [id], onDelete: Restrict)
-  category        Category?           @relation("OfferCategory", fields: [category_id], references: [id])
-  supplier_type   CompanyTypeDict?    @relation("OfferCompanyType", fields: [supplier_type_id], references: [id])
-  unit_of_measure UnitOfMeasureDict?  @relation(fields: [unit_id], references: [id])
-  photos          CompanyOfferPhoto[]
-  quote_responses QuoteResponse[]
-
-  @@map("company_offers")
-}
-
-model CompanyOfferPhoto {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  offer_id   String   @db.Uuid
-  url        String
-  sort_order Int      @default(0) @db.SmallInt
-  created_at DateTime @default(now()) @db.Timestamptz
-
-  offer CompanyOffer @relation(fields: [offer_id], references: [id], onDelete: Cascade)
-
-  @@map("company_offer_photos")
-}
-
-// ==========================================
-// 7. QUOTE RESPONSES
-// ==========================================
-
-model QuoteResponse {
-  id                       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  serial_number            Int            @unique @default(autoincrement())
-  request_id               String         @db.Uuid
-  supplier_id              String         @db.Uuid
-  company_offer_id         String?        @db.Uuid
-  unit_price_usd           Decimal        @db.Decimal(12, 2)
-  quantity                 Decimal        @db.Decimal(12, 2)
-  payment_conditions       String?        @db.VarChar(200)
-  payment_condition_id     String?        @db.Uuid
-  delivery_method_id       String?        @db.Uuid
-  delivery_time            String?        @db.VarChar(100)
-  estimated_delivery_hours Int?
-  notes                    String?
-  has_guarantee            Boolean        @default(false)
-  status                   ResponseStatus @default(pending)
-  rejection_reason         String?
-  total_amount_usd         Decimal        @db.Decimal(14, 2) // Computed in DB, mapping required but Prisma supports reading computed
-  exchange_rate_id         String?        @db.Uuid
-  payment_currency         String         @default("USD") @db.Char(3)
-  formal_quote_url         String?
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  request           Request                 @relation(fields: [request_id], references: [id], onDelete: Cascade)
-  supplier          Company                 @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
-  offer             CompanyOffer?           @relation(fields: [company_offer_id], references: [id], onDelete: SetNull)
-  payment_condition PaymentCondition?       @relation("QuoteResponsePaymentCondition", fields: [payment_condition_id], references: [id])
-  delivery_method   DeliveryMethod?         @relation(fields: [delivery_method_id], references: [id])
-  exchange_rate     ExchangeRate?           @relation(fields: [exchange_rate_id], references: [id])
-  currency          Currency                @relation(fields: [payment_currency], references: [code])
-  transaction       Transaction?
-  conversations     Conversation[]
-  revisions         QuoteResponseRevision[]
-
-  @@unique([request_id, supplier_id], name: "uq_response_per_request")
-  @@map("quote_responses")
-}
-
-model QuoteResponseRevision {
-  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  quote_response_id String              @db.Uuid
-  actor_company_id  String              @db.Uuid
-  action            QuoteRevisionAction
-  snapshot          Json?
-  created_at        DateTime            @default(now()) @db.Timestamptz
-
-  quote_response QuoteResponse @relation(fields: [quote_response_id], references: [id], onDelete: Cascade)
-  actor_company  Company       @relation("QuoteResponseRevisionActor", fields: [actor_company_id], references: [id], onDelete: Restrict)
-
-  @@index([quote_response_id, created_at(sort: Desc)])
-  @@map("quote_response_revisions")
-}
-
-// ==========================================
-// 8. TRANSACTIONS
-// ==========================================
-
-model Transaction {
-  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  serial_number           Int               @unique @default(autoincrement())
-  quote_response_id       String            @unique @db.Uuid
-  buyer_id                String            @db.Uuid
-  supplier_id             String            @db.Uuid
-  product_description     String            @db.VarChar(300)
-  unit_price_usd          Decimal           @db.Decimal(12, 2)
-  quantity                Decimal           @db.Decimal(12, 2)
-  total_amount_usd        Decimal           @db.Decimal(14, 2)
-  payment_method_id       Int?              @db.SmallInt
-  payment_conditions      String?           @db.VarChar(200)
-  payment_condition_id    String?           @db.Uuid
-  delivery_time           String?           @db.VarChar(100)
-  status                  TransactionStatus @default(awaiting_payment)
-  estimated_delivery_date DateTime?         @db.Date
-  actual_delivery_date    DateTime?         @db.Date
-  cancellation_reason     String?
-  buyer_confirmed         Boolean           @default(false)
-  supplier_confirmed      Boolean           @default(false)
-  buyer_confirmed_at      DateTime?         @db.Timestamptz
-  supplier_confirmed_at   DateTime?         @db.Timestamptz
-  exchange_rate_id        String?           @db.Uuid
-  payment_currency        String            @default("USD") @db.Char(3)
-  buyer_review_status     ReviewStatus      @default(pending)
-  supplier_review_status  ReviewStatus      @default(pending)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  quote_response    QuoteResponse         @relation(fields: [quote_response_id], references: [id], onDelete: Restrict)
-  buyer             Company               @relation("BuyerTransactions", fields: [buyer_id], references: [id], onDelete: Restrict)
-  supplier          Company               @relation("SupplierTransactions", fields: [supplier_id], references: [id], onDelete: Restrict)
-  payment_method    PaymentMethodDict?    @relation(fields: [payment_method_id], references: [id])
-  payment_condition PaymentCondition?     @relation("TransactionPaymentCondition", fields: [payment_condition_id], references: [id])
-  exchange_rate     ExchangeRate?         @relation(fields: [exchange_rate_id], references: [id])
-  currency          Currency              @relation(fields: [payment_currency], references: [code])
-  reviews           Review[]
-  conversation      Conversation?
-  revisions         TransactionRevision[]
-
-  @@map("transactions")
-}
-
-model TransactionRevision {
-  id               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transaction_id   String                    @db.Uuid
-  actor_company_id String                    @db.Uuid
-  action           TransactionRevisionAction
-  snapshot         Json?
-  created_at       DateTime                  @default(now()) @db.Timestamptz
-
-  transaction   Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
-  actor_company Company     @relation("TransactionRevisionActor", fields: [actor_company_id], references: [id], onDelete: Restrict)
-
-  @@index([transaction_id, created_at(sort: Desc)])
-  @@map("transaction_revisions")
-}
-
-// ==========================================
-// 9. REVIEWS
-// ==========================================
-
-model Review {
-  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transaction_id       String   @db.Uuid
-  author_company_id    String   @db.Uuid
-  evaluated_company_id String   @db.Uuid
-  reviewer_role        String   @db.VarChar(10) // 'buyer' | 'seller'
-  rating               Decimal? @db.Decimal(3, 2) // auto-computed from dimension scores
-
-  // Seller dimensions (filled when reviewer_role = 'buyer')
-  score_quality       Int? @db.SmallInt
-  score_compliance    Int? @db.SmallInt
-  score_communication Int? @db.SmallInt
-  score_price         Int? @db.SmallInt
-
-  // Buyer dimension (filled when reviewer_role = 'seller')
-  score_reliability Int? @db.SmallInt
-
-  // Flow control
-  review_status ReviewStatus @default(pending)
-  comment       String?
-  is_public     Boolean      @default(true)
-  submitted_at  DateTime?    @db.Timestamptz
-  expires_at    DateTime?    @db.Timestamptz
-
-  created_at DateTime @default(now()) @db.Timestamptz
-
-  transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Restrict)
-  author      Company     @relation("ReviewAuthor", fields: [author_company_id], references: [id], onDelete: Restrict)
-  evaluated   Company     @relation("ReviewTarget", fields: [evaluated_company_id], references: [id], onDelete: Restrict)
-
-  @@unique([transaction_id, author_company_id], name: "uq_review_per_transaction")
-  @@index([author_company_id, review_status])
-  @@map("reviews")
-}
-
-// ==========================================
-// 10. NOTIFICATIONS
-// ==========================================
-
-model Notification {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id  String    @db.Uuid
-  user_id     String?   @db.Uuid
-  type_id     Int       @db.SmallInt
-  title       String    @db.VarChar(200)
-  message     String
-  link        String?
-  is_read     Boolean   @default(false)
-  read_at     DateTime? @db.Timestamptz
-  entity_type String?   @db.VarChar(50)
-  entity_id   String?   @db.Uuid
-
-  created_at DateTime @default(now()) @db.Timestamptz
-
-  company Company              @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  user    User?                @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  type    NotificationTypeDict @relation(fields: [type_id], references: [id])
-
-  @@map("notifications")
-}
-
-// ==========================================
-// 11. CONVERSATIONS & MESSAGES (PostgreSQL)
-// ==========================================
-
-model Conversation {
-  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  participant_1_id  String             @db.Uuid
-  participant_2_id  String             @db.Uuid
-  request_id        String?            @db.Uuid
-  quote_response_id String?            @db.Uuid
-  transaction_id    String?            @unique @db.Uuid
-  status            ConversationStatus @default(active)
-  last_message      String?
-  last_message_date DateTime?          @db.Timestamptz
-  unread_count_1    Int                @default(0)
-  unread_count_2    Int                @default(0)
-  // buyer_review_status    ReviewStatus       @default(pending)
-  // supplier_review_status ReviewStatus       @default(pending)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  participant_1  Company        @relation("ConversationP1", fields: [participant_1_id], references: [id], onDelete: Restrict)
-  participant_2  Company        @relation("ConversationP2", fields: [participant_2_id], references: [id], onDelete: Restrict)
-  request        Request?       @relation(fields: [request_id], references: [id], onDelete: SetNull)
-  quote_response QuoteResponse? @relation(fields: [quote_response_id], references: [id], onDelete: SetNull)
-  transaction    Transaction?   @relation(fields: [transaction_id], references: [id], onDelete: SetNull)
-  messages       Message[]
-
-  @@unique([request_id, quote_response_id], name: "uq_conversation")
-  @@map("conversations")
-}
-
-model Message {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  conversation_id String    @db.Uuid
-  sender_id       String?   @db.Uuid
-  message_type    String    @default("user") @db.VarChar(10)
-  event_key       String?   @db.VarChar(60)
-  event_payload   Json?
-  client_msg_id   String?   @unique @db.VarChar(100)
-  content         String?
-  file_url        String?
-  file_name       String?   @db.VarChar(200)
-  is_read         Boolean   @default(false)
-  read_at         DateTime? @db.Timestamptz
-
-  created_at DateTime @default(now()) @db.Timestamptz
-
-  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
-  sender       Company?     @relation(fields: [sender_id], references: [id], onDelete: Restrict)
-
-  @@map("messages")
-}
-
-// ==========================================
-// 12. ONBOARDING & LOOKUP TABLES (V6)
-// ==========================================
-
-model UserOnboardingStatus {
-  id                     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id                String  @db.Uuid
-  company_id             String  @db.Uuid
-  module_name            String  @db.VarChar(100)
-  has_completed_tutorial Boolean @default(false)
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, company_id, module_name])
-  @@map("user_onboarding_status")
-}
-
-model PaymentCondition {
-  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name_en     String  @unique @db.VarChar(100)
-  name_es     String  @unique @db.VarChar(100)
-  days_to_due Int
-  description String?
-  is_active   Boolean @default(true)
-
-  requests        Request[]       @relation("RequestPaymentCondition")
-  quote_responses QuoteResponse[] @relation("QuoteResponsePaymentCondition")
-  transactions    Transaction[]   @relation("TransactionPaymentCondition")
-
-  @@map("payment_conditions")
-}
-
-model EstimatedMonthlyTransaction {
-  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  range_name     String  @unique @db.VarChar(50)
-  description    String?
-  description_es String?
-  is_active      Boolean @default(true)
-
-  companies Company[]
-
-  @@map("estimated_monthly_transactions")
-}
-
-model CompanySize {
-  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  size_name        String  @unique @db.VarChar(50)
-  display_label    String  @db.VarChar(100)
-  display_label_es String  @db.VarChar(100)
-  is_active        Boolean @default(true)
-
-  companies Company[]
-
-  @@map("company_sizes")
-}
-
-model DeliveryMethod {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  country_id Int     @db.SmallInt
-  name       String  @db.VarChar(100)
-  is_active  Boolean @default(true)
-
-  country         Country         @relation(fields: [country_id], references: [id], onDelete: Cascade)
-  quote_responses QuoteResponse[]
-
-  @@map("delivery_methods")
-}
-
-// ==========================================
-// 13. SUBSCRIPTION PLANS
-// ==========================================
-
-model SubscriptionPlan {
-  id                   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  plan_name            String  @unique @db.VarChar(100)
-  price                Decimal @db.Decimal(10, 2)
-  billing_cycle        Int // number of days
-  is_active            Boolean @default(true)
-  is_default           Boolean @default(false)
-  name_es              String  @default("") @db.VarChar(50)
-  trial_days           Int     @default(0) @db.SmallInt
-  max_rfq_per_month    Int?
-  max_quotes_per_month Int?
-  max_active_offers    Int?
-
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-
-  subscriptions Subscription[]
-
-  @@map("subscription_plans")
-}
-
-// ==========================================
-// 14. ADMINS
-// ==========================================
-
-model Admin {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email         String    @unique @db.VarChar(150)
-  password      String    @db.VarChar(255)
-  full_name     String    @db.VarChar(255)
-  role          AdminRole @default(ops_admin)
-  status        String    @default("active") @db.VarChar(20) // 'active', 'inactive', 'locked'
-  last_login_at DateTime? @db.Timestamptz
-  created_at    DateTime  @default(now()) @db.Timestamptz
-  updated_at    DateTime  @default(now()) @db.Timestamptz
-
-  reviewed_docs VerificationDocument[] @relation("DocReviewer")
-
-  @@map("admins")
-}
-
-model AdminAuditLog {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  admin_id    String   @db.Uuid
-  action      String   @db.VarChar(100)
-  resource    String   @db.VarChar(100)
-  resource_id String?  @db.VarChar(100)
-  payload     Json?
-  created_at  DateTime @default(now()) @db.Timestamptz
-
-  @@map("admin_audit_logs")
 }
