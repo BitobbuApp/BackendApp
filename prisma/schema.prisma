@@ -229,6 +229,7 @@ model Company {
   currency                 Currency?                    @relation(fields: [default_currency], references: [code])
   operating_countries      CompanyOperatingCountry[]
   social_media             CompanySocialMedia[]
+  requestInvitations       RequestInvitation[]
 
   @@map("companies")
 }
@@ -616,17 +617,18 @@ model Request {
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
 
-  company           Company           @relation(fields: [company_id], references: [id], onDelete: Restrict)
-  user              User?             @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  unit_of_measure   UnitOfMeasureDict @relation(fields: [unit_id], references: [id])
-  category          Category?         @relation("RequestCategory", fields: [category_id], references: [id])
-  payment_condition PaymentCondition? @relation("RequestPaymentCondition", fields: [payment_condition_id], references: [id])
-  files             RequestFile[]
-  quote_responses   QuoteResponse[]
-  conversations     Conversation[]
-  country           Country?          @relation("RequestCountry", fields: [country_id], references: [id])
-  state             State?            @relation("RequestState", fields: [state_id], references: [id])
-  city              City?             @relation("RequestCity", fields: [city_id], references: [id])
+  company            Company             @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  user               User?               @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  unit_of_measure    UnitOfMeasureDict   @relation(fields: [unit_id], references: [id])
+  category           Category?           @relation("RequestCategory", fields: [category_id], references: [id])
+  payment_condition  PaymentCondition?   @relation("RequestPaymentCondition", fields: [payment_condition_id], references: [id])
+  files              RequestFile[]
+  quote_responses    QuoteResponse[]
+  conversations      Conversation[]
+  country            Country?            @relation("RequestCountry", fields: [country_id], references: [id])
+  state              State?              @relation("RequestState", fields: [state_id], references: [id])
+  city               City?               @relation("RequestCity", fields: [city_id], references: [id])
+  requestInvitations RequestInvitation[]
 
   @@map("requests")
 }
@@ -1056,4 +1058,26 @@ model AdminAuditLog {
   created_at  DateTime @default(now()) @db.Timestamptz
 
   @@map("admin_audit_logs")
+}
+
+model RequestInvitation {
+  id         String    @id @default(uuid()) @db.Uuid
+  requestId  String    @map("request_id") @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  tier       Int       @db.SmallInt
+  score      Decimal   @db.Decimal(4, 3)
+  status     String    @default("PENDING") @db.VarChar(20)
+  notifiedAt DateTime? @map("notified_at") @db.Timestamptz
+  viewedAt   DateTime? @map("viewed_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, companyId])
+  @@index([companyId, status])
+  @@index([requestId, tier])
+  @@index([status, createdAt])
+  @@map("request_invitations")
 }
