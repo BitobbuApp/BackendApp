@@ -10,5 +10,6 @@ export const MAILGUN_TEMPLATES: Record<string, string> = {
     'password_updated': 'tu contraseña fue actualizada',
     'trial_ending_today': 'tu prueba en bitobbu termina hoy',
     'profile_verified': '¡tu perfil ya está verificado!',
-    'otp_verification': 'código de verificación'
+    'otp_verification': 'código de verificación',
+    'rfq_match': 'nuevo solicitud de rfq'
 };

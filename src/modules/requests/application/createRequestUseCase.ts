@@ -6,7 +6,7 @@ import { createRequestDtoRequestSchema, requestDtoResponseSchema } from "./dtos/
 import { RFQ_TYPE } from "../../../shared/constants/request/request.contants";
 import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
 import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
-import { matchingQueue } from "../../../infrastructure/queue/matching.queue";
+import { matchingQueue } from "../../../shared/infrastructure/queue/index.queue";
 
 interface CreateRequestDto {
     company_id: string;

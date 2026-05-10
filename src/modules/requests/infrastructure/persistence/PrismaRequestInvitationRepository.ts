@@ -6,8 +6,8 @@ export class PrismaRequestInvitationRepository implements RequestInvitationRepos
     public async create(data: Partial<RequestInvitation>): Promise<RequestInvitation> {
         const created = await prisma.requestInvitation.create({
             data: {
-                requestId: data.requestId!,
-                companyId: data.companyId!,
+                request_id: data.requestId!,
+                company_id: data.companyId!,
                 tier: data.tier!,
                 score: data.score!,
                 status: data.status ?? 'PENDING',
@@ -26,15 +26,15 @@ export class PrismaRequestInvitationRepository implements RequestInvitationRepos
     private mapToEntity(db: any): RequestInvitation {
         return new RequestInvitation(
             db.id,
-            db.requestId,
-            db.companyId,
+            db.request_id,
+            db.company_id,
             db.tier,
             Number(db.score),
             db.status,
-            db.notifiedAt,
-            db.viewedAt,
-            db.createdAt,
-            db.updatedAt
+            db.notified_at,
+            db.viewed_at,
+            db.created_at,
+            db.updated_at
         );
     }
 }

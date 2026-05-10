@@ -6,6 +6,7 @@ import { PrismaCompanyRepository } from '../../companies/infrastructure/persiste
 import { CompanyRepository } from '../../companies/domain/repositories/company.repository';
 import { PrismaRequestRepository } from '../infrastructure/persistence/PrismaRequestRepository';
 import { RequestRepository } from '../domain/repositories/request.repository';
+import { notificationsQueue } from '../../../shared/infrastructure/queue/index.queue';
 
 interface MatchInput { rfqId: string; }
 
@@ -114,6 +115,12 @@ export class MatchRfqToSuppliersUseCase extends UseCase<MatchInput, void> {
                 tier: candidate.tier,
                 score: candidate.score
             });
+            
+            // Enqueue email notification
+            await notificationsQueue.add('rfq-match-email', {
+                companyId: candidate.companyId,
+                requestId: request.id
+            }, { delay: 1000 });
         }
 
         console.log(`Created ${finalCandidates.length} invitations for RFQ ${request.id}`);

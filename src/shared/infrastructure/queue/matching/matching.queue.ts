@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { redisConnection } from './redis.connection';
+import { redisConnection } from '../../redis';
 
 export const matchingQueue = new Queue('rfq-matching', {
   connection: redisConnection,

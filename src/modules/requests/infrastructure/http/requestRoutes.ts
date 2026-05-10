@@ -34,8 +34,8 @@ export async function requestRoutes(app: FastifyInstance) {
     app.post('/',
         { preHandler: [authMiddleware, requireBuyer, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
-            const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
-            await guard.authorize(request.user.companyId, 'rfq');
+            //const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
+            //await guard.authorize(request.user.companyId, 'rfq');
 
             const useCase = new CreateRequestUseCase();
             const result = await useCase.execute({
@@ -45,7 +45,7 @@ export async function requestRoutes(app: FastifyInstance) {
                 company_id: request.user.companyId,
                 user_id: request.user.userId
             });
-            await guard.incrementUsage(request.user.companyId, 'rfq');
+            //await guard.incrementUsage(request.user.companyId, 'rfq');
             return ApiResponse.success(reply, result, "Request created", 201);
         }
     );
