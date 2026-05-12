@@ -5,9 +5,8 @@ import { MatchRfqToSuppliersUseCase } from '../../../../modules/requests/applica
 export const matchingWorker = new Worker(
   'rfq-matching',
   async (job) => {
-    // console.log("🚀 ~ BullMQ background worker started successfully 🚀", job)
-    // const useCase = new MatchRfqToSuppliersUseCase();
-    // await useCase.execute({ rfqId: job.data.rfqId });
+    const useCase = new MatchRfqToSuppliersUseCase();
+    await useCase.execute({ rfqId: job.data.rfqId });
   },
   { connection: redisConnection, concurrency: 5 }
 );

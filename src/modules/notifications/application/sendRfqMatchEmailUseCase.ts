@@ -40,15 +40,19 @@ export class SendRfqMatchEmailUseCase extends UseCase<SendRfqMatchEmailInput, vo
         }
 
         if (supplier.settings?.email_notifications === false) {
-            logger.info(`Email notifications disabled for supplier: ${data.companyId}`);
+            logger.info({ companyId: data.companyId }, `Email notifications disabled for supplier (settings.email_notifications is false)`);
             return;
         }
 
+        logger.debug({ companyId: data.companyId, hasSettings: !!supplier.settings }, "Supplier found and notifications are enabled");
+
         const primaryContact = supplier.contacts?.find(c => c.is_primary) || supplier.contacts?.[0];
         if (!primaryContact?.corporate_email) {
-            logger.warn(`No corporate email found for supplier: ${data.companyId}`);
+            logger.warn({ companyId: data.companyId, contactsCount: supplier.contacts?.length }, `No corporate email found for supplier`);
             return;
         }
+
+        logger.debug({ email: primaryContact.corporate_email }, "Primary contact email identified");
 
         // 2. Fetch Request to get RFQ details
         const request = await this.requestRepo.findById(data.requestId);
@@ -57,25 +61,43 @@ export class SendRfqMatchEmailUseCase extends UseCase<SendRfqMatchEmailInput, vo
             return;
         }
 
-        // 3. Fetch Buyer Company to get the name
+        // 3. Fetch Buyer Company to get the name and location
         let buyerCompanyName = 'Bitobbu Buyer';
+        let location = 'N/A';
+
         if (request.company_id) {
             const buyer = await this.companyRepo.findById(request.company_id);
             if (buyer) {
                 buyerCompanyName = buyer.trade_name || buyer.legal_name || 'Bitobbu Buyer';
+                
+                // Determine Location from Buyer Company Info
+                if (buyer.locations && buyer.locations.length > 0) {
+                    const mainLocation = buyer.locations.find((l: any) => l.is_main_headquarters) || buyer.locations[0];
+                    const stateName = mainLocation.state?.name;
+                    const cityName = mainLocation.city?.name;
+                    
+                    if (cityName && stateName) {
+                        location = `${cityName}, ${stateName}`;
+                    } else if (stateName) {
+                        location = stateName;
+                    } else if (cityName) {
+                        location = cityName;
+                    }
+                }
             }
         }
-
-        // 4. Determine Location string from Request
-        // Assuming request has city_id, state_id, country_id, but usually we just want a string or fetch the names.
-        // For now, if we can't easily resolve city names without another repo, we might just pass a generic or leave it blank if not available.
-        // Let's check if request has a location object populated by the repo, or we use reach_service if location isn't populated.
-        const location = request.reach_service || 'N/A';
 
         // 5. Format date
         const dateLimit = request.expiration_date 
             ? new Date(request.expiration_date).toLocaleDateString('es-ES') 
             : 'Sin fecha límite';
+
+        logger.info({
+            to: primaryContact.corporate_email,
+            template: 'rfq_match',
+            buyer: buyerCompanyName,
+            product: request.product_service
+        }, "Preparing to send RFQ match email via Mailgun");
 
         // 6. Send Email
         await this.emailService.sendTemplate({

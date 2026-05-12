@@ -45,8 +45,9 @@ export class MatchRfqToSuppliersUseCase extends UseCase<MatchInput, void> {
             // Using the raw Prisma access here isn't strictly correct for UseCases,
             // but CompanyRepository list accepts filters. Let's try passing Prisma-like filters if it supports it.
             // Wait, looking at CompanyRepository list, it accepts `filters?: any`. Let's pass the correct prisma filter.
-            const filters = {
+            const filters: any = {
                 can_sell: true,
+                id: { not: request.company_id },
                 categories_of_interest: {
                     some: {
                         category_id: request.category_id
