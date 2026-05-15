@@ -10,6 +10,8 @@ import { ListMarketplaceRequestsUseCase } from '../../application/listMarketplac
 
 import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { requireBuyer, requireSeller } from '../../../../shared/infrastructure/http/middlewares/roleMiddleware';
+import { SubscriptionGuardService } from '../../../subscriptions/application/subscription-guard.service';
+import { PrismaSubscriptionRepository } from '../../../subscriptions/infrastructure/persistence/PrismaSubscriptionRepository';
 
 export async function requestRoutes(app: FastifyInstance) {
 
@@ -32,13 +34,18 @@ export async function requestRoutes(app: FastifyInstance) {
     app.post('/',
         { preHandler: [authMiddleware, requireBuyer, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
+            //const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
+            //await guard.authorize(request.user.companyId, 'rfq');
+
             const useCase = new CreateRequestUseCase();
             const result = await useCase.execute({
+
                 ...request.body,
                 rawFiles: request.uploadedFiles || [],
                 company_id: request.user.companyId,
                 user_id: request.user.userId
             });
+            //await guard.incrementUsage(request.user.companyId, 'rfq');
             return ApiResponse.success(reply, result, "Request created", 201);
         }
     );

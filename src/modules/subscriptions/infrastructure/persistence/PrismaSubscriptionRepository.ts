@@ -79,6 +79,54 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
         });
     }
 
+    async findActiveByCompanyId(companyId: string): Promise<any | null> {
+        return await prisma.subscription.findFirst({
+            where: {
+                company_id: companyId,
+                is_active: true
+            },
+            include: { plan: true }
+        });
+    }
+
+    async deactivateActive(companyId: string): Promise<void> {
+        await prisma.subscription.updateMany({
+            where: {
+                company_id: companyId,
+                is_active: true
+            },
+            data: {
+                is_active: false,
+                updated_at: new Date()
+            }
+        });
+    }
+
+    async create(data: any): Promise<any> {
+        return await prisma.subscription.create({
+            data: {
+                company_id: data.company_id,
+                plan_id: data.plan_id,
+                amount: data.amount,
+                trial_ends_at: data.trial_ends_at,
+                current_period_start: data.current_period_start || new Date(),
+                current_period_end: data.current_period_end,
+                expires_at: data.expires_at,
+                is_active: true
+            }
+        });
+    }
+
+    async hasHadTrial(companyId: string): Promise<boolean> {
+        const count = await prisma.subscription.count({
+            where: {
+                company_id: companyId,
+                trial_ends_at: { not: null }
+            }
+        });
+        return count > 0;
+    }
+
     private calculateStatus(item: any): string {
         if (!item.is_active) return 'inactive';
         if (item.expires_at && new Date(item.expires_at) < new Date()) return 'expired';
