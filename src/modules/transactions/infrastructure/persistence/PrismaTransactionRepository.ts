@@ -3,6 +3,41 @@ import { Transaction } from "../../domain/entities/transaction.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 
 export class PrismaTransactionRepository implements TransactionRepository {
+    private buildAdminWhere(filters: any) {
+        const where: any = {};
+
+        if (filters.status) {
+            where.status = filters.status;
+        }
+
+        if (filters.buyer_id) {
+            where.buyer_id = filters.buyer_id;
+        }
+
+        if (filters.supplier_id) {
+            where.supplier_id = filters.supplier_id;
+        }
+
+        if (filters.search) {
+            where.product_description = { contains: filters.search, mode: 'insensitive' };
+        }
+
+        if (filters.serial_number) {
+            where.serial_number = Number(filters.serial_number);
+        }
+
+        if (filters.from_date || filters.to_date) {
+            where.created_at = {};
+            if (filters.from_date) {
+                where.created_at.gte = new Date(filters.from_date);
+            }
+            if (filters.to_date) {
+                where.created_at.lte = new Date(filters.to_date);
+            }
+        }
+
+        return where;
+    }
     async create(transaction: Partial<Transaction>): Promise<Transaction> {
         const created = await prisma.transaction.create({
             data: {
@@ -113,6 +148,54 @@ export class PrismaTransactionRepository implements TransactionRepository {
         await prisma.transaction.delete({ where: { id } });
     }
 
+    async findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedTransactions> {
+        const offset = (page - 1) * limit;
+        const where = this.buildAdminWhere(filters);
+
+        const [items, total] = await Promise.all([
+            prisma.transaction.findMany({
+                where,
+                skip: offset,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: { 
+                    payment_method: true,
+                    buyer: { select: { trade_name: true } },
+                    supplier: { select: { trade_name: true } }
+                }
+            }),
+            prisma.transaction.count({ where })
+        ]);
+
+        return {
+            items: items.map((item: any) => this.mapToEntity(item)),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
+    async findAdminExportBatch(filters: any, limit: number, cursor?: string): Promise<Transaction[]> {
+        const where = this.buildAdminWhere(filters);
+        const items = await prisma.transaction.findMany({
+            where,
+            take: limit,
+            ...(cursor && {
+                skip: 1,
+                cursor: { id: cursor },
+            }),
+            orderBy: { id: 'asc' },
+            include: {
+                payment_method: true,
+                buyer: { select: { trade_name: true } },
+                supplier: { select: { trade_name: true } }
+            }
+        });
+
+        return items.map((item: any) => this.mapToEntity(item));
+    }
+
     async updateWithRevision(
         id: string,
         transactionData: Partial<Transaction>,
@@ -216,6 +299,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
             db.supplier_review_status ?? 'pending',
             db.buyer?.trade_name ?? null,
             db.supplier?.trade_name ?? null,
+            db.serial_number ?? null,
             db.created_at,
             db.updated_at
         );

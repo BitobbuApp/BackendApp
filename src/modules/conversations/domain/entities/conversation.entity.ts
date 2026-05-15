@@ -16,6 +16,7 @@ export interface Conversation {
     request?: {
         product_service: string;
         quantity: number;
+        serial_number?: number | null;
         unit_of_measure?: {
             abbreviation: string;
         };
@@ -23,6 +24,10 @@ export interface Conversation {
     quote_response?: {
         unit_price_usd: number;
         quantity: number;
+        serial_number?: number | null;
+    } | null | undefined;
+    transaction?: {
+        serial_number?: number | null;
     } | null | undefined;
     participant_1?: any;
     participant_2?: any;

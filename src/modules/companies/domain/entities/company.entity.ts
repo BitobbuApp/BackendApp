@@ -38,6 +38,7 @@ export class Company {
         public settings?: any,
         public payment_methods?: any[],
         public categories_of_interest?: any[],
-        public verification_info?: any
+        public verification_info?: any,
+        public social_media?: any[]
     ) { }
 }

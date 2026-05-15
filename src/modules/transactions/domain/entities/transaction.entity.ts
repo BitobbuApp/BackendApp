@@ -37,6 +37,7 @@ export class Transaction {
         public supplier_review_status: string = 'pending',
         public buyer_name: string | null = null,
         public supplier_name: string | null = null,
+        public serial_number: number | null = null,
         public created_at: Date | null = null,
         public updated_at: Date | null = null
     ) { }

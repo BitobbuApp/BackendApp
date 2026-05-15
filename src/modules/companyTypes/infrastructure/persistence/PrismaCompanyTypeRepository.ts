@@ -5,6 +5,7 @@ import { CompanyTypeRepository } from "../../domain/repositories/companyType.rep
 export class PrismaCompanyTypeRepository implements CompanyTypeRepository {
     async list(): Promise<CompanyType[]> {
         const items = await prisma.companyTypeDict.findMany({
+            where: { is_active: true },
             orderBy: { name_es: "asc" }
         });
 
@@ -16,6 +17,7 @@ export class PrismaCompanyTypeRepository implements CompanyTypeRepository {
             db.id,
             db.name_en,
             db.name_es,
+            db.is_active,
             db.description ?? null
         );
     }

@@ -15,4 +15,6 @@ export interface RequestRepository {
     findExcludingCompany(excludeCompanyId: string, page: number, limit: number): Promise<RequestListResult>;
     update(id: string, request: Partial<RequestEntity>): Promise<RequestEntity>;
     delete(id: string): Promise<void>;
+    findAllAdmin(filters: any, page: number, limit: number): Promise<RequestListResult>;
+    findAdminExportBatch(filters: any, limit: number, cursor?: string): Promise<RequestEntity[]>;
 }

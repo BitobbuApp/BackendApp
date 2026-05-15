@@ -92,6 +92,7 @@ export class TransactionCanceledStrategy implements TransactionStrategy {
             updated.supplier_review_status ?? 'pending',
             null, // buyer_name
             null, // supplier_name
+            (updated as any).serial_number,
             updated.created_at,
             updated.updated_at,
         );

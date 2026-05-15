@@ -21,4 +21,6 @@ export interface TransactionRepository {
     update(id: string, transaction: Partial<Transaction>): Promise<Transaction>;
     updateWithRevision(id: string, transaction: Partial<Transaction>, revision: RevisionData): Promise<Transaction>;
     delete(id: string): Promise<void>;
+    findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedTransactions>;
+    findAdminExportBatch(filters: any, limit: number, cursor?: string): Promise<Transaction[]>;
 }

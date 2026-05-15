@@ -14,8 +14,28 @@ import { userOnboardingStatusRoutes } from "./modules/userOnboardingStatus/infra
 import { deliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/http/deliveryMethodRoutes";
 import { reviewRoutes } from "./modules/reviews/infrastructure/http/reviewRoutes";
 import { dashboardRoutes } from "./modules/dashboard/infrastructure/http/dashboardRoutes";
+import { notificationRoutes } from "./modules/notifications/infrastructure/http/notificationRoutes";
+
+// Admin imports
+import { adminAuthRoutes } from "./modules/admins/infrastructure/http/adminAuthRoutes";
+import { adminManagementRoutes } from "./modules/admins/infrastructure/http/adminManagementRoutes";
+import { adminDashboardRoutes } from "./modules/dashboard/infrastructure/http/adminDashboardRoutes";
+import { adminUserRoutes } from "./modules/users/infrastructure/http/adminUserRoutes";
+import { adminVerificationRoutes } from "./modules/companies/infrastructure/http/adminVerificationRoutes";
+import { adminSubscriptionRoutes } from "./modules/subscriptions/infrastructure/http/adminSubscriptionRoutes";
+import { adminPlanRoutes } from "./modules/plansCatalog/infrastructure/http/adminPlanRoutes";
+import { adminLookupRoutes } from "./modules/lookups/infrastructure/http/adminLookupRoutes";
+import { adminGeographyRoutes } from "./modules/countries/infrastructure/http/adminGeographyRoutes";
+import { adminCityRoutes } from "./modules/cities/infrastructure/http/adminCityRoutes";
+import { adminRfqRoutes } from "./modules/requests/infrastructure/http/adminRfqRoutes";
+import { adminQuoteResponseRoutes } from "./modules/quote_responses/infrastructure/http/adminQuoteResponseRoutes";
+import { adminTransactionRoutes } from "./modules/transactions/infrastructure/http/adminTransactionRoutes";
+import { adminDeliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/http/adminDeliveryMethodRoutes";
+import { adminCurrencyRoutes } from "./modules/currencies/infrastructure/http/adminCurrencyRoutes";
+import { adminExchangeRateRoutes } from "./modules/exchangeRates/infrastructure/http/adminExchangeRateRoutes";
 
 export async function routes(app: FastifyInstance) {
+    // User / Public Routes
     app.register(userRoutes, { prefix: '/users' });
     app.register(companyRoutes, { prefix: '/companies' });
     app.register(requestRoutes, { prefix: '/requests' });
@@ -31,4 +51,23 @@ export async function routes(app: FastifyInstance) {
     app.register(dashboardRoutes, { prefix: '/dashboard' });
     app.register(deliveryMethodRoutes, { prefix: '/delivery-methods' });
     app.register(reviewRoutes, { prefix: '/reviews' });
+    app.register(notificationRoutes, { prefix: '/notifications' });
+
+    // Admin Routes
+    app.register(adminAuthRoutes, { prefix: '/admin/auth' });
+    app.register(adminManagementRoutes, { prefix: '/admin/admins' });
+    app.register(adminDashboardRoutes, { prefix: '/admin/dashboard' });
+    app.register(adminUserRoutes, { prefix: '/admin/users' });
+    app.register(adminVerificationRoutes, { prefix: '/admin/verifications' });
+    app.register(adminSubscriptionRoutes, { prefix: '/admin/subscriptions' });
+    app.register(adminPlanRoutes, { prefix: '/admin/plans' });
+    app.register(adminLookupRoutes, { prefix: '/admin/lookups' });
+    app.register(adminGeographyRoutes, { prefix: '/admin/geography' });
+    app.register(adminCityRoutes, { prefix: '/admin/geography/cities' });
+    app.register(adminDeliveryMethodRoutes, { prefix: '/admin/delivery-methods' });
+    app.register(adminCurrencyRoutes, { prefix: '/admin/currencies' });
+    app.register(adminExchangeRateRoutes, { prefix: '/admin/exchange-rates' });
+    app.register(adminRfqRoutes, { prefix: '/admin/rfqs' });
+    app.register(adminQuoteResponseRoutes, { prefix: '/admin/quote-responses' });
+    app.register(adminTransactionRoutes, { prefix: '/admin/transactions' });
 }
