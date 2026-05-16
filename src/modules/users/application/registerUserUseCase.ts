@@ -6,6 +6,12 @@ import bcrypt from 'bcrypt';
 import { UseCase } from '../../../shared/application/useCase';
 import { registerUserDtoRequestSchema, registerUserDtoResponseSchema } from './dtos/register.dto';
 import { VENEZUELA_COUNTRY_ID } from '../../../shared/constants/geo.constants';
+import { EmailService } from '../../../shared/application/services/email.service';
+import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
+import { PrismaVerificationRepository } from '../../companies/infrastructure/persistence/PrismaVerificationRepository';
+import { VerificationRepository } from '../../companies/domain/repositories/verification.repository';
+import { CreateSubscriptionUseCase } from '../../subscriptions/application/createSubscriptionUseCase';
+import { GetSubscriptionPlanUseCase } from '../../subscriptions/application/getSubscriptionPlanUseCase';
 
 interface RegisterDto {
     first_name: string;
@@ -16,6 +22,8 @@ interface RegisterDto {
     country_id: number;
     state_id: number;
     sector_id: number;
+    can_buy?: boolean;
+    can_sell?: boolean;
 }
 
 interface RegisterResult {
@@ -30,9 +38,18 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     protected inputSchema: Joi.Schema = registerUserDtoRequestSchema;
     protected outputSchema: Joi.Schema = registerUserDtoResponseSchema;
     private readonly userRepository: UserRepository;
+    private readonly emailService: EmailService;
+    private readonly verificationRepository: VerificationRepository;
+    private readonly getSubscriptionPlanUseCase: GetSubscriptionPlanUseCase;
+    private readonly createSubscriptionUseCase: CreateSubscriptionUseCase;
+
     constructor() {
         super();
         this.userRepository = new PrismaUserRepository();
+        this.emailService = new MailgunEmailAdapter();
+        this.verificationRepository = new PrismaVerificationRepository();
+        this.getSubscriptionPlanUseCase = new GetSubscriptionPlanUseCase();
+        this.createSubscriptionUseCase = new CreateSubscriptionUseCase();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {
@@ -53,14 +70,51 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
         const newUser = await this.userRepository.create({
             id: '',
             company_id: null,
-            ...userData,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            email: userData.email,
             password: hashedPassword,
             salt: null,
+            trade_name: userData.trade_name,
+            founding_year: null,
+            country_id: userData.country_id,
+            sector_id: userData.sector_id,
+            state_id: userData.state_id,
+            can_buy: userData.can_buy,
+            can_sell: userData.can_sell,
             is_active: true,
             created_at: new Date(),
             updated_at: new Date(),
             last_access: null
         } as any);
+
+        if (newUser.company_id) {
+            await this.verificationRepository.upsertVerification({
+                company_id: newUser.company_id,
+                status: 'pending'
+            });
+
+            // Assign default plan (Free)
+            const defaultPlan = await this.getSubscriptionPlanUseCase.execute({
+                is_default: true
+            });
+            
+            if (defaultPlan) {
+                await this.createSubscriptionUseCase.execute({
+                    company_id: newUser.company_id,
+                    plan_id: defaultPlan.id
+                });
+            }
+        }
+
+        // Send welcome email (fire and forget / fail-safe)
+        await this.emailService.sendTemplate({
+            to: newUser.email,
+            templateKey: 'welcome',
+            variables: {
+                first_name: newUser.first_name
+            }
+        });
 
         return {
             id: newUser.id,

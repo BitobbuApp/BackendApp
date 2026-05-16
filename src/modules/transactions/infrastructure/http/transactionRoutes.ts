@@ -1,12 +1,14 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateTransactionUseCase } from '../../application/createTransactionUseCase';
 import { GetTransactionByIdUseCase } from '../../application/getTransactionByIdUseCase';
 import { UpdateTransactionUseCase } from '../../application/updateTransactionUseCase';
 import { DeleteTransactionUseCase } from '../../application/deleteTransactionUseCase';
 import { ListTransactionsByCompanyUseCase } from '../../application/listTransactionsByCompanyUseCase';
 import { listTransactionsQuerySchema } from '../../application/dtos/transaction.dto';
+import { PerformTransactionActionUseCase } from '../../application/performTransactionActionUseCase';
 
 export async function transactionRoutes(app: FastifyInstance) {
 
@@ -80,6 +82,23 @@ export async function transactionRoutes(app: FastifyInstance) {
             const useCase = new DeleteTransactionUseCase();
             const result = await useCase.execute(request.params.id);
             return ApiResponse.success(reply, result, "Transaction removed");
+        }
+    );
+
+    // POST /transactions/:id/action (JWT protected — State Machine entry point)
+    app.post('/:id/action',
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
+        async (request: any, reply: any) => {
+            const { action, payload } = request.body;
+            const useCase = new PerformTransactionActionUseCase();
+            const result = await useCase.execute({
+                transactionId: request.params.id,
+                action,
+                actorCompanyId: request.user.companyId,
+                payload: payload || {},
+                rawFiles: request.uploadedFiles || [],
+            });
+            return ApiResponse.success(reply, result, `Transaction action "${action}" performed successfully`);
         }
     );
 }

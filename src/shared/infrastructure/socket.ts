@@ -11,6 +11,8 @@ export const initializeSocket = (app: any) => {
 
     // 1. Inicializar el servidor de Socket.io acoplado al servidor HTTP de Fastify
     io = new SocketIOServer(app.server, {
+        pingTimeout: 300000,   // 5 minutos sin desconectar (Ideal para debugging con breakpoints)
+        pingInterval: 25000,   // Frecuencia normal
         cors: {
             origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
             methods: ['GET', 'POST'],
@@ -22,10 +24,8 @@ export const initializeSocket = (app: any) => {
         const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
         
         if (!token) {
-            // Permitir conexión temporalmente en desarrollo aunque falte el token
-            logger.warn(`⚠️ Conexión de socket sin token permitida (Modo Dev). SocketID: ${socket.id}`);
-            socket.data.user = { id: 'mock-user-id' };
-            return next();
+            logger.error(`❌ Conexión rechazada: Falta token de autenticación. SocketID: ${socket.id}`);
+            return next(new Error('Authentication error: Token missing'));
         }
         
         try {
@@ -36,6 +36,7 @@ export const initializeSocket = (app: any) => {
             const decoded = jwtService.verifyToken(cleanToken);
             
             // Almacenar el payload del usuario (contiene companyId, userId, etc.) en el socket
+            console.log(decoded)
             socket.data.user = decoded;
             
             next();
@@ -46,7 +47,15 @@ export const initializeSocket = (app: any) => {
 
     // 3. Manejador de Conexiones
     io.on('connection', (socket: Socket) => {
-        logger.info(`🔌 Cliente conectado: ${socket.id} (User: ${socket.data.user?.id})`);
+        logger.info(`🔌 Cliente conectado: ${socket.id} (User: ${socket.data.user?.userId})`);
+
+        // Join the global company room automatically if companyId is available
+        const companyId = socket.data.user?.companyId;
+        if (companyId) {
+            const companyRoom = `company_${companyId}`;
+            socket.join(companyRoom);
+            logger.info(`Socket ${socket.id} se unió as su sala global: ${companyRoom}`);
+        }
 
         // Registrar módulos
         registerMessageHandlers(socket);

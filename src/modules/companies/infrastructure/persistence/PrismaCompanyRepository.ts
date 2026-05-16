@@ -86,14 +86,22 @@ export class PrismaCompanyRepository implements CompanyRepository {
             where: { id },
             relationLoadStrategy: 'join',
             include: {
-                locations: true,
+                locations: {
+                    include: {
+                        state: true,
+                        city: true,
+                    }
+                },
                 contacts: true,
                 commercial_profile: true,
                 settings: true,
                 payment_methods: { include: { method: true } },
                 categories_of_interest: { include: { category: true } },
                 sector_ref: true,
-                company_type_ref: true
+                company_type_ref: true,
+                verification: true,
+                verif_documents: { include: { type: true } },
+                social_media: true
             }
         });
         if (!found) return null;
@@ -106,14 +114,21 @@ export class PrismaCompanyRepository implements CompanyRepository {
             where: { tax_id: taxId },
             relationLoadStrategy: 'join',
             include: {
-                locations: true,
+                locations: {
+                    include: {
+                        state: true,
+                        city: true,
+                    }
+                },
                 contacts: true,
                 commercial_profile: true,
                 settings: true,
                 payment_methods: { include: { method: true } },
                 categories_of_interest: { include: { category: true } },
                 sector_ref: true,
-                company_type_ref: true
+                company_type_ref: true,
+                verification: true,
+                verif_documents: { include: { type: true } }
             }
         });
         if (!found) return null;
@@ -241,6 +256,19 @@ export class PrismaCompanyRepository implements CompanyRepository {
             };
         }
 
+        // social_media: full replace (deleteMany + recreate)
+        if (data.social_media_links && Array.isArray(data.social_media_links)) {
+            updatePayload.social_media = {
+                deleteMany: {},
+                create: data.social_media_links
+                    .filter((item: any) => item.url && item.url.trim() !== '')
+                    .map((item: any) => ({
+                        platform: item.platform,
+                        url: item.url.trim()
+                    }))
+            };
+        }
+
         const updated = await prisma.company.update({
             where: { id },
             data: updatePayload,
@@ -248,7 +276,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 sector_ref: true,
                 company_type_ref: true,
                 payment_methods: { include: { method: true } },
-                categories_of_interest: { include: { category: true } }
+                categories_of_interest: { include: { category: true } },
+                social_media: true
             }
         });
         return this.mapToEntity(updated);
@@ -266,7 +295,12 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 take: limit,
                 orderBy: { created_at: 'desc' },
                 include: {
-                    locations: true,
+                    locations: {
+                        include: {
+                            state: true,
+                            city: true,
+                        }
+                    },
                     contacts: true,
                     commercial_profile: true,
                     settings: true,
@@ -274,6 +308,11 @@ export class PrismaCompanyRepository implements CompanyRepository {
                     categories_of_interest: { include: { category: true } },
                     sector_ref: true,
                     company_type_ref: true,
+                    verification: true,
+                    verif_documents: { include: { type: true } },
+                    _count: {
+                        select: { offers: true }
+                    }
                 }
             })
         ]);
@@ -298,6 +337,31 @@ export class PrismaCompanyRepository implements CompanyRepository {
             name: ci.category.name_es,
         })) ?? [];
 
+        let verificationInfo = null;
+        if (db.verification) {
+            verificationInfo = {
+                status: db.verification.status,
+                rejection_reason: db.verification.rejection_reason,
+                verified_at: db.verification.verified_at,
+                documents: db.verif_documents?.map((doc: any) => ({
+                    id: doc.id,
+                    type_id: doc.type_id,
+                    type_name: doc.type?.name_es ?? doc.type?.name_en ?? '',
+                    url: doc.url,
+                    status: doc.status,
+                    notes: doc.notes,
+                    created_at: doc.created_at,
+                    reviewed_at: doc.reviewed_at
+                })) ?? []
+            };
+        }
+
+        const socialMedia = db.social_media?.map((sm: any) => ({
+            id: sm.id,
+            platform: sm.platform,
+            url: sm.url,
+        })) ?? [];
+
         return new Company(
             db.id,
             db.trade_name,
@@ -313,9 +377,19 @@ export class PrismaCompanyRepository implements CompanyRepository {
             db.founding_year ?? null,
             db.monthly_transactions_id ?? null,
             db.company_size_id ?? null,
-            Number(db.average_rating),
-            db.transaction_count,
-            db.review_count,
+            Number(db.average_rating || 0),
+            db.transaction_count || 0,
+            db.review_count || 0,
+            db.seller_review_count || 0,
+            db.buyer_review_count || 0,
+            Number(db.avg_quality || 0),
+            Number(db.avg_compliance_seller || 0),
+            Number(db.avg_communication_seller || 0),
+            Number(db.avg_price || 0),
+            Number(db.avg_compliance_buyer || 0),
+            Number(db.avg_reliability || 0),
+            Number(db.avg_communication_buyer || 0),
+            db._count?.offers || 0,
             db.created_at,
             db.updated_at,
             db.locations,
@@ -323,7 +397,31 @@ export class PrismaCompanyRepository implements CompanyRepository {
             db.commercial_profile,
             db.settings,
             paymentMethods,
-            categoriesOfInterest
+            categoriesOfInterest,
+            verificationInfo,
+            socialMedia
         );
+    }
+
+    async getReviews(id: string, page: number = 1, limit: number = 10): Promise<{ items: any[], total: number }> {
+        const skip = (page - 1) * limit;
+        const [items, total] = await Promise.all([
+            prisma.review.findMany({
+                where: { evaluated_company_id: id },
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    author: {
+                        select: {
+                            trade_name: true,
+                            logo_url: true
+                        }
+                    }
+                }
+            }),
+            prisma.review.count({ where: { evaluated_company_id: id } })
+        ]);
+        return { items, total };
     }
 }

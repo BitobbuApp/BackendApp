@@ -5,7 +5,8 @@ import { VerifDocTypeRepository } from "../../domain/repositories/verifDocType.r
 export class PrismaVerifDocTypeRepository implements VerifDocTypeRepository {
     async list(): Promise<VerifDocType[]> {
         const items = await prisma.verifDocTypeDict.findMany({
-            orderBy: { name: "asc" }
+            where: { is_active: true },
+            orderBy: { name_es: "asc" }
         });
 
         return items.map((item) => this.mapToEntity(item));
@@ -14,7 +15,9 @@ export class PrismaVerifDocTypeRepository implements VerifDocTypeRepository {
     private mapToEntity(db: any): VerifDocType {
         return new VerifDocType(
             db.id,
-            db.name,
+            db.name_en,
+            db.name_es ?? null,
+            db.is_active,
             db.instructions ?? null
         );
     }

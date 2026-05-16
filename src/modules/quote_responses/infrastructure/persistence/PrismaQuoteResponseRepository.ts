@@ -1,10 +1,41 @@
-import { QuoteResponseRepository, PaginatedResult } from "../../domain/repositories/quote_response.repository";
+import { QuoteResponseRepository, PaginatedResult, RevisionData } from "../../domain/repositories/quote_response.repository";
 import { QuoteResponse, ResponseStatus } from "../../domain/entities/quote_response.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 import { Prisma } from "@prisma/client";
 import { DuplicateQuoteResponseError } from "../../domain/errors/quote_response.errors";
 
 export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
+    private buildAdminWhere(filters: any) {
+        const where: any = {};
+
+        if (filters.status) {
+            where.status = filters.status;
+        }
+
+        if (filters.serial_number) {
+            where.serial_number = Number(filters.serial_number);
+        }
+
+        if (filters.from_date || filters.to_date) {
+            where.created_at = {};
+            if (filters.from_date) {
+                where.created_at.gte = new Date(filters.from_date);
+            }
+            if (filters.to_date) {
+                where.created_at.lte = new Date(filters.to_date);
+            }
+        }
+
+        if (filters.request_id) {
+            where.request_id = filters.request_id;
+        }
+
+        if (filters.supplier_id) {
+            where.supplier_id = filters.supplier_id;
+        }
+
+        return where;
+    }
     async create(response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         try {
             const created = await prisma.$transaction(async (tx) => {
@@ -14,17 +45,20 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                         request_id: response.request_id!,
                         supplier_id: response.supplier_id!,
                         company_offer_id: response.company_offer_id ?? null,
-                        unit_price: new Prisma.Decimal(response.unit_price!),
+                        unit_price_usd: new Prisma.Decimal(response.unit_price_usd!),
                         quantity: new Prisma.Decimal(response.quantity!),
                         payment_conditions: response.payment_conditions ?? null,
                         payment_condition_id: (response as any).payment_condition_id ?? null,
                         delivery_method_id: (response as any).delivery_method_id ?? null,
                         delivery_time: response.delivery_time ?? null,
+                        estimated_delivery_hours: response.estimated_delivery_hours ?? null,
                         notes: response.notes ?? null,
                         has_guarantee: response.has_guarantee ?? false,
                         status: (response.status as any) ?? 'pending',
                         rejection_reason: response.rejection_reason ?? null,
-                        total_amount: new Prisma.Decimal(response.unit_price! * response.quantity!),
+                        total_amount_usd: new Prisma.Decimal(response.unit_price_usd! * response.quantity!),
+                        payment_currency: (response as any).payment_currency ?? 'USD',
+                        exchange_rate_id: (response as any).exchange_rate_id ?? null,
                     }
                 });
 
@@ -57,9 +91,9 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         const skip = (page - 1) * limit;
 
         const [total, items] = await Promise.all([
-            prisma.quoteResponse.count({ where: { supplier_id: supplierId } }),
+            prisma.quoteResponse.count({ where: { supplier_id: supplierId, status: { notIn: ['accepted', 'rejected', 'expired'] as any } } }),
             prisma.quoteResponse.findMany({
-                where: { supplier_id: supplierId },
+                where: { supplier_id: supplierId, status: { notIn: ['accepted', 'rejected', 'expired'] as any } },
                 skip,
                 take: limit,
                 orderBy: { created_at: 'desc' }
@@ -95,6 +129,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                             company_type_ref: true,
                             sector_ref: true,
                             average_rating: true,
+                            review_count: true,
+                            transaction_count: true,
+                            avg_quality: true,
+                            avg_compliance_seller: true,
+                            avg_communication_seller: true,
+                            avg_price: true,
+                            seller_review_count: true,
+                            avg_compliance_buyer: true,
+                            avg_reliability: true,
+                            avg_communication_buyer: true,
+                            buyer_review_count: true,
                         }
                     }
                 }
@@ -106,14 +151,16 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 id: item.id,
                 request_id: item.request_id,
                 supplier_id: item.supplier_id,
-                unit_price: Number(item.unit_price),
+                unit_price_usd: Number(item.unit_price_usd),
                 quantity: Number(item.quantity),
-                total_amount: Number(item.total_amount),
+                total_amount_usd: Number(item.total_amount_usd),
                 payment_conditions: item.payment_conditions,
                 payment_condition_id: item.payment_condition_id,
                 delivery_time: item.delivery_time,
+                estimated_delivery_hours: item.estimated_delivery_hours,
                 notes: item.notes,
                 status: item.status,
+                serial_number: item.serial_number,
                 created_at: item.created_at,
                 updated_at: item.updated_at,
                 supplier: {
@@ -121,6 +168,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                     company_type: item.supplier?.company_type_ref?.name ?? null,
                     sector: item.supplier?.sector_ref?.name ?? null,
                     average_rating: item.supplier?.average_rating ? Number(item.supplier.average_rating) : 0,
+                    review_count: item.supplier?.review_count ?? 0,
+                    transaction_count: item.supplier?.transaction_count ?? 0,
+                    avg_quality: Number(item.supplier?.avg_quality ?? 0),
+                    avg_compliance_seller: Number(item.supplier?.avg_compliance_seller ?? 0),
+                    avg_communication_seller: Number(item.supplier?.avg_communication_seller ?? 0),
+                    avg_price: Number(item.supplier?.avg_price ?? 0),
+                    seller_review_count: item.supplier?.seller_review_count ?? 0,
+                    avg_compliance_buyer: Number(item.supplier?.avg_compliance_buyer ?? 0),
+                    avg_reliability: Number(item.supplier?.avg_reliability ?? 0),
+                    avg_communication_buyer: Number(item.supplier?.avg_communication_buyer ?? 0),
+                    buyer_review_count: item.supplier?.buyer_review_count ?? 0,
                     name: item.supplier?.trade_name, // Mapping to match frontend expectations
                     initial: item.supplier?.trade_name?.[0]?.toUpperCase() || 'S'
                 }
@@ -135,6 +193,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     async findByRequestOwnerId(companyId: string, page: number, limit: number): Promise<PaginatedResult<any>> {
         const skip = (page - 1) * limit;
         const where = {
+            status: { notIn: ['accepted', 'rejected', 'expired'] as any },
             request: { company_id: companyId }
         };
 
@@ -154,6 +213,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                             company_type_ref: true,
                             sector_ref: true,
                             average_rating: true,
+                            review_count: true,
+                            transaction_count: true,
+                            avg_quality: true,
+                            avg_compliance_seller: true,
+                            avg_communication_seller: true,
+                            avg_price: true,
+                            seller_review_count: true,
+                            avg_compliance_buyer: true,
+                            avg_reliability: true,
+                            avg_communication_buyer: true,
+                            buyer_review_count: true,
                         }
                     },
                     request: {
@@ -168,13 +238,15 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 id: item.id,
                 request_id: item.request_id,
                 supplier_id: item.supplier_id,
-                unit_price: Number(item.unit_price),
+                unit_price_usd: Number(item.unit_price_usd),
                 quantity: Number(item.quantity),
-                total_amount: Number(item.total_amount),
+                total_amount_usd: Number(item.total_amount_usd),
                 payment_conditions: item.payment_conditions,
                 delivery_time: item.delivery_time,
+                estimated_delivery_hours: item.estimated_delivery_hours,
                 notes: item.notes,
                 status: item.status,
+                serial_number: item.serial_number,
                 created_at: item.created_at,
                 updated_at: item.updated_at,
                 supplier: {
@@ -182,6 +254,17 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                     company_type: item.supplier?.company_type_ref?.name ?? null,
                     sector: item.supplier?.sector_ref?.name ?? null,
                     average_rating: item.supplier?.average_rating ? Number(item.supplier.average_rating) : 0,
+                    review_count: item.supplier?.review_count ?? 0,
+                    transaction_count: item.supplier?.transaction_count ?? 0,
+                    avg_quality: Number(item.supplier?.avg_quality ?? 0),
+                    avg_compliance_seller: Number(item.supplier?.avg_compliance_seller ?? 0),
+                    avg_communication_seller: Number(item.supplier?.avg_communication_seller ?? 0),
+                    avg_price: Number(item.supplier?.avg_price ?? 0),
+                    seller_review_count: item.supplier?.seller_review_count ?? 0,
+                    avg_compliance_buyer: Number(item.supplier?.avg_compliance_buyer ?? 0),
+                    avg_reliability: Number(item.supplier?.avg_reliability ?? 0),
+                    avg_communication_buyer: Number(item.supplier?.avg_communication_buyer ?? 0),
+                    buyer_review_count: item.supplier?.buyer_review_count ?? 0,
                 },
                 request: item.request,
             })),
@@ -195,7 +278,7 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     async update(id: string, response: Partial<QuoteResponse>): Promise<QuoteResponse> {
         const dataToUpdate: any = {
             ...(response.company_offer_id !== undefined && { company_offer_id: response.company_offer_id }),
-            ...(response.unit_price !== undefined && { unit_price: new Prisma.Decimal(response.unit_price) }),
+            ...(response.unit_price_usd !== undefined && { unit_price_usd: new Prisma.Decimal(response.unit_price_usd) }),
             ...(response.quantity !== undefined && { quantity: new Prisma.Decimal(response.quantity) }),
             ...(response.payment_conditions !== undefined && { payment_conditions: response.payment_conditions }),
             ...(response.payment_condition_id !== undefined && {
@@ -209,19 +292,23 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                     : { connect: { id: (response as any).delivery_method_id } }
             }),
             ...(response.delivery_time !== undefined && { delivery_time: response.delivery_time }),
+            ...(response.estimated_delivery_hours !== undefined && { estimated_delivery_hours: response.estimated_delivery_hours }),
             ...(response.notes !== undefined && { notes: response.notes }),
             ...(response.has_guarantee !== undefined && { has_guarantee: response.has_guarantee }),
             ...(response.status !== undefined && { status: response.status as any }),
             ...(response.rejection_reason !== undefined && { rejection_reason: response.rejection_reason }),
+            ...((response as any).exchange_rate_id !== undefined && { exchange_rate_id: (response as any).exchange_rate_id }),
+            ...((response as any).payment_currency !== undefined && { payment_currency: (response as any).payment_currency }),
+            ...(response.formal_quote_url !== undefined && { formal_quote_url: response.formal_quote_url }),
         };
 
-        if (response.unit_price !== undefined || response.quantity !== undefined) {
+        if (response.unit_price_usd !== undefined || response.quantity !== undefined) {
              return prisma.$transaction(async (tx) => {
-                 const existing = await tx.quoteResponse.findUnique({ where: { id }, select: { unit_price: true, quantity: true } });
+                 const existing = await tx.quoteResponse.findUnique({ where: { id }, select: { unit_price_usd: true, quantity: true } });
                  if (existing) {
-                     const newUnitPrice = response.unit_price !== undefined ? new Prisma.Decimal(response.unit_price) : existing.unit_price;
+                     const newUnitPrice = response.unit_price_usd !== undefined ? new Prisma.Decimal(response.unit_price_usd) : existing.unit_price_usd;
                      const newQuantity = response.quantity !== undefined ? new Prisma.Decimal(response.quantity) : existing.quantity;
-                     dataToUpdate.total_amount = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
+                     dataToUpdate.total_amount_usd = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
                  }
                  const updated = await tx.quoteResponse.update({
                      where: { id },
@@ -242,6 +329,86 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
         await prisma.quoteResponse.delete({ where: { id } });
     }
 
+
+
+    async updateWithRevision(
+        id: string,
+        data: Partial<QuoteResponse>,
+        revision: RevisionData
+    ): Promise<QuoteResponse> {
+        return prisma.$transaction(async (tx) => {
+            // 1. Snapshot the current state before update
+            const current = await tx.quoteResponse.findUniqueOrThrow({ where: { id } });
+
+            // 2. Build update payload
+            const dataToUpdate: any = {
+                ...(data.unit_price_usd !== undefined && { unit_price_usd: new Prisma.Decimal(data.unit_price_usd) }),
+                ...(data.quantity !== undefined && { quantity: new Prisma.Decimal(data.quantity) }),
+                ...(data.payment_conditions !== undefined && { payment_conditions: data.payment_conditions }),
+                ...(data.delivery_time !== undefined && { delivery_time: data.delivery_time }),
+                ...(data.estimated_delivery_hours !== undefined && { estimated_delivery_hours: data.estimated_delivery_hours }),
+                ...(data.notes !== undefined && { notes: data.notes }),
+                ...(data.has_guarantee !== undefined && { has_guarantee: data.has_guarantee }),
+                ...(data.status !== undefined && { status: data.status as any }),
+                ...(data.rejection_reason !== undefined && { rejection_reason: data.rejection_reason }),
+                ...(data.formal_quote_url !== undefined && { formal_quote_url: data.formal_quote_url }),
+                ...(data.payment_condition_id !== undefined && {
+                    payment_condition: data.payment_condition_id === null
+                        ? { disconnect: true }
+                        : { connect: { id: data.payment_condition_id } }
+                }),
+                ...(data.delivery_method_id !== undefined && {
+                    delivery_method: data.delivery_method_id === null
+                        ? { disconnect: true }
+                        : { connect: { id: data.delivery_method_id } }
+                }),
+            };
+
+            // Recalculate total if price or quantity changed
+            if (data.unit_price_usd !== undefined || data.quantity !== undefined) {
+                const newUnitPrice = data.unit_price_usd !== undefined ? new Prisma.Decimal(data.unit_price_usd) : current.unit_price_usd;
+                const newQuantity = data.quantity !== undefined ? new Prisma.Decimal(data.quantity) : current.quantity;
+                dataToUpdate.total_amount_usd = new Prisma.Decimal(Number(newUnitPrice) * Number(newQuantity));
+            }
+
+            // 3. Update the quote response
+            const updated = await tx.quoteResponse.update({
+                where: { id },
+                data: dataToUpdate,
+            });
+
+            // 4. Create the revision snapshot
+            const snapshot = {
+                unit_price_usd: Number(current.unit_price_usd),
+                quantity: Number(current.quantity),
+                total_amount_usd: Number(current.total_amount_usd),
+                payment_conditions: current.payment_conditions,
+                payment_condition_id: current.payment_condition_id,
+                delivery_method_id: current.delivery_method_id,
+                delivery_time: current.delivery_time,
+                notes: current.notes,
+                has_guarantee: current.has_guarantee,
+                status: current.status,
+                formal_quote_url: current.formal_quote_url,
+                ...revision.snapshot,
+            };
+
+            await tx.quoteResponseRevision.create({
+                data: {
+                    quote_response_id: id,
+                    actor_company_id: revision.actorCompanyId,
+                    action: revision.action as any,
+                    snapshot,
+                },
+            });
+
+            return this.mapToEntity(updated);
+        }, {
+            maxWait: 300000,
+            timeout: 300000
+        });
+    }
+
     async findQuoteResponseAndSupplier(quoteResponseId: string) {
         const found = await prisma.quoteResponse.findUnique({
             where: { id: quoteResponseId },
@@ -258,6 +425,16 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                         review_count: true,
                         sector_id: true,
                         locations: true,
+                        transaction_count: true,
+                        avg_quality: true,
+                        avg_compliance_seller: true,
+                        avg_communication_seller: true,
+                        avg_price: true,
+                        seller_review_count: true,
+                        avg_compliance_buyer: true,
+                        avg_reliability: true,
+                        avg_communication_buyer: true,
+                        buyer_review_count: true,
                     }
                 },
                 request: {
@@ -273,9 +450,79 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
                 ...found.supplier,
                 sector: (found.supplier as any).sector_ref?.name ?? null,
                 company_type: (found.supplier as any).company_type_ref?.name ?? null,
+                average_rating: found.supplier?.average_rating ? Number(found.supplier.average_rating) : 0,
+                avg_quality: Number(found.supplier?.avg_quality ?? 0),
+                avg_compliance_seller: Number(found.supplier?.avg_compliance_seller ?? 0),
+                avg_communication_seller: Number(found.supplier?.avg_communication_seller ?? 0),
+                avg_price: Number(found.supplier?.avg_price ?? 0),
+                avg_compliance_buyer: Number(found.supplier?.avg_compliance_buyer ?? 0),
+                avg_reliability: Number(found.supplier?.avg_reliability ?? 0),
+                avg_communication_buyer: Number(found.supplier?.avg_communication_buyer ?? 0),
             },
             request: found.request
         };
+    }
+
+    async findAllAdmin(filters: any, page: number, limit: number): Promise<PaginatedResult<any>> {
+        const skip = (page - 1) * limit;
+        const where = this.buildAdminWhere(filters);
+
+        const [total, data] = await Promise.all([
+            prisma.quoteResponse.count({ where }),
+            prisma.quoteResponse.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    supplier: { select: { trade_name: true, logo_url: true } },
+                    request: { select: { product_service: true, serial_number: true } }
+                }
+            })
+        ]);
+
+        return {
+            items: data.map((item: any) => {
+                const entity = this.mapToEntity(item);
+                return {
+                    ...entity,
+                    supplier_name: item.supplier?.trade_name || 'N/A',
+                    request_product: item.request?.product_service || 'N/A',
+                    request_serial: item.request?.serial_number || 'N/A',
+                };
+            }),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
+    async findAdminExportBatch(filters: any, limit: number, cursor?: string): Promise<any[]> {
+        const where = this.buildAdminWhere(filters);
+        const data = await prisma.quoteResponse.findMany({
+            where,
+            take: limit,
+            ...(cursor && {
+                skip: 1,
+                cursor: { id: cursor },
+            }),
+            orderBy: { id: 'asc' },
+            include: {
+                supplier: { select: { trade_name: true, logo_url: true } },
+                request: { select: { product_service: true, serial_number: true } }
+            }
+        });
+
+        return data.map((item: any) => {
+            const entity = this.mapToEntity(item);
+            return {
+                ...entity,
+                supplier_name: item.supplier?.trade_name || 'N/A',
+                request_product: item.request?.product_service || 'N/A',
+                request_serial: item.request?.serial_number || 'N/A',
+            };
+        });
     }
 
     private mapToEntity(db: Prisma.QuoteResponseGetPayload<{}>): QuoteResponse {
@@ -284,17 +531,22 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
             db.request_id,
             db.supplier_id,
             db.company_offer_id,
-            Number(db.unit_price),
+            Number(db.unit_price_usd),
             Number(db.quantity),
             db.payment_conditions,
             (db as any).payment_condition_id ?? null,
             (db as any).delivery_method_id ?? null,
             db.delivery_time,
+            db.estimated_delivery_hours ?? null,
             db.notes,
             db.has_guarantee,
             db.status,
             db.rejection_reason,
-            Number(db.total_amount),
+            Number(db.total_amount_usd),
+            (db as any).exchange_rate_id ?? null,
+            (db as any).payment_currency ?? 'USD',
+            (db as any).formal_quote_url ?? null,
+            (db as any).serial_number ?? null,
             db.created_at,
             db.updated_at
         );

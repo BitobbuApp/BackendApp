@@ -1,0 +1,1 @@
+node scripts/ensure-gitmoji-prefix.mjs "$1" "$2"

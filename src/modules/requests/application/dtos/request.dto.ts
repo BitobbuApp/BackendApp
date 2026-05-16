@@ -20,13 +20,8 @@ export const createRequestDtoRequestSchema = Joi.object({
     city_id: Joi.number().integer().min(1).allow(null).optional(),
     reach_service: Joi.string().max(200).allow(null, '').optional(),
     expiration_date: Joi.date().iso().allow(null).optional(),
-    files: Joi.array().items(
-        Joi.object({
-            url: Joi.string().uri().required(),
-            file_name: Joi.string().allow(null, '').optional(),
-        })
-    ).optional()
-});
+    rawFiles: Joi.any().optional()
+}).options({ stripUnknown: true });
 
 export const updateRequestDtoRequestSchema = Joi.object({
     id: Joi.string().uuid().required(),
@@ -62,7 +57,7 @@ export const requestDtoResponseSchema = Joi.object({
     user_id: Joi.string().allow(null).optional(),
     product_service: Joi.string().required(),
     quantity: Joi.number().required(),
-    unit_of_measure: Joi.string().required(),
+    unit_of_measure: Joi.string().allow('').required(),
     unit_id: Joi.number().integer().required(),
     description: Joi.string().allow(null).optional(),
     category: Joi.string().allow(null).optional(),
@@ -85,6 +80,27 @@ export const requestDtoResponseSchema = Joi.object({
             created_at: Joi.date().iso().allow(null).optional(),
         })
     ).optional(),
+    company: Joi.object({
+        id: Joi.string().required(),
+        trade_name: Joi.string().required(),
+        logo_url: Joi.string().allow(null).optional(),
+        average_rating: Joi.number().allow(null).optional(),
+        bio: Joi.string().allow(null).optional(),
+        sector: Joi.string().allow(null).optional(),
+        company_type: Joi.string().allow(null).optional(),
+        review_count: Joi.number().optional(),
+        transaction_count: Joi.number().optional(),
+        avg_quality: Joi.number().optional(),
+        avg_compliance_seller: Joi.number().optional(),
+        avg_communication_seller: Joi.number().optional(),
+        avg_price: Joi.number().optional(),
+        seller_review_count: Joi.number().optional(),
+        avg_compliance_buyer: Joi.number().optional(),
+        avg_reliability: Joi.number().optional(),
+        avg_communication_buyer: Joi.number().optional(),
+        buyer_review_count: Joi.number().optional(),
+        locations: Joi.array().items(Joi.any()).optional(),
+    }).allow(null).optional(),
     created_at: Joi.date().iso().allow(null).optional(),
     updated_at: Joi.date().iso().allow(null).optional(),
 }).options({ stripUnknown: true });
@@ -104,7 +120,7 @@ export const marketplaceRequestDtoResponseSchema = Joi.object({
     user_id: Joi.string().allow(null).optional(),
     product_service: Joi.string().required(),
     quantity: Joi.number().required(),
-    unit_of_measure: Joi.string().required(),
+    unit_of_measure: Joi.string().allow('').required(),
     unit_id: Joi.number().integer().required(),
     description: Joi.string().allow(null).optional(),
     category: Joi.string().allow(null).optional(),
@@ -133,7 +149,23 @@ export const marketplaceRequestDtoResponseSchema = Joi.object({
         logo_url: Joi.string().allow(null).optional(),
         sector: Joi.string().allow(null).optional(),
         average_rating: Joi.number().allow(null).optional(),
+        bio: Joi.string().allow(null).optional(),
+        company_type: Joi.string().allow(null).optional(),
+        review_count: Joi.number().optional(),
+        transaction_count: Joi.number().optional(),
+        avg_quality: Joi.number().optional(),
+        avg_compliance_seller: Joi.number().optional(),
+        avg_communication_seller: Joi.number().optional(),
+        avg_price: Joi.number().optional(),
+        seller_review_count: Joi.number().optional(),
+        avg_compliance_buyer: Joi.number().optional(),
+        avg_reliability: Joi.number().optional(),
+        avg_communication_buyer: Joi.number().optional(),
+        buyer_review_count: Joi.number().optional(),
+        locations: Joi.array().items(Joi.any()).optional(),
     }).allow(null).optional(),
+    has_responded: Joi.boolean().optional(),
+    my_quote_status: Joi.string().allow(null).optional(),
     created_at: Joi.date().iso().allow(null).optional(),
     updated_at: Joi.date().iso().allow(null).optional(),
 }).options({ stripUnknown: true });

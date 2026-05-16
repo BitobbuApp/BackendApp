@@ -1,7 +1,11 @@
+import { prisma } from '../../../../shared/infrastructure/database';
+import { SubscriptionGuardService } from '../../../subscriptions/application/subscription-guard.service';
+import { PrismaSubscriptionRepository } from '../../../subscriptions/infrastructure/persistence/PrismaSubscriptionRepository';
 // src/modules/companyOffers/infrastructure/http/companyOfferRoutes.ts
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateCompanyOfferUseCase } from '../../application/createCompanyOfferUseCase';
 import { GetCompanyOfferByIdUseCase } from '../../application/getCompanyOfferByIdUseCase';
 import { UpdateCompanyOfferUseCase } from '../../application/updateCompanyOfferUseCase';
@@ -13,15 +17,21 @@ export async function companyOfferRoutes(app: FastifyInstance) {
 
     // POST /company-offers (JWT protected)
     app.post('/',
-        { preHandler: [authMiddleware] } as any,
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
             const useCase = new CreateCompanyOfferUseCase();
             // Assuming the JWT payload has user.company_id
             // We use the company_id from the body or fallback to user's company
             const company_id = request.body.company_id || request.user.companyId;
+            const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
+            const activeOffersCount = await prisma.companyOffer.count({
+                where: { company_id }
+            });
+            await guard.authorize(company_id, 'offer', activeOffersCount);
             const result = await useCase.execute({
                 ...request.body,
-                company_id: company_id
+                company_id: company_id,
+                rawFiles: request.uploadedFiles || []
             });
             return ApiResponse.success(reply, result, "Company offer created", 201);
         }
