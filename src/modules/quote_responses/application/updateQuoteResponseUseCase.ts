@@ -8,7 +8,7 @@ import Joi from "joi";
 interface UpdateQuoteResponseDto {
     id: string;
     company_offer_id?: string | null;
-    unit_price?: number;
+    unit_price_usd?: number;
     quantity?: number;
     payment_condition_id?: string | null;
     delivery_method_id?: string | null;
@@ -37,7 +37,7 @@ export class UpdateQuoteResponseUseCase extends UseCase<UpdateQuoteResponseDto, 
         return {
             id: updated.id,
             company_offer_id: updated.company_offer_id,
-            unit_price: Number(updated.unit_price),
+            unit_price_usd: Number(updated.unit_price_usd),
             quantity: updated.quantity,
             payment_condition_id: updated.payment_condition_id,
             delivery_method_id: updated.delivery_method_id,
@@ -46,7 +46,7 @@ export class UpdateQuoteResponseUseCase extends UseCase<UpdateQuoteResponseDto, 
             has_guarantee: updated.has_guarantee,
             status: updated.status,
             rejection_reason: updated.rejection_reason,
-            total_amount: Number(updated.total_amount),
+            total_amount_usd: Number(updated.total_amount_usd),
             created_at: updated.created_at,
         };
     }

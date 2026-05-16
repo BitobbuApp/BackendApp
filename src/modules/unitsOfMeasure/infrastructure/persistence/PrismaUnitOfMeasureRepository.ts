@@ -5,7 +5,8 @@ import { UnitOfMeasureRepository } from "../../domain/repositories/unitOfMeasure
 export class PrismaUnitOfMeasureRepository implements UnitOfMeasureRepository {
     async list(): Promise<UnitOfMeasure[]> {
         const items = await prisma.unitOfMeasureDict.findMany({
-            orderBy: { name: "asc" }
+            where: { is_active: true },
+            orderBy: { name_es: "asc" }
         });
 
         return items.map((item) => this.mapToEntity(item));
@@ -14,8 +15,10 @@ export class PrismaUnitOfMeasureRepository implements UnitOfMeasureRepository {
     private mapToEntity(db: any): UnitOfMeasure {
         return new UnitOfMeasure(
             db.id,
-            db.name,
-            db.abbreviation
+            db.name_en,
+            db.name_es ?? null,
+            db.abbreviation,
+            db.is_active
         );
     }
 }

@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
+import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { CreateQuoteResponseUseCase } from '../../application/createQuoteResponseUseCase';
 import { GetQuoteResponseByIdUseCase } from '../../application/getQuoteResponseByIdUseCase';
 import { GetQuoteResponseWithSupplierUseCase } from '../../application/getQuoteResponseWithSupplierUseCase';
@@ -9,18 +10,26 @@ import { ListReceivedQuoteResponsesUseCase } from '../../application/listReceive
 import { ListQuoteResponsesByRequestIdUseCase } from '../../application/listQuoteResponsesByRequestIdUseCase';
 import { UpdateQuoteResponseUseCase } from '../../application/updateQuoteResponseUseCase';
 import { DeleteQuoteResponseUseCase } from '../../application/deleteQuoteResponseUseCase';
+import { PerformQuoteActionUseCase } from '../../application/performQuoteActionUseCase';
+import { requireBuyer, requireSeller } from '../../../../shared/infrastructure/http/middlewares/roleMiddleware';
+import { SubscriptionGuardService } from '../../../subscriptions/application/subscription-guard.service';
+import { PrismaSubscriptionRepository } from '../../../subscriptions/infrastructure/persistence/PrismaSubscriptionRepository';
 
 export async function quoteResponseRoutes(app: FastifyInstance) {
 
-    // POST /quote-responses (JWT protected)
+    // POST /quote-responses (JWT protected — only sellers can submit a quote)
     app.post('/',
-        { preHandler: [authMiddleware] } as any,
+        { preHandler: [authMiddleware, requireSeller] } as any,
         async (request: any, reply: any) => {
+            const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
+            await guard.authorize(request.user.companyId, 'quote');
+
             const useCase = new CreateQuoteResponseUseCase();
             const result = await useCase.execute({
                 ...request.body,
                 supplier_id: request.user.companyId
             });
+            await guard.incrementUsage(request.user.companyId, 'quote');
             return ApiResponse.success(reply, result, "Quote response created", 201);
         }
     );
@@ -110,6 +119,23 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
             const useCase = new DeleteQuoteResponseUseCase();
             await useCase.execute(request.params.id);
             return ApiResponse.success(reply, null, "Quote response removed");
+        }
+    );
+
+    // POST /quote-responses/:id/action (JWT protected — State Machine entry point)
+    app.post('/:id/action',
+        { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
+        async (request: any, reply: any) => {
+            const { action, payload } = request.body;
+            const useCase = new PerformQuoteActionUseCase();
+            const result = await useCase.execute({
+                quoteResponseId: request.params.id,
+                action,
+                actorCompanyId: request.user.companyId,
+                payload: payload || {},
+                rawFiles: request.uploadedFiles || [],
+            });
+            return ApiResponse.success(reply, result, `Action "${action}" performed successfully`);
         }
     );
 }

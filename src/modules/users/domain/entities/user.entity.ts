@@ -14,6 +14,8 @@ export class User {
         public country_id: number | null,
         public sector_id: number | null,
         public state_id: number | null,
+        public can_buy: boolean | null,
+        public can_sell: boolean | null,
         public is_active: boolean | null,
         public last_access: Date | null,
         public created_at: Date | null,
@@ -31,6 +33,8 @@ export class User {
         this.country_id = country_id;
         this.sector_id = sector_id;
         this.state_id = state_id;
+        this.can_buy = can_buy;
+        this.can_sell = can_sell;
         this.is_active = is_active;
         this.last_access = last_access;
         this.created_at = created_at;

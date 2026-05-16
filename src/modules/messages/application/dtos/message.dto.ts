@@ -12,7 +12,10 @@ export const createMessageDtoRequestSchema = Joi.object({
 export const messageDtoResponseSchema = Joi.object({
     id: Joi.string().uuid().required(),
     conversation_id: Joi.string().uuid().required(),
-    sender_id: Joi.string().uuid().required(),
+    sender_id: Joi.string().uuid().allow(null).required(),
+    message_type: Joi.string().optional().default('user'),
+    event_key: Joi.string().optional().allow(null),
+    event_payload: Joi.any().optional().allow(null),
     client_msg_id: Joi.string().uuid().optional().allow(null),
     content: Joi.string().optional().allow(null, ''),
     file_url: Joi.string().uri().optional().allow(null, ''),

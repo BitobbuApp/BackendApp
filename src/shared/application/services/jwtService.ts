@@ -1,9 +1,14 @@
 import jwt from 'jsonwebtoken';
 
 export interface TokenUserPayload {
-    userId: string;
-    companyId: string | null;
+    userId?: string;
+    companyId?: string | null;
     email: string;
+
+    actorType?: 'user' | 'admin';
+    adminId?: string;
+    role?: string;
+    status?: string;
 }
 
 export class JwtService {
