@@ -23,11 +23,11 @@ export async function companyOfferRoutes(app: FastifyInstance) {
             // Assuming the JWT payload has user.company_id
             // We use the company_id from the body or fallback to user's company
             const company_id = request.body.company_id || request.user.companyId;
-            const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
-            const activeOffersCount = await prisma.companyOffer.count({
-                where: { company_id }
-            });
-            await guard.authorize(company_id, 'offer', activeOffersCount);
+            //const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
+            //const activeOffersCount = await prisma.companyOffer.count({
+            //    where: { company_id }
+            //});
+            //await guard.authorize(company_id, 'offer', activeOffersCount);
             const result = await useCase.execute({
                 ...request.body,
                 company_id: company_id,
