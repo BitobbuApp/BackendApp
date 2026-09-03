@@ -21,15 +21,15 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
     app.post('/',
         { preHandler: [authMiddleware, requireSeller] } as any,
         async (request: any, reply: any) => {
-            //const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
-            //await guard.authorize(request.user.companyId, 'quote');
+            // const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
+            // await guard.authorize(request.user.companyId, 'quote');
 
             const useCase = new CreateQuoteResponseUseCase();
             const result = await useCase.execute({
                 ...request.body,
                 supplier_id: request.user.companyId
             });
-            //await guard.incrementUsage(request.user.companyId, 'quote');
+            // await guard.incrementUsage(request.user.companyId, 'quote');
             return ApiResponse.success(reply, result, "Quote response created", 201);
         }
     );
