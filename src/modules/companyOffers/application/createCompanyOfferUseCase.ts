@@ -12,6 +12,12 @@ interface CreateCompanyOfferPhotoDto {
     sort_order?: number;
 }
 
+interface CreateCompanyOfferPricingTierDto {
+    min_quantity: number;
+    max_quantity?: number | null;
+    price_usd: number;
+}
+
 interface CreateCompanyOfferDto {
     company_id: string;
     name: string;
@@ -26,6 +32,7 @@ interface CreateCompanyOfferDto {
     is_active?: boolean;
     rating?: number | null;
     photos?: CreateCompanyOfferPhotoDto[];
+    pricing_tiers?: CreateCompanyOfferPricingTierDto[];
     rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }
 
