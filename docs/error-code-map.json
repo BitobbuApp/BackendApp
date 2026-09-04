@@ -1,0 +1,183 @@
+{
+  "version": "1.0.0",
+  "generatedFrom": "docs/frontend-error-integration-manual.md",
+  "defaultFallback": {
+    "code": "INTERNAL_SERVER_ERROR",
+    "status": 500,
+    "category": "INTERNAL",
+    "userMessage": "Something went wrong. Please try again."
+  },
+  "errorCodes": {
+    "VALIDATION_ERROR": {
+      "status": 400,
+      "category": "VALIDATION",
+      "backendMessagePattern": "Validation Failed or field validation text",
+      "userMessage": "Please review the highlighted fields."
+    },
+    "AUTH_MISSING_TOKEN": {
+      "status": 401,
+      "category": "AUTHENTICATION",
+      "backendMessagePattern": "Authentication token missing...",
+      "userMessage": "Your session is missing. Please sign in again."
+    },
+    "AUTH_INVALID_TOKEN": {
+      "status": 401,
+      "category": "AUTHENTICATION",
+      "backendMessagePattern": "Invalid or expired token",
+      "userMessage": "Your session expired. Please sign in again."
+    },
+    "USER_INVALID_CREDENTIALS": {
+      "status": 401,
+      "category": "AUTHENTICATION",
+      "backendMessagePattern": "Invalid email or password",
+      "userMessage": "Email or password is incorrect."
+    },
+    "USER_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "User {identifier} not found",
+      "userMessage": "We could not find that user."
+    },
+    "USER_ALREADY_EXISTS": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "User with email {email} already exists",
+      "userMessage": "An account with this email already exists."
+    },
+    "COMPANY_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "Company with ID {id} not found",
+      "userMessage": "Company not found."
+    },
+    "COMPANY_ALREADY_EXISTS": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "Company with Tax ID {taxId} already exists",
+      "userMessage": "A company with this Tax ID already exists."
+    },
+    "LOCATION_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "Location with ID {id} not found",
+      "userMessage": "Location not found."
+    },
+    "CONTACT_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "Contact with ID {id} not found",
+      "userMessage": "Contact not found."
+    },
+    "COMPANY_PRIMARY_CONTACT_DELETE_FORBIDDEN": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "Cannot delete the primary contact...",
+      "userMessage": "Set another primary contact before deleting this one."
+    },
+    "COMPANY_MAIN_HEADQUARTERS_DELETE_FORBIDDEN": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "Cannot delete the main headquarters...",
+      "userMessage": "Set another main location before deleting this one."
+    },
+    "REQUEST_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "Request with ID {id} not found",
+      "userMessage": "Request not found."
+    },
+    "QUOTE_RESPONSE_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "Quote response with ID {id} not found",
+      "userMessage": "Quote response not found."
+    },
+    "QUOTE_RESPONSE_DUPLICATE": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "Quote response for request {id}... already exists",
+      "userMessage": "A quote response for this request already exists."
+    },
+    "QUOTE_RESPONSE_INVALID_TRANSITION": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "Transition-related message",
+      "userMessage": "This status change is not allowed."
+    },
+    "QUOTE_RESPONSE_UNAUTHORIZED_ACTOR": {
+      "status": 403,
+      "category": "AUTHORIZATION",
+      "backendMessagePattern": "Company role \"{role}\" is not authorized...",
+      "userMessage": "You do not have permission for this action."
+    },
+    "TRANSACTION_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "Transaction with ID {id} not found",
+      "userMessage": "Transaction not found."
+    },
+    "TRANSACTION_DUPLICATE": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "Transaction for quote response ID \"{id}\" already exists",
+      "userMessage": "A transaction already exists for this quote response."
+    },
+    "TRANSACTION_INVALID_TRANSITION": {
+      "status": 409,
+      "category": "CONFLICT",
+      "backendMessagePattern": "Transition-related message",
+      "userMessage": "This status change is not allowed."
+    },
+    "TRANSACTION_UNAUTHORIZED_ACTOR": {
+      "status": 403,
+      "category": "AUTHORIZATION",
+      "backendMessagePattern": "Company role \"{role}\" is not authorized...",
+      "userMessage": "You do not have permission for this action."
+    },
+    "REVIEW_NOT_FOUND": {
+      "status": 404,
+      "category": "NOT_FOUND",
+      "backendMessagePattern": "Pending review not found (or variant)",
+      "userMessage": "Review not found."
+    },
+    "REVIEW_UNAUTHORIZED_ACTOR": {
+      "status": 403,
+      "category": "AUTHORIZATION",
+      "backendMessagePattern": "You are not the buyer/supplier...",
+      "userMessage": "You cannot submit this review."
+    },
+    "REVIEW_ALREADY_SUBMITTED": {
+      "status": 400,
+      "category": "BUSINESS",
+      "backendMessagePattern": "You have already submitted your review",
+      "userMessage": "You already submitted this review."
+    },
+    "REVIEW_PERIOD_EXPIRED": {
+      "status": 400,
+      "category": "BUSINESS",
+      "backendMessagePattern": "The review period has expired",
+      "userMessage": "Review period has expired."
+    },
+    "BUSINESS_ERROR": {
+      "status": 400,
+      "statusBehavior": "Use actual HTTP response status when available",
+      "category": "BUSINESS",
+      "backendMessagePattern": "Legacy custom error with only statusCode",
+      "userMessage": "This operation cannot be completed right now."
+    },
+    "INTERNAL_SERVER_ERROR": {
+      "status": 500,
+      "statusBehavior": "Use actual HTTP response status when available",
+      "category": "INTERNAL",
+      "backendMessagePattern": "An unexpected error occurred (or provided message)",
+      "userMessage": "Something went wrong. Please try again."
+    }
+  },
+  "legacyFallbackCases": [
+    "ConversationNotFoundError / ConversationAccessDeniedError",
+    "CompanyOfferNotFoundError",
+    "OnboardingStatusNotFoundError",
+    "ApiResponse.error(...) calls without explicit code/category",
+    "ApplicationError(400, ...) without explicit code/category"
+  ]
+}
