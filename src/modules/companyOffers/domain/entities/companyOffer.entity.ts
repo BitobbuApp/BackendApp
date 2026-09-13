@@ -10,6 +10,17 @@ export class CompanyOfferPhoto {
     ) { }
 }
 
+export class CompanyOfferPricingTier {
+    constructor(
+        public id: string,
+        public offer_id: string,
+        public min_quantity: number,
+        public max_quantity: number | null,
+        public price_usd: number,
+        public created_at: Date | null = null
+    ) { }
+}
+
 export class CompanyOffer {
     constructor(
         public id: string,
@@ -28,8 +39,10 @@ export class CompanyOffer {
         public video_url: string | null = null,
         public is_active: boolean = true,
         public rating: number | null = 0.00,
+        public deleted_at: Date | null = null,
         public created_at: Date | null = null,
         public updated_at: Date | null = null,
-        public photos: CompanyOfferPhoto[] = []
+        public photos: CompanyOfferPhoto[] = [],
+        public pricing_tiers: CompanyOfferPricingTier[] = []
     ) { }
 }
