@@ -1,6 +1,6 @@
 // src/modules/companyOffers/infrastructure/persistence/PrismaCompanyOfferRepository.ts
 import { CompanyOfferRepository } from "../../domain/repositories/companyOffer.repository";
-import { CompanyOffer, CompanyOfferPhoto } from "../../domain/entities/companyOffer.entity";
+import { CompanyOffer, CompanyOfferPhoto, CompanyOfferPricingTier } from "../../domain/entities/companyOffer.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 
 export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
@@ -29,10 +29,21 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             };
         }
 
+        if (offer.pricing_tiers && offer.pricing_tiers.length > 0) {
+            dataToCreate.pricing_tiers = {
+                create: offer.pricing_tiers.map((tier: Partial<CompanyOfferPricingTier>) => ({
+                    min_quantity: tier.min_quantity!,
+                    max_quantity: tier.max_quantity ?? null,
+                    price_usd: tier.price_usd!
+                }))
+            };
+        }
+
         const created = await prisma.companyOffer.create({
             data: dataToCreate,
             include: {
                 photos: true,
+                pricing_tiers: true,
                 category: true,
                 supplier_type: true,
                 unit_of_measure: true,
@@ -42,9 +53,9 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     }
 
     async findById(id: string): Promise<CompanyOffer | null> {
-        const found = await prisma.companyOffer.findUnique({
-            where: { id },
-            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
+        const found = await prisma.companyOffer.findFirst({
+            where: { id, deleted_at: null },
+            include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true }
         });
         if (!found) return null;
         return this.mapToEntity(found);
@@ -52,8 +63,8 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
 
     async findByCompanyId(companyId: string): Promise<CompanyOffer[]> {
         const list = await prisma.companyOffer.findMany({
-            where: { company_id: companyId },
-            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
+            where: { company_id: companyId, deleted_at: null },
+            include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true }
         });
         return list.map((item: any) => this.mapToEntity(item));
     }
@@ -61,11 +72,12 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     async findAllWithPagination(page: number, limit: number): Promise<{ data: CompanyOffer[], total: number }> {
         const skip = (page - 1) * limit;
         const [total, list] = await Promise.all([
-            prisma.companyOffer.count(),
+            prisma.companyOffer.count({ where: { deleted_at: null } }),
             prisma.companyOffer.findMany({
                 skip,
                 take: limit,
-                include: { photos: true, category: true, supplier_type: true, unit_of_measure: true },
+                where: { deleted_at: null },
+                include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true },
                 orderBy: { created_at: 'desc' }
             })
         ]);
@@ -102,21 +114,39 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             };
         }
 
+        if (offer.pricing_tiers !== undefined) {
+            dataToUpdate.pricing_tiers = {
+                deleteMany: {},
+                create: offer.pricing_tiers.map((tier: Partial<CompanyOfferPricingTier>) => ({
+                    min_quantity: tier.min_quantity!,
+                    max_quantity: tier.max_quantity ?? null,
+                    price_usd: tier.price_usd!
+                }))
+            };
+        }
+
         const updated = await prisma.companyOffer.update({
             where: { id },
             data: dataToUpdate,
-            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
+            include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true }
         });
         return this.mapToEntity(updated);
     }
 
     async delete(id: string): Promise<void> {
-        await prisma.companyOffer.delete({ where: { id } });
+        await prisma.companyOffer.update({
+            where: { id },
+            data: { deleted_at: new Date(), is_active: false }
+        });
     }
 
-    private mapToEntity(db: any): CompanyOffer {
+    private mapToEntity = (db: any): CompanyOffer => {
         const photos = db.photos?.map((p: any) => new CompanyOfferPhoto(
             p.id, p.offer_id, p.url, p.sort_order, p.created_at
+        )) || [];
+
+        const tiers = db.pricing_tiers?.map((t: any) => new CompanyOfferPricingTier(
+            t.id, t.offer_id, t.min_quantity, t.max_quantity, t.price_usd ? Number(t.price_usd) : 0, t.created_at
         )) || [];
 
         return new CompanyOffer(
@@ -136,9 +166,11 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             db.video_url,
             db.is_active,
             db.rating ? Number(db.rating) : 0,
+            db.deleted_at ?? null,
             db.created_at,
             db.updated_at,
-            photos
+            photos,
+            tiers
         );
     }
 }

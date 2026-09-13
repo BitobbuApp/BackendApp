@@ -11,6 +11,12 @@ interface UpdateCompanyOfferPhotoDto {
     sort_order?: number;
 }
 
+interface UpdateCompanyOfferPricingTierDto {
+    min_quantity: number;
+    max_quantity?: number | null;
+    price_usd: number;
+}
+
 interface UpdateCompanyOfferDto {
     id: string;
     name?: string;
@@ -25,6 +31,7 @@ interface UpdateCompanyOfferDto {
     is_active?: boolean;
     rating?: number | null;
     photos?: UpdateCompanyOfferPhotoDto[];
+    pricing_tiers?: UpdateCompanyOfferPricingTierDto[];
 }
 
 export class UpdateCompanyOfferUseCase extends UseCase<UpdateCompanyOfferDto, any> {
@@ -52,6 +59,15 @@ export class UpdateCompanyOfferUseCase extends UseCase<UpdateCompanyOfferDto, an
             payload.photos = payload.photos.map((p: any) => ({
                 url: p.url,
                 sort_order: p.sort_order ?? 0
+            }));
+        }
+
+        // Maps pricing tiers if needed for the repo
+        if (payload.pricing_tiers) {
+            payload.pricing_tiers = payload.pricing_tiers.map((t: any) => ({
+                min_quantity: t.min_quantity,
+                max_quantity: t.max_quantity ?? null,
+                price_usd: t.price_usd
             }));
         }
 
