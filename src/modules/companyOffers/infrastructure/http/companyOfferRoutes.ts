@@ -28,6 +28,15 @@ export async function companyOfferRoutes(app: FastifyInstance) {
             //    where: { company_id }
             //});
             //await guard.authorize(company_id, 'offer', activeOffersCount);
+            // The multipart parser might leave pricing_tiers as a JSON string
+            if (request.body.pricing_tiers && typeof request.body.pricing_tiers === 'string') {
+                try {
+                    request.body.pricing_tiers = JSON.parse(request.body.pricing_tiers);
+                } catch (e) {
+                    // Let Joi validation fail if it's invalid JSON
+                }
+            }
+
             const result = await useCase.execute({
                 ...request.body,
                 company_id: company_id,

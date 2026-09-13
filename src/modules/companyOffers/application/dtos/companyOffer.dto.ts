@@ -29,7 +29,7 @@ export const createCompanyOfferDtoRequestSchema = Joi.object({
     rating: Joi.number().precision(2).min(0).max(5).allow(null).optional(),
     photos: Joi.array().items(companyOfferPhotoDtoSchema).optional().default([]),
     pricing_tiers: Joi.array().items(companyOfferPricingTierDtoSchema).optional().default([]),
-    rawFiles: Joi.array().items(Joi.object()).optional(),
+    rawFiles: Joi.any().optional(),
     files: Joi.any().optional()
 });
 

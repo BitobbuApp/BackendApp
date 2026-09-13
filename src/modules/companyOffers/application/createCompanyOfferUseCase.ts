@@ -56,6 +56,8 @@ export class CreateCompanyOfferUseCase extends UseCase<CreateCompanyOfferDto, an
         if (data.rawFiles && data.rawFiles.length > 0) {
             const publicUrlBase = process.env.S3_PUBLIC_URL || 'https://pub-763f58343d734ddfbcf74e591370f038.r2.dev';
 
+            console.log("Raw files to upload: ", data.rawFiles.map(f => ({ file_name: f.file_name, mime_type: f.mime_type })));
+
             for (const file of data.rawFiles) {
                 try {
                     const result = await this.uploadDocumentUseCase.execute({
