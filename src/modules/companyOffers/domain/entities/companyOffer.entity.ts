@@ -30,6 +30,7 @@ export class CompanyOffer {
         public rating: number | null = 0.00,
         public created_at: Date | null = null,
         public updated_at: Date | null = null,
-        public photos: CompanyOfferPhoto[] = []
+        public photos: CompanyOfferPhoto[] = [],
+        public company_details: any | null = null
     ) { }
 }

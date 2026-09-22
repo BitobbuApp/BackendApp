@@ -51,6 +51,19 @@ export const companyOfferPhotoDtoResponseSchema = Joi.object({
     created_at: Joi.date().allow(null).optional()
 }).options({ stripUnknown: true });
 
+export const companyOfferCompanyLocationDtoResponseSchema = Joi.object({
+    country_id: Joi.number().integer().allow(null).optional(),
+    state_id: Joi.number().integer().allow(null).optional(),
+    city_id: Joi.number().integer().allow(null).optional()
+}).options({ stripUnknown: true });
+
+export const companyOfferCompanyDetailsDtoResponseSchema = Joi.object({
+    trade_name: Joi.string().required(),
+    legal_name: Joi.string().allow(null).optional(),
+    logo_url: Joi.string().allow(null).optional(),
+    locations: Joi.array().items(companyOfferCompanyLocationDtoResponseSchema).optional().default([])
+}).options({ stripUnknown: true });
+
 export const companyOfferDtoResponseSchema = Joi.object({
     id: Joi.string().uuid().required(),
     company_id: Joi.string().uuid().required(),
@@ -70,8 +83,22 @@ export const companyOfferDtoResponseSchema = Joi.object({
     rating: Joi.number().allow(null).optional(),
     created_at: Joi.date().allow(null).optional(),
     updated_at: Joi.date().allow(null).optional(),
-    photos: Joi.array().items(companyOfferPhotoDtoResponseSchema).optional().default([])
+    photos: Joi.array().items(companyOfferPhotoDtoResponseSchema).optional().default([]),
+    company_details: companyOfferCompanyDetailsDtoResponseSchema.allow(null).optional()
 }).options({ stripUnknown: true });
+
+export const searchMarketplaceDtoRequestSchema = Joi.object({
+    searchTerm: Joi.string().allow('', null).optional(),
+    categoryId: Joi.number().integer().min(1).allow(null).optional(),
+    supplierTypeId: Joi.number().integer().min(1).allow(null).optional(),
+    minPrice: Joi.number().min(0).allow(null).optional(),
+    maxPrice: Joi.number().min(0).allow(null).optional(),
+    countryId: Joi.number().integer().min(1).allow(null).optional(),
+    stateId: Joi.number().integer().min(1).allow(null).optional(),
+    sortBy: Joi.string().valid('price_asc', 'price_desc', 'rating_desc', 'newest').default('newest'),
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20)
+});
 
 export const companyOfferListDtoResponseSchema = Joi.array()
     .items(companyOfferDtoResponseSchema);

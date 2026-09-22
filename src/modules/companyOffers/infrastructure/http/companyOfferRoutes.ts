@@ -12,8 +12,18 @@ import { UpdateCompanyOfferUseCase } from '../../application/updateCompanyOfferU
 import { DeleteCompanyOfferUseCase } from '../../application/deleteCompanyOfferUseCase';
 import { ListCompanyOffersByCompanyUseCase } from '../../application/listCompanyOffersByCompanyUseCase';
 import { ListCompanyOffersUseCase } from '../../application/listCompanyOffersUseCase';
+import { SearchMarketplaceOffersUseCase } from '../../application/searchMarketplaceOffersUseCase';
 
 export async function companyOfferRoutes(app: FastifyInstance) {
+
+    // GET /company-offers/marketplace (Public)
+    app.get('/marketplace',
+        async (request: any, reply: any) => {
+            const useCase = new SearchMarketplaceOffersUseCase();
+            const result = await useCase.execute(request.query);
+            return ApiResponse.success(reply, result, "Marketplace offers retrieved");
+        }
+    );
 
     // POST /company-offers (JWT protected)
     app.post('/',
