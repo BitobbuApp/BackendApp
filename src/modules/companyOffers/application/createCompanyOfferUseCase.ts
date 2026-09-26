@@ -12,6 +12,12 @@ interface CreateCompanyOfferPhotoDto {
     sort_order?: number;
 }
 
+interface CreateCompanyOfferPricingTierDto {
+    min_quantity: number;
+    max_quantity?: number | null;
+    price_usd: number;
+}
+
 interface CreateCompanyOfferDto {
     company_id: string;
     name: string;
@@ -26,6 +32,7 @@ interface CreateCompanyOfferDto {
     is_active?: boolean;
     rating?: number | null;
     photos?: CreateCompanyOfferPhotoDto[];
+    pricing_tiers?: CreateCompanyOfferPricingTierDto[];
     rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }
 
@@ -48,6 +55,8 @@ export class CreateCompanyOfferUseCase extends UseCase<CreateCompanyOfferDto, an
         
         if (data.rawFiles && data.rawFiles.length > 0) {
             const publicUrlBase = process.env.S3_PUBLIC_URL || 'https://pub-763f58343d734ddfbcf74e591370f038.r2.dev';
+
+            console.log("Raw files to upload: ", data.rawFiles.map(f => ({ file_name: f.file_name, mime_type: f.mime_type })));
 
             for (const file of data.rawFiles) {
                 try {

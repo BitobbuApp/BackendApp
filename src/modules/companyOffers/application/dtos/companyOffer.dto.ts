@@ -7,6 +7,12 @@ export const companyOfferPhotoDtoSchema = Joi.object({
     sort_order: Joi.number().integer().min(0).default(0)
 });
 
+export const companyOfferPricingTierDtoSchema = Joi.object({
+    min_quantity: Joi.number().integer().min(1).required(),
+    max_quantity: Joi.number().integer().min(1).allow(null).optional(),
+    price_usd: Joi.number().precision(2).min(0).required()
+});
+
 // --- Request Schemas ---
 export const createCompanyOfferDtoRequestSchema = Joi.object({
     company_id: Joi.string().uuid().required(),
@@ -22,7 +28,8 @@ export const createCompanyOfferDtoRequestSchema = Joi.object({
     is_active: Joi.boolean().default(true),
     rating: Joi.number().precision(2).min(0).max(5).allow(null).optional(),
     photos: Joi.array().items(companyOfferPhotoDtoSchema).optional().default([]),
-    rawFiles: Joi.array().items(Joi.object()).optional(),
+    pricing_tiers: Joi.array().items(companyOfferPricingTierDtoSchema).optional().default([]),
+    rawFiles: Joi.any().optional(),
     files: Joi.any().optional()
 });
 
@@ -39,7 +46,8 @@ export const updateCompanyOfferDtoRequestSchema = Joi.object({
     video_url: Joi.string().uri().allow(null, '').optional(),
     is_active: Joi.boolean().optional(),
     rating: Joi.number().precision(2).min(0).max(5).allow(null).optional(),
-    photos: Joi.array().items(companyOfferPhotoDtoSchema).optional()
+    photos: Joi.array().items(companyOfferPhotoDtoSchema).optional(),
+    pricing_tiers: Joi.array().items(companyOfferPricingTierDtoSchema).optional()
 });
 
 // --- Response Schemas ---
@@ -65,6 +73,14 @@ export const companyOfferCompanyDetailsDtoResponseSchema = Joi.object({
     locations: Joi.array().items(companyOfferCompanyLocationDtoResponseSchema).optional().default([])
 }).options({ stripUnknown: true });
 
+export const companyOfferPricingTierDtoResponseSchema = Joi.object({
+    id: Joi.string().uuid().required(),
+    offer_id: Joi.string().uuid().required(),
+    min_quantity: Joi.number().integer().required(),
+    max_quantity: Joi.number().integer().allow(null).optional(),
+    price_usd: Joi.number().required(),
+    created_at: Joi.date().allow(null).optional()
+}).options({ stripUnknown: true });
 export const companyOfferDtoResponseSchema = Joi.object({
     id: Joi.string().uuid().required(),
     company_id: Joi.string().uuid().required(),
@@ -82,10 +98,12 @@ export const companyOfferDtoResponseSchema = Joi.object({
     video_url: Joi.string().allow('', null).optional(),
     is_active: Joi.boolean().required(),
     rating: Joi.number().allow(null).optional(),
+    deleted_at: Joi.date().allow(null).optional(),
     created_at: Joi.date().allow(null).optional(),
     updated_at: Joi.date().allow(null).optional(),
     photos: Joi.array().items(companyOfferPhotoDtoResponseSchema).optional().default([]),
-    company_details: companyOfferCompanyDetailsDtoResponseSchema.allow(null).optional()
+    company_details: companyOfferCompanyDetailsDtoResponseSchema.allow(null).optional(),
+    pricing_tiers: Joi.array().items(companyOfferPricingTierDtoResponseSchema).optional().default([])
 }).options({ stripUnknown: true });
 
 export const searchMarketplaceDtoRequestSchema = Joi.object({
