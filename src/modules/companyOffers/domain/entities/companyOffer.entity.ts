@@ -43,6 +43,7 @@ export class CompanyOffer {
         public created_at: Date | null = null,
         public updated_at: Date | null = null,
         public photos: CompanyOfferPhoto[] = [],
-        public pricing_tiers: CompanyOfferPricingTier[] = []
+        public pricing_tiers: CompanyOfferPricingTier[] = [],
+        public company_details: any | null = null
     ) { }
 }
