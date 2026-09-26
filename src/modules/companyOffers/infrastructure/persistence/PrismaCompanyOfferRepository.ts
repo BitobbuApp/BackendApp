@@ -76,6 +76,80 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
         };
     }
 
+    async searchMarketplace(filters: any, pagination: { page: number; limit: number }): Promise<{ data: CompanyOffer[], total: number }> {
+        const { page, limit } = pagination;
+        const skip = (page - 1) * limit;
+
+        const where: any = { is_active: true };
+
+        if (filters.searchTerm) {
+            where.OR = [
+                { name: { contains: filters.searchTerm, mode: 'insensitive' } },
+                { description: { contains: filters.searchTerm, mode: 'insensitive' } }
+            ];
+        }
+
+        if (filters.categoryId) {
+            where.category_id = filters.categoryId;
+        }
+
+        if (filters.supplierTypeId) {
+            where.supplier_type_id = filters.supplierTypeId;
+        }
+
+        if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+            where.base_price_usd = {};
+            if (filters.minPrice !== undefined) where.base_price_usd.gte = filters.minPrice;
+            if (filters.maxPrice !== undefined) where.base_price_usd.lte = filters.maxPrice;
+        }
+
+        if (filters.countryId || filters.stateId) {
+            where.company = {
+                locations: {
+                    some: {
+                        ...(filters.countryId && { country_id: filters.countryId }),
+                        ...(filters.stateId && { state_id: filters.stateId })
+                    }
+                }
+            };
+        }
+
+        let orderBy: any = { created_at: 'desc' }; // 'newest' default
+        if (filters.sortBy === 'price_asc') {
+            orderBy = { base_price_usd: 'asc' };
+        } else if (filters.sortBy === 'price_desc') {
+            orderBy = { base_price_usd: 'desc' };
+        } else if (filters.sortBy === 'rating_desc') {
+            orderBy = { rating: 'desc' };
+        }
+
+        const [total, list] = await Promise.all([
+            prisma.companyOffer.count({ where }),
+            prisma.companyOffer.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy,
+                include: {
+                    photos: true,
+                    category: true,
+                    supplier_type: true,
+                    unit_of_measure: true,
+                    company: {
+                        include: {
+                            locations: true
+                        }
+                    }
+                }
+            })
+        ]);
+
+        return {
+            total,
+            data: list.map((item: any) => this.mapToEntity(item))
+        };
+    }
+
     async update(id: string, offer: Partial<CompanyOffer>): Promise<CompanyOffer> {
         const dataToUpdate: any = {
             ...(offer.name !== undefined && { name: offer.name }),
@@ -119,6 +193,20 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             p.id, p.offer_id, p.url, p.sort_order, p.created_at
         )) || [];
 
+        let company_details = null;
+        if (db.company) {
+            company_details = {
+                trade_name: db.company.trade_name,
+                legal_name: db.company.legal_name,
+                logo_url: db.company.logo_url,
+                locations: db.company.locations?.map((l: any) => ({
+                    country_id: l.country_id,
+                    state_id: l.state_id,
+                    city_id: l.city_id
+                })) || []
+            };
+        }
+
         return new CompanyOffer(
             db.id,
             db.company_id,
@@ -138,7 +226,8 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             db.rating ? Number(db.rating) : 0,
             db.created_at,
             db.updated_at,
-            photos
+            photos,
+            company_details
         );
     }
 }
