@@ -58,27 +58,28 @@ export const companyOfferCompanyLocationDtoResponseSchema = Joi.object({
 }).options({ stripUnknown: true });
 
 export const companyOfferCompanyDetailsDtoResponseSchema = Joi.object({
-    trade_name: Joi.string().required(),
-    legal_name: Joi.string().allow(null).optional(),
-    logo_url: Joi.string().allow(null).optional(),
+    trade_name: Joi.string().allow('', null).required(),
+    legal_name: Joi.string().allow('', null).optional(),
+    logo_url: Joi.string().allow('', null).optional(),
+    average_rating: Joi.number().allow(null).optional(),
     locations: Joi.array().items(companyOfferCompanyLocationDtoResponseSchema).optional().default([])
 }).options({ stripUnknown: true });
 
 export const companyOfferDtoResponseSchema = Joi.object({
     id: Joi.string().uuid().required(),
     company_id: Joi.string().uuid().required(),
-    name: Joi.string().required(),
-    description: Joi.string().allow(null).optional(),
+    name: Joi.string().allow('', null).required(),
+    description: Joi.string().allow('', null).optional(),
     category_id: Joi.number().integer().allow(null).optional(),
-    category: Joi.string().allow(null).optional(),
+    category: Joi.string().allow('', null).optional(),
     supplier_type_id: Joi.number().integer().allow(null).optional(),
-    supplier_type: Joi.string().allow(null).optional(),
+    supplier_type: Joi.string().allow('', null).optional(),
     base_price_usd: Joi.number().allow(null).optional(),
     unit_id: Joi.number().integer().allow(null).optional(),
-    unit_of_measure: Joi.string().allow(null).optional(),
+    unit_of_measure: Joi.string().allow('', null).optional(),
     moq: Joi.number().allow(null).optional(),
-    std_delivery_time: Joi.string().allow(null).optional(),
-    video_url: Joi.string().allow(null).optional(),
+    std_delivery_time: Joi.string().allow('', null).optional(),
+    video_url: Joi.string().allow('', null).optional(),
     is_active: Joi.boolean().required(),
     rating: Joi.number().allow(null).optional(),
     created_at: Joi.date().allow(null).optional(),

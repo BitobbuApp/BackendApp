@@ -199,6 +199,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
                 trade_name: db.company.trade_name,
                 legal_name: db.company.legal_name,
                 logo_url: db.company.logo_url,
+                average_rating: db.company.average_rating ? Number(db.company.average_rating) : 0,
                 locations: db.company.locations?.map((l: any) => ({
                     country_id: l.country_id,
                     state_id: l.state_id,
