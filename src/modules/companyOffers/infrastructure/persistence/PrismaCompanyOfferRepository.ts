@@ -144,6 +144,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
                 orderBy,
                 include: {
                     photos: true,
+                    pricing_tiers: true,
                     category: true,
                     supplier_type: true,
                     unit_of_measure: true,
