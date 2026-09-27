@@ -70,7 +70,17 @@ export const companyOfferCompanyDetailsDtoResponseSchema = Joi.object({
     legal_name: Joi.string().allow('', null).optional(),
     logo_url: Joi.string().allow('', null).optional(),
     average_rating: Joi.number().allow(null).optional(),
-    locations: Joi.array().items(companyOfferCompanyLocationDtoResponseSchema).optional().default([])
+    review_count: Joi.number().allow(null).optional(),
+    locations: Joi.array().items(companyOfferCompanyLocationDtoResponseSchema).optional().default([]),
+    recent_reviews: Joi.array().items(
+        Joi.object({
+            id: Joi.string().uuid().optional(),
+            rating: Joi.number().optional(),
+            comment: Joi.string().allow('', null).optional(),
+            created_at: Joi.date().allow(null).optional(),
+            author_name: Joi.string().allow('', null).optional()
+        }).options({ stripUnknown: true })
+    ).optional().default([])
 }).options({ stripUnknown: true });
 
 export const companyOfferPricingTierDtoResponseSchema = Joi.object({

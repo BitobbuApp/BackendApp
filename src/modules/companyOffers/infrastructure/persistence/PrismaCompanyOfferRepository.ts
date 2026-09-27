@@ -55,7 +55,35 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     async findById(id: string): Promise<CompanyOffer | null> {
         const found = await prisma.companyOffer.findFirst({
             where: { id, deleted_at: null },
-            include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true }
+            include: { 
+                photos: {
+                    orderBy: {
+                        sort_order: 'asc'
+                    }
+                }, 
+                pricing_tiers: {
+                    orderBy: {
+                        min_quantity: 'asc'
+                    }
+                }, 
+                category: true, 
+                supplier_type: true, 
+                unit_of_measure: true,
+                company: {
+                    include: {
+                        locations: true,
+                        received_reviews: {
+                            take: 3,
+                            orderBy: { created_at: 'desc' },
+                            include: {
+                                author: {
+                                    select: { trade_name: true, legal_name: true }
+                                }
+                            }
+                        }
+                    }
+                } 
+            }
         });
         if (!found) return null;
         return this.mapToEntity(found);
@@ -227,10 +255,18 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
                 legal_name: db.company.legal_name,
                 logo_url: db.company.logo_url,
                 average_rating: db.company.average_rating ? Number(db.company.average_rating) : 0,
+                review_count: db.company.review_count || 0,
                 locations: db.company.locations?.map((l: any) => ({
                     country_id: l.country_id,
                     state_id: l.state_id,
                     city_id: l.city_id
+                })) || [],
+                recent_reviews: db.company.received_reviews?.map((r: any) => ({
+                    id: r.id,
+                    rating: Number(r.rating),
+                    comment: r.comment,
+                    created_at: r.created_at,
+                    author_name: r.author?.trade_name || r.author?.legal_name || 'Comprador verificado'
                 })) || []
             };
         }

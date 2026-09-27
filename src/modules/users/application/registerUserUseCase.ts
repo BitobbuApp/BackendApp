@@ -12,6 +12,7 @@ import { PrismaVerificationRepository } from '../../companies/infrastructure/per
 import { VerificationRepository } from '../../companies/domain/repositories/verification.repository';
 import { CreateSubscriptionUseCase } from '../../subscriptions/application/createSubscriptionUseCase';
 import { GetSubscriptionPlanUseCase } from '../../subscriptions/application/getSubscriptionPlanUseCase';
+import { JwtService } from '../../../shared/application/services/jwtService';
 
 interface RegisterDto {
     first_name: string;
@@ -31,6 +32,11 @@ interface RegisterResult {
     first_name: string;
     last_name: string;
     email: string;
+    is_active: boolean;
+    last_access: Date | null;
+    token: string;
+    has_company: boolean;
+    company_id: string | null;
 }
 
 
@@ -42,6 +48,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     private readonly verificationRepository: VerificationRepository;
     private readonly getSubscriptionPlanUseCase: GetSubscriptionPlanUseCase;
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase;
+    private readonly jwtService: JwtService;
 
     constructor() {
         super();
@@ -50,6 +57,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
         this.verificationRepository = new PrismaVerificationRepository();
         this.getSubscriptionPlanUseCase = new GetSubscriptionPlanUseCase();
         this.createSubscriptionUseCase = new CreateSubscriptionUseCase();
+        this.jwtService = new JwtService();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {
@@ -116,11 +124,23 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             }
         });
 
+        // Generate JWT token
+        const token = this.jwtService.generateToken({
+            userId: newUser.id,
+            companyId: newUser.company_id ?? null,
+            email: newUser.email,
+        });
+
         return {
             id: newUser.id,
             first_name: newUser.first_name,
             last_name: newUser.last_name,
-            email: newUser.email
+            email: newUser.email,
+            is_active: newUser.is_active ?? true,
+            last_access: newUser.last_access,
+            token,
+            has_company: !!newUser.company_id,
+            company_id: newUser.company_id ?? null,
         };
     }
 }
