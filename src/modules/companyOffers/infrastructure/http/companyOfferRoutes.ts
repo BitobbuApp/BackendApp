@@ -25,6 +25,15 @@ export async function companyOfferRoutes(app: FastifyInstance) {
         }
     );
 
+    // GET /company-offers/marketplace/:id (Public)
+    app.get('/marketplace/:id',
+        async (request: any, reply: any) => {
+            const useCase = new GetCompanyOfferByIdUseCase();
+            const result = await useCase.execute(request.params.id);
+            return ApiResponse.success(reply, result, "Marketplace offer found");
+        }
+    );
+
     // POST /company-offers (JWT protected)
     app.post('/',
         { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
