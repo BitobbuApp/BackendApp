@@ -33,6 +33,12 @@ export class MatchRfqToSuppliersUseCase extends UseCase<MatchInput, void> {
             return;
         }
 
+        // Direct RFQs are delivered only to their target supplier (see CreateRequestUseCase)
+        if (request.is_direct) {
+            console.log(`Skipping matching for direct RFQ: ${data.rfqId}`);
+            return;
+        }
+
         // 2. Fetch all Companies with active offers in that categoryId
         // To simplify, we'll fetch companies that can_sell and map them. In real world, we'd query by categories_of_interest or offers.
         // Actually, let's use list on CompanyRepository.

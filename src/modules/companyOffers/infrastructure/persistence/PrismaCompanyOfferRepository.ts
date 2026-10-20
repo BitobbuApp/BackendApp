@@ -53,8 +53,16 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     }
 
     async findById(id: string): Promise<CompanyOffer | null> {
+        return this.findOneWithDetails({ id, deleted_at: null });
+    }
+
+    async findActiveById(id: string): Promise<CompanyOffer | null> {
+        return this.findOneWithDetails({ id, is_active: true, deleted_at: null });
+    }
+
+    private async findOneWithDetails(where: any): Promise<CompanyOffer | null> {
         const found = await prisma.companyOffer.findFirst({
-            where: { id, deleted_at: null },
+            where,
             include: { 
                 photos: {
                     orderBy: {
@@ -120,7 +128,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
         const { page, limit } = pagination;
         const skip = (page - 1) * limit;
 
-        const where: any = { is_active: true };
+        const where: any = { is_active: true, deleted_at: null };
 
         if (filters.searchTerm) {
             where.OR = [

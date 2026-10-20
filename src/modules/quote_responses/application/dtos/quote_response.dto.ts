@@ -54,6 +54,8 @@ export const quoteResponseDtoResponseSchema = Joi.object({
     status: Joi.string().required(),
     rejection_reason: Joi.string().allow(null).optional(),
     total_amount_usd: Joi.number().required(),
+    // Set when the quote opened a negotiation (direct RFQs)
+    conversation_id: Joi.string().uuid().allow(null).optional(),
     created_at: Joi.date().allow(null).optional(),
     updated_at: Joi.date().allow(null).optional()
 }).options({ stripUnknown: true });

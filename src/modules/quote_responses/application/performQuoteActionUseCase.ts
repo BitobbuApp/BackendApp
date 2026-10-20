@@ -146,30 +146,47 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
             };
 
             if (data.action === 'negotiation_started') {
-                // Emit to the supplier's global room because they haven't joined the conversation yet!
-                const supplierGlobalRoom = `company_${result.supplier_id}`;
-                io.to(supplierGlobalRoom).emit(eventName, payload);
-                logger.info(`📡 Socket event "${eventName}" emitted to supplier global room: ${supplierGlobalRoom}`);
+                // Notify the counterparty of whoever opened the negotiation:
+                // the supplier when the buyer starts it, the buyer when the supplier starts it (direct RFQ)
+                const startedBySupplier = data.actorCompanyId === result.supplier_id;
+                let counterpartyId = result.supplier_id;
+                if (startedBySupplier) {
+                    const request = await prisma.request.findUniqueOrThrow({
+                        where: { id: result.request_id },
+                        select: { company_id: true },
+                    });
+                    counterpartyId = request.company_id;
+                }
 
-                // 🔔 Notify the supplier
+                // Emit to the counterparty's global room because they haven't joined the conversation yet!
+                const counterpartyGlobalRoom = `company_${counterpartyId}`;
+                io.to(counterpartyGlobalRoom).emit(eventName, {
+                    ...payload,
+                    actor_role: startedBySupplier ? 'supplier' : 'buyer',
+                });
+                logger.info(`📡 Socket event "${eventName}" emitted to counterparty global room: ${counterpartyGlobalRoom}`);
+
+                // 🔔 Notify the counterparty
                 const notifUC = new CreateNotificationUseCase();
                 const notif = await notifUC.execute({
-                    companyId: result.supplier_id,
+                    companyId: counterpartyId,
                     typeId: NOTIFICATION_TYPE.NEGOTIATION,
                     title: 'Nueva negociación',
-                    message: 'Un comprador quiere negociar tu oferta.',
-                    link: `/Negotiations/${conversation.id}`,
+                    message: startedBySupplier
+                        ? 'Un proveedor respondió tu solicitud directa y abrió la negociación.'
+                        : 'Un comprador quiere negociar tu oferta.',
+                    link: `/Chat/${conversation.id}`,
                     entityType: 'quote_response',
                     entityId: data.quoteResponseId,
                 });
-                io.to(supplierGlobalRoom).emit('notification:new', {
+                io.to(counterpartyGlobalRoom).emit('notification:new', {
                     id: notif.id,
                     title: notif.title,
                     message: notif.message,
                     link: notif.link,
                     createdAt: notif.createdAt,
                 });
-                logger.info(`🔔 Notification created for supplier ${result.supplier_id} (negotiation_started)`);
+                logger.info(`🔔 Notification created for company ${counterpartyId} (negotiation_started)`);
 
             } else if (data.action === 'accepted') {
                 io.to(conversation.id).emit(eventName, payload);
@@ -183,7 +200,7 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
                     typeId: NOTIFICATION_TYPE.QUOTE_ACCEPTED,
                     title: '¡Cotización aceptada!',
                     message: 'Un comprador aceptó tu propuesta de negociación.',
-                    link: `/Negotiations/${conversation.id}`,
+                    link: `/Chat/${conversation.id}`,
                     entityType: 'quote_response',
                     entityId: data.quoteResponseId,
                 });

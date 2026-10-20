@@ -1,12 +1,21 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { RequestRepository } from "../domain/repositories/request.repository";
 import { PrismaRequestRepository } from "../infrastructure/persistence/PrismaRequestRepository";
-import { RequestNotFoundError } from "../domain/errors/request.errors";
+import { RequestNotFoundError, RequestAccessDeniedError } from "../domain/errors/request.errors";
+import { directRequestFields } from "./helpers/directRequestFields";
 import { requestDtoResponseSchema } from "./dtos/request.dto";
 import Joi from "joi";
 
-export class GetRequestByIdUseCase extends UseCase<string, any> {
-    protected inputSchema: Joi.Schema = Joi.string().uuid().required();
+interface GetRequestByIdDto {
+    id: string;
+    requester_company_id?: string | null;
+}
+
+export class GetRequestByIdUseCase extends UseCase<GetRequestByIdDto, any> {
+    protected inputSchema: Joi.Schema = Joi.object({
+        id: Joi.string().uuid().required(),
+        requester_company_id: Joi.string().uuid().allow(null).optional(),
+    });
     protected outputSchema: Joi.Schema = requestDtoResponseSchema;
     private readonly requestRepository: RequestRepository;
 
@@ -15,10 +24,19 @@ export class GetRequestByIdUseCase extends UseCase<string, any> {
         this.requestRepository = new PrismaRequestRepository();
     }
 
-    protected async implementation(id: string): Promise<any> {
+    protected async implementation({ id, requester_company_id }: GetRequestByIdDto): Promise<any> {
         const request = await this.requestRepository.findById(id);
         if (!request) throw new RequestNotFoundError(id);
+
+        // Direct RFQs are only visible to the buyer and the target supplier
+        if (request.is_direct
+            && requester_company_id !== request.company_id
+            && requester_company_id !== request.target_company_id) {
+            throw new RequestAccessDeniedError(id);
+        }
+
         return {
+            ...directRequestFields(request),
             id: request.id,
             company_id: request.company_id,
             user_id: request.user_id,

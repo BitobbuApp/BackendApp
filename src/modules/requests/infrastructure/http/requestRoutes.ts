@@ -81,7 +81,10 @@ export async function requestRoutes(app: FastifyInstance) {
             reply: FastifyReply
         ) => {
             const useCase = new GetRequestByIdUseCase();
-            const result = await useCase.execute(request.params.id);
+            const result = await useCase.execute({
+                id: request.params.id,
+                requester_company_id: request.user?.companyId ?? null
+            });
             return ApiResponse.success(reply, result, "Request found");
         }
     );

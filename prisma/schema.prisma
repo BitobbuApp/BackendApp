@@ -82,7 +82,8 @@ model Company {
   quote_response_revisions QuoteResponseRevision[]      @relation("QuoteResponseRevisionActor")
   quote_responses          QuoteResponse[]
   requests                 Request[]
-  authored_reviews         Review[]                     @relation("ReviewAuthor")
+  targeted_requests        Request[]                    @relation("RequestTargetCompany")
+  authored_reviews        Review[]                     @relation("ReviewAuthor")
   received_reviews         Review[]                     @relation("ReviewTarget")
   subscriptions            Subscription[]
   transaction_revisions    TransactionRevision[]        @relation("TransactionRevisionActor")
@@ -442,9 +443,13 @@ model Request {
   reach_service        String?           @db.VarChar(200)
   state_id             Int?              @db.SmallInt
   serial_number        Int               @unique @default(autoincrement())
+  target_company_id    String?           @db.Uuid
+  company_offer_id     String?           @db.Uuid
   conversations        Conversation[]
   quote_responses      QuoteResponse[]
   files                RequestFile[]
+  target_company       Company?          @relation("RequestTargetCompany", fields: [target_company_id], references: [id])
+  offer                CompanyOffer?     @relation(fields: [company_offer_id], references: [id])
   category             Category?         @relation("RequestCategory", fields: [category_id], references: [id])
   city                 City?             @relation("RequestCity", fields: [city_id], references: [id])
   company              Company           @relation(fields: [company_id], references: [id])
@@ -455,6 +460,7 @@ model Request {
   user                 User?             @relation(fields: [user_id], references: [id])
   requestInvitations   RequestInvitation[]
 
+  @@index([target_company_id, status])
   @@map("requests")
 }
 
@@ -493,6 +499,7 @@ model CompanyOffer {
   supplier_type     CompanyTypeDict?    @relation("OfferCompanyType", fields: [supplier_type_id], references: [id])
   unit_of_measure   UnitOfMeasureDict?  @relation(fields: [unit_id], references: [id])
   quote_responses   QuoteResponse[]
+  direct_requests   Request[]
 
   @@map("company_offers")
 }
