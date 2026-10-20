@@ -33,6 +33,11 @@ export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceReque
 
         return {
             data: (result._raw || []).map((r: any) => ({
+                is_direct: r.target_company_id != null,
+                target_company_id: r.target_company_id ?? null,
+                company_offer_id: r.company_offer_id ?? null,
+                target_company: r.target_company ?? null,
+                offer: r.offer ? PrismaRequestRepository.mapOffer(r.offer) : null,
                 id: r.id,
                 company_id: r.company_id,
                 user_id: r.user_id,

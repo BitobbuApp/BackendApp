@@ -2,6 +2,7 @@ import { UseCase } from "../../../shared/application/useCase";
 import { RequestRepository } from "../domain/repositories/request.repository";
 import { PrismaRequestRepository } from "../infrastructure/persistence/PrismaRequestRepository";
 import { getRequestsByCompanyIdDtoRequestSchema, requestListDtoResponseSchema } from "./dtos/request.dto";
+import { directRequestFields } from "./helpers/directRequestFields";
 import Joi from "joi";
 
 interface GetRequestsByCompanyIdDto {
@@ -24,6 +25,7 @@ export class GetRequestsByCompanyIdUseCase extends UseCase<GetRequestsByCompanyI
         const result = await this.requestRepository.findByCompanyId(data.company_id, data.page, data.limit);
         return {
             data: result.data.map(request => ({
+                ...directRequestFields(request),
                 id: request.id,
                 company_id: request.company_id,
                 user_id: request.user_id,

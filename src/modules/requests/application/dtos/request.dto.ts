@@ -20,6 +20,8 @@ export const createRequestDtoRequestSchema = Joi.object({
     city_id: Joi.number().integer().min(1).allow(null).optional(),
     reach_service: Joi.string().max(200).allow(null, '').optional(),
     expiration_date: Joi.date().iso().allow(null).optional(),
+    // Direct RFQ: when present, the request goes only to the offer's company (no matching)
+    company_offer_id: Joi.string().uuid().allow(null, '').optional(),
     rawFiles: Joi.any().optional()
 }).options({ stripUnknown: true });
 
@@ -51,7 +53,31 @@ export const getRequestsByCompanyIdDtoRequestSchema = Joi.object({
 
 // --- Response Schemas ---
 
+// Direct RFQ fields shared by every request response
+const directRequestResponseFields = {
+    is_direct: Joi.boolean().optional(),
+    target_company_id: Joi.string().uuid().allow(null).optional(),
+    company_offer_id: Joi.string().uuid().allow(null).optional(),
+    target_company: Joi.object({
+        id: Joi.string().required(),
+        trade_name: Joi.string().allow('', null).required(),
+        logo_url: Joi.string().allow(null, '').optional(),
+    }).allow(null).optional(),
+    offer: Joi.object({
+        id: Joi.string().required(),
+        name: Joi.string().allow('', null).required(),
+        base_price_usd: Joi.number().allow(null).optional(),
+        moq: Joi.number().allow(null).optional(),
+        pricing_tiers: Joi.array().items(Joi.object({
+            min_quantity: Joi.number().required(),
+            max_quantity: Joi.number().allow(null).optional(),
+            price_usd: Joi.number().required(),
+        })).optional(),
+    }).allow(null).optional(),
+};
+
 export const requestDtoResponseSchema = Joi.object({
+    ...directRequestResponseFields,
     id: Joi.string().required(),
     company_id: Joi.string().required(),
     user_id: Joi.string().allow(null).optional(),
@@ -115,6 +141,7 @@ export const requestListDtoResponseSchema = Joi.object({
 // --- Marketplace Response Schemas ---
 
 export const marketplaceRequestDtoResponseSchema = Joi.object({
+    ...directRequestResponseFields,
     id: Joi.string().required(),
     company_id: Joi.string().required(),
     user_id: Joi.string().allow(null).optional(),

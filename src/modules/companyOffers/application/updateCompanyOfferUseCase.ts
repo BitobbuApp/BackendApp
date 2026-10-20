@@ -2,7 +2,7 @@
 import { UseCase } from "../../../shared/application/useCase";
 import { CompanyOfferRepository } from "../domain/repositories/companyOffer.repository";
 import { PrismaCompanyOfferRepository } from "../infrastructure/persistence/PrismaCompanyOfferRepository";
-import { CompanyOfferNotFoundError } from "../domain/errors/companyOffer.errors";
+import { CompanyOfferNotFoundError, CompanyOfferAccessDeniedError } from "../domain/errors/companyOffer.errors";
 import { updateCompanyOfferDtoRequestSchema, companyOfferDtoResponseSchema } from "./dtos/companyOffer.dto";
 import Joi from "joi";
 
@@ -19,6 +19,7 @@ interface UpdateCompanyOfferPricingTierDto {
 
 interface UpdateCompanyOfferDto {
     id: string;
+    requester_company_id: string;
     name?: string;
     description?: string | null;
     category_id?: number | null;
@@ -49,8 +50,12 @@ export class UpdateCompanyOfferUseCase extends UseCase<UpdateCompanyOfferDto, an
         if (!existingOffer) {
             throw new CompanyOfferNotFoundError(data.id);
         }
+        if (existingOffer.company_id !== data.requester_company_id) {
+            throw new CompanyOfferAccessDeniedError(data.id);
+        }
 
-        const payload: any = { ...data };
+        const { requester_company_id, ...rest } = data;
+        const payload: any = { ...rest };
         if (payload.base_price_usd !== undefined) {
             payload.base_price_usd = payload.base_price_usd;
         }

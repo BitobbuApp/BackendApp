@@ -13,6 +13,7 @@ import { DeleteCompanyOfferUseCase } from '../../application/deleteCompanyOfferU
 import { ListCompanyOffersByCompanyUseCase } from '../../application/listCompanyOffersByCompanyUseCase';
 import { ListCompanyOffersUseCase } from '../../application/listCompanyOffersUseCase';
 import { SearchMarketplaceOffersUseCase } from '../../application/searchMarketplaceOffersUseCase';
+import { GetMarketplaceOfferByIdUseCase } from '../../application/getMarketplaceOfferByIdUseCase';
 
 export async function companyOfferRoutes(app: FastifyInstance) {
 
@@ -28,7 +29,7 @@ export async function companyOfferRoutes(app: FastifyInstance) {
     // GET /company-offers/marketplace/:id (Public)
     app.get('/marketplace/:id',
         async (request: any, reply: any) => {
-            const useCase = new GetCompanyOfferByIdUseCase();
+            const useCase = new GetMarketplaceOfferByIdUseCase();
             const result = await useCase.execute(request.params.id);
             return ApiResponse.success(reply, result, "Marketplace offer found");
         }
@@ -39,9 +40,11 @@ export async function companyOfferRoutes(app: FastifyInstance) {
         { preHandler: [authMiddleware, multipartParserMiddleware] } as any,
         async (request: any, reply: any) => {
             const useCase = new CreateCompanyOfferUseCase();
-            // Assuming the JWT payload has user.company_id
-            // We use the company_id from the body or fallback to user's company
-            const company_id = request.body.company_id || request.user.companyId;
+            // Offers are always created for the authenticated user's company (body company_id is ignored)
+            const company_id = request.user.companyId;
+            if (!company_id) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             //const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
             //const activeOffersCount = await prisma.companyOffer.count({
             //    where: { company_id }
@@ -101,10 +104,14 @@ export async function companyOfferRoutes(app: FastifyInstance) {
     app.patch('/:id',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
+            if (!request.user.companyId) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             const useCase = new UpdateCompanyOfferUseCase();
             const result = await useCase.execute({
                 ...request.body,
-                id: request.params.id
+                id: request.params.id,
+                requester_company_id: request.user.companyId
             });
             return ApiResponse.success(reply, result, "Company offer updated");
         }
@@ -114,8 +121,14 @@ export async function companyOfferRoutes(app: FastifyInstance) {
     app.delete('/:id',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
+            if (!request.user.companyId) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             const useCase = new DeleteCompanyOfferUseCase();
-            await useCase.execute(request.params.id);
+            await useCase.execute({
+                id: request.params.id,
+                requester_company_id: request.user.companyId
+            });
             return ApiResponse.success(reply, null, "Company offer removed");
         }
     );

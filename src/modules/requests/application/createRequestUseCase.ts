@@ -6,7 +6,19 @@ import { createRequestDtoRequestSchema, requestDtoResponseSchema } from "./dtos/
 import { RFQ_TYPE } from "../../../shared/constants/request/request.contants";
 import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
 import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
-import { matchingQueue } from "../../../shared/infrastructure/queue/index.queue";
+import { matchingQueue, notificationsQueue } from "../../../shared/infrastructure/queue/index.queue";
+import { RequestEntity } from "../domain/entities/request.entity";
+import { DirectRequestSelfTargetError } from "../domain/errors/request.errors";
+import { RequestInvitationRepository } from "../domain/repositories/requestInvitation.repository";
+import { PrismaRequestInvitationRepository } from "../infrastructure/persistence/PrismaRequestInvitationRepository";
+import { CompanyOfferRepository } from "../../companyOffers/domain/repositories/companyOffer.repository";
+import { PrismaCompanyOfferRepository } from "../../companyOffers/infrastructure/persistence/PrismaCompanyOfferRepository";
+import { CompanyOfferNotFoundError } from "../../companyOffers/domain/errors/companyOffer.errors";
+import { CreateNotificationUseCase } from "../../notifications/application/createNotificationUseCase";
+import { NOTIFICATION_TYPE } from "../../notifications/domain/notificationTypes.constants";
+import { getIO } from "../../../shared/infrastructure/socket";
+import logger from "../../../shared/infrastructure/logger";
+import { directRequestFields } from "./helpers/directRequestFields";
 
 interface CreateRequestDto {
     company_id: string;
@@ -24,6 +36,7 @@ interface CreateRequestDto {
     city_id?: number | null;
     reach_service?: string | null;
     expiration_date?: Date | null;
+    company_offer_id?: string | null;
     rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
 }
 
@@ -65,11 +78,15 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
     protected outputSchema: Joi.Schema = requestDtoResponseSchema;
     private readonly requestRepository: RequestRepository;
     private readonly uploadDocumentUseCase: UploadDocumentUseCase;
+    private readonly companyOfferRepository: CompanyOfferRepository;
+    private readonly invitationRepository: RequestInvitationRepository;
 
     constructor() {
         super();
         this.requestRepository = new PrismaRequestRepository();
         this.uploadDocumentUseCase = new UploadDocumentUseCase(storageService);
+        this.companyOfferRepository = new PrismaCompanyOfferRepository();
+        this.invitationRepository = new PrismaRequestInvitationRepository();
     }
 
     protected async implementation(data: CreateRequestDto): Promise<RequestResult> {
@@ -114,11 +131,31 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
             (repoData as any).files = files;
         }
 
+        // Direct RFQ from a marketplace product: target the offer's company only
+        const { company_offer_id } = repoData;
+        delete (repoData as any).company_offer_id;
+        if (company_offer_id) {
+            const offer = await this.companyOfferRepository.findActiveById(company_offer_id);
+            if (!offer) throw new CompanyOfferNotFoundError(company_offer_id);
+            if (offer.company_id === data.company_id) throw new DirectRequestSelfTargetError();
+
+            (repoData as any).target_company_id = offer.company_id;
+            (repoData as any).company_offer_id = offer.id;
+            if (!repoData.category_id && offer.category_id) {
+                repoData.category_id = offer.category_id;
+            }
+        }
+
         const created = await this.requestRepository.create(repoData as any);
 
-        await matchingQueue.add('match-rfq', { rfqId: created.id }, { delay: 1000 });
+        if (created.is_direct) {
+            await this.deliverDirectRequest(created);
+        } else {
+            await matchingQueue.add('match-rfq', { rfqId: created.id }, { delay: 1000 });
+        }
 
         return {
+            ...directRequestFields(created),
             id: created.id,
             company_id: created.company_id,
             user_id: created.user_id,
@@ -142,6 +179,47 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
             created_at: created.created_at,
             updated_at: created.updated_at,
         };
+    }
+
+    /**
+     * Delivers a direct RFQ to its target supplier instead of running the matching job:
+     * a single invitation, the usual RFQ email and a real-time in-app notification.
+     * Non-blocking — delivery failures never break the request creation.
+     */
+    private async deliverDirectRequest(request: RequestEntity): Promise<void> {
+        const targetCompanyId = request.target_company_id!;
+        try {
+            await this.invitationRepository.create({
+                requestId: request.id,
+                companyId: targetCompanyId,
+                tier: 1,
+                score: 1
+            });
+
+            await notificationsQueue.add('rfq-match-email', {
+                companyId: targetCompanyId,
+                requestId: request.id
+            }, { delay: 1000 });
+
+            const notif = await new CreateNotificationUseCase().execute({
+                companyId: targetCompanyId,
+                typeId: NOTIFICATION_TYPE.GENERAL,
+                title: 'Nueva solicitud directa',
+                message: `Un comprador te solicitó una cotización de "${request.product_service}".`,
+                link: `/prospects/${request.id}`,
+                entityType: 'request',
+                entityId: request.id,
+            });
+            getIO().to(`company_${targetCompanyId}`).emit('notification:new', {
+                id: notif.id,
+                title: notif.title,
+                message: notif.message,
+                link: notif.link,
+                createdAt: notif.createdAt,
+            });
+        } catch (err) {
+            logger.error(err, `Failed to deliver direct RFQ ${request.id} to company ${targetCompanyId}`);
+        }
     }
 }
 

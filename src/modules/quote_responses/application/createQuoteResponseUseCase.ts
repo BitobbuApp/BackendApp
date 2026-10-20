@@ -3,6 +3,11 @@ import { QuoteResponseRepository } from "../domain/repositories/quote_response.r
 import { PrismaQuoteResponseRepository } from "../infrastructure/persistence/PrismaQuoteResponseRepository";
 import { createQuoteResponseDtoRequestSchema, quoteResponseDtoResponseSchema } from "./dtos/quote_response.dto";
 import { DuplicateQuoteResponseError } from "../domain/errors/quote_response.errors";
+import { RequestNotFoundError } from "../../requests/domain/errors/request.errors";
+import { assertCanQuoteRequest } from "./helpers/directRequestRules";
+import { PerformQuoteActionUseCase } from "./performQuoteActionUseCase";
+import { prisma } from "../../../shared/infrastructure/database";
+import logger from "../../../shared/infrastructure/logger";
 import Joi from "joi";
 
 interface CreateQuoteResponseDto {
@@ -32,8 +37,46 @@ export class CreateQuoteResponseUseCase extends UseCase<CreateQuoteResponseDto, 
     }
 
     protected async implementation(data: CreateQuoteResponseDto): Promise<any> {
+        const request = await prisma.request.findUnique({
+            where: { id: data.request_id },
+            select: { target_company_id: true, company_offer_id: true },
+        });
+        if (!request) throw new RequestNotFoundError(data.request_id);
+
+        const isDirect = !!request.target_company_id;
+        assertCanQuoteRequest(request.target_company_id, data.supplier_id);
+        if (isDirect) {
+            // Quote is tied to the marketplace offer and starts pending so the negotiation can open
+            data.company_offer_id = request.company_offer_id;
+            data.status = 'pending';
+        }
+
         const created = await this.quoteResponseRepository.create(data);
+
+        // Direct RFQ: the supplier's quote opens the negotiation right away (conversation + negotiating)
+        let conversation_id: string | null = null;
+        let status = created.status;
+        if (isDirect) {
+            try {
+                const negotiation = await new PerformQuoteActionUseCase().execute({
+                    quoteResponseId: created.id,
+                    action: 'negotiation_started',
+                    actorCompanyId: data.supplier_id,
+                });
+                status = negotiation.status;
+                const conversation = await prisma.conversation.findFirst({
+                    where: { quote_response_id: created.id },
+                    select: { id: true },
+                });
+                conversation_id = conversation?.id ?? null;
+            } catch (err) {
+                // The quote stays pending; the buyer can still start the negotiation manually
+                logger.error(err, `Failed to auto-start negotiation for direct quote ${created.id}`);
+            }
+        }
+
         return {
+            conversation_id,
             id: created.id,
             request_id: created.request_id,
             supplier_id: created.supplier_id,
@@ -44,7 +87,7 @@ export class CreateQuoteResponseUseCase extends UseCase<CreateQuoteResponseDto, 
             delivery_time: created.delivery_time,
             notes: created.notes,
             has_guarantee: created.has_guarantee,
-            status: created.status,
+            status,
             rejection_reason: created.rejection_reason,
             total_amount_usd: Number(created.total_amount_usd),
             payment_condition_id: created.payment_condition_id,

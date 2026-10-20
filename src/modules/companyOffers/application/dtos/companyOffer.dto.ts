@@ -34,6 +34,7 @@ export const createCompanyOfferDtoRequestSchema = Joi.object({
 });
 
 export const updateCompanyOfferDtoRequestSchema = Joi.object({
+    requester_company_id: Joi.string().uuid().required(),
     id: Joi.string().uuid().required(),
     name: Joi.string().max(200).optional(),
     description: Joi.string().allow(null, '').optional(),

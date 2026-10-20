@@ -2,6 +2,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { FastifyInstance } from 'fastify';
 import logger from './logger';
 import { registerMessageHandlers } from '../../modules/messages/infrastructure/socket/messageHandler';
+import { registerTypingHandlers } from '../../modules/messages/infrastructure/socket/typingHandler';
 import { JwtService } from '../application/services/jwtService';
 
 let io: SocketIOServer;
@@ -59,6 +60,7 @@ export const initializeSocket = (app: any) => {
 
         // Registrar módulos
         registerMessageHandlers(socket);
+        registerTypingHandlers(socket);
 
         // Evento genérico para unirse a salas (conversaciones)
         socket.on('join_conversation', (conversationId: string) => {
