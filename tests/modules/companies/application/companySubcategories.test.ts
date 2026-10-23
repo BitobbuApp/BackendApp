@@ -112,16 +112,21 @@ describe('UpdateCompanyUseCase with subcategories', () => {
 });
 
 describe('PrismaCompanyRepository subcategories', () => {
-    test('update replaces only the links to ACTIVE subcategories (inactive ones are preserved)', async () => {
+    test('update replaces only the links to visible subcategories (hidden ones are preserved)', async () => {
         stub(prisma.companyContact, 'findFirst', async () => null);
+        // Hidden = inactive subcategories or subcategories of an inactive category
+        const findHidden = recorder(async () => [{ id: 11 }, { id: 30 }]);
+        stub(prisma.subcategory, 'findMany', findHidden);
         const companyUpdate = recorder(async () => ({ id: COMPANY_ID, subcategories_of_interest: [] }));
         stub(prisma.company, 'update', companyUpdate);
 
         await new PrismaCompanyRepository().update(COMPANY_ID, { interest_subcategory_ids: [10, 20] });
 
+        assert.deepEqual(findHidden.calls[0][0].where, { OR: [{ is_active: false }, { category: { is_active: false } }] });
         const { data, include } = companyUpdate.calls[0][0];
+        // A nested deleteMany only accepts scalar filters: the hidden ids are excluded explicitly
         assert.deepEqual(data.subcategories_of_interest, {
-            deleteMany: { subcategory: { is_active: true } },
+            deleteMany: { subcategory_id: { notIn: [11, 30] } },
             create: [
                 { subcategory: { connect: { id: 10 } } },
                 { subcategory: { connect: { id: 20 } } },

@@ -2,17 +2,20 @@
 import { CompanyRepository, CompanyListResult } from "../../domain/repositories/company.repository";
 import { Company } from "../../domain/entities/company.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
+import { Prisma } from '@prisma/client';
 import { VENEZUELA_COUNTRY_ID } from '../../../../shared/constants/geo.constants';
 
 // Only active subcategories (of active categories) are exposed; links to inactive ones are kept but hidden
+// Typed with Prisma's input types so tsc validates their shape (the rest of the payload is `any`)
 const ACTIVE_SUBCATEGORIES_INCLUDE = {
     where: { subcategory: { is_active: true, category: { is_active: true } } },
     include: { subcategory: true },
-};
+} satisfies Prisma.Company$subcategories_of_interestArgs;
 
-const subcategoryLinks = (ids: number[]) => ids.map((subcategoryId: number) => ({
-    subcategory: { connect: { id: subcategoryId } }
-}));
+const subcategoryLinks = (ids: number[]): Prisma.CompanySubcategoryOfInterestCreateWithoutCompanyInput[] =>
+    ids.map((subcategoryId: number) => ({
+        subcategory: { connect: { id: subcategoryId } }
+    }));
 
 export class PrismaCompanyRepository implements CompanyRepository {
     async create(data: any): Promise<Company> {
@@ -274,10 +277,17 @@ export class PrismaCompanyRepository implements CompanyRepository {
         // Replace only the links to ACTIVE subcategories: links to inactive ones are preserved (hidden),
         // so they come back if the backoffice reactivates the subcategory
         if (data.interest_subcategory_ids) {
-            updatePayload.subcategories_of_interest = {
-                deleteMany: { subcategory: { is_active: true } },
+            // A nested deleteMany only accepts scalar filters (no relation filters), so the hidden
+            // subcategories (inactive, or of an inactive category) are resolved first and excluded
+            const hidden = await prisma.subcategory.findMany({
+                where: { OR: [{ is_active: false }, { category: { is_active: false } }] },
+                select: { id: true },
+            });
+            const subcategoriesOfInterest: Prisma.CompanySubcategoryOfInterestUpdateManyWithoutCompanyNestedInput = {
+                deleteMany: { subcategory_id: { notIn: hidden.map((s) => s.id) } },
                 create: subcategoryLinks(data.interest_subcategory_ids)
             };
+            updatePayload.subcategories_of_interest = subcategoriesOfInterest;
         }
 
         // social_media: full replace (deleteMany + recreate)
