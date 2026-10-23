@@ -68,8 +68,14 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
     app.get('/:id',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
+            if (!request.user.companyId) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             const useCase = new GetQuoteResponseByIdUseCase();
-            const result = await useCase.execute(request.params.id);
+            const result = await useCase.execute({
+                id: request.params.id,
+                requester_company_id: request.user.companyId
+            });
             return ApiResponse.success(reply, result, "Quote response found");
         }
     );
@@ -78,8 +84,14 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
     app.get('/:id/with-supplier',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
+            if (!request.user.companyId) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             const useCase = new GetQuoteResponseWithSupplierUseCase();
-            const result = await useCase.execute(request.params.id);
+            const result = await useCase.execute({
+                id: request.params.id,
+                requester_company_id: request.user.companyId
+            });
             return ApiResponse.success(reply, result, "Quote response and supplier found");
         }
     );
@@ -88,10 +100,14 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
     app.get('/request/:requestId',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
+            if (!request.user.companyId) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             const { page, limit } = request.query as { page?: string, limit?: string };
             const useCase = new ListQuoteResponsesByRequestIdUseCase();
             const result = await useCase.execute({
                 request_id: request.params.requestId,
+                requester_company_id: request.user.companyId,
                 page: page ? parseInt(page, 10) : 1,
                 limit: limit ? parseInt(limit, 10) : 10
             });
@@ -103,10 +119,14 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
     app.patch('/:id',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
+            if (!request.user.companyId) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             const useCase = new UpdateQuoteResponseUseCase();
             const result = await useCase.execute({
                 ...request.body,
-                id: request.params.id
+                id: request.params.id,
+                requester_company_id: request.user.companyId
             });
             return ApiResponse.success(reply, result, "Quote response updated");
         }
@@ -116,8 +136,14 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
     app.delete('/:id',
         { preHandler: [authMiddleware] } as any,
         async (request: any, reply: any) => {
+            if (!request.user.companyId) {
+                return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
             const useCase = new DeleteQuoteResponseUseCase();
-            await useCase.execute(request.params.id);
+            await useCase.execute({
+                id: request.params.id,
+                requester_company_id: request.user.companyId
+            });
             return ApiResponse.success(reply, null, "Quote response removed");
         }
     );

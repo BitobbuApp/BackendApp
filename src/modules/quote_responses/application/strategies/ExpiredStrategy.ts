@@ -9,6 +9,8 @@ import { PrismaQuoteResponseRepository } from '../../infrastructure/persistence/
  * System automatically expires the quote (invoked by cronjob).
  * Status transitions to `expired`.
  * No actor role validation — system action.
+ * Must NOT be reachable over HTTP: 'expired' is excluded from PerformQuoteActionUseCase's VALID_ACTIONS.
+ * Invoke the strategy directly from the job that expires quotes.
  */
 export class ExpiredStrategy implements QuoteRevisionStrategy {
     readonly action = 'expired';

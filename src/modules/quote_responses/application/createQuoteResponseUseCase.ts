@@ -64,11 +64,7 @@ export class CreateQuoteResponseUseCase extends UseCase<CreateQuoteResponseDto, 
                     actorCompanyId: data.supplier_id,
                 });
                 status = negotiation.status;
-                const conversation = await prisma.conversation.findFirst({
-                    where: { quote_response_id: created.id },
-                    select: { id: true },
-                });
-                conversation_id = conversation?.id ?? null;
+                conversation_id = negotiation.conversation_id ?? null;
             } catch (err) {
                 // The quote stays pending; the buyer can still start the negotiation manually
                 logger.error(err, `Failed to auto-start negotiation for direct quote ${created.id}`);

@@ -26,7 +26,8 @@ const VALID_ACTIONS = [
     'formal_quote_rejected',
     'accepted',
     'canceled',
-    'expired',
+    // 'expired' is intentionally not accepted here: it is a system action (ExpiredStrategy, future cron),
+    // and exposing it would let any company expire someone else's quote.
 ];
 
 const inputSchema = Joi.object({
@@ -77,10 +78,17 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
         });
 
         // 2. See if there's a linked transaction (useful when action is 'accepted')
-        const transaction = await prisma.transaction.findUnique({
-            where: { quote_response_id: data.quoteResponseId },
-            select: { id: true },
-        });
+        //    and the negotiation conversation (useful to open the chat after 'negotiation_started')
+        const [transaction, conversation] = await Promise.all([
+            prisma.transaction.findUnique({
+                where: { quote_response_id: data.quoteResponseId },
+                select: { id: true },
+            }),
+            prisma.conversation.findFirst({
+                where: { quote_response_id: data.quoteResponseId },
+                select: { id: true },
+            }),
+        ]);
 
         // 3. Emit socket event
         this.emitSocketEvent(data, result, transaction?.id);
@@ -102,6 +110,7 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
             delivery_method_id: result.delivery_method_id,
             rejection_reason: result.rejection_reason,
             transaction_id: transaction?.id,
+            conversation_id: conversation?.id ?? null,
             created_at: result.created_at,
             updated_at: result.updated_at,
         };
