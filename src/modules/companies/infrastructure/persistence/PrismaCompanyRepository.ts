@@ -4,6 +4,16 @@ import { Company } from "../../domain/entities/company.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 import { VENEZUELA_COUNTRY_ID } from '../../../../shared/constants/geo.constants';
 
+// Only active subcategories (of active categories) are exposed; links to inactive ones are kept but hidden
+const ACTIVE_SUBCATEGORIES_INCLUDE = {
+    where: { subcategory: { is_active: true, category: { is_active: true } } },
+    include: { subcategory: true },
+};
+
+const subcategoryLinks = (ids: number[]) => ids.map((subcategoryId: number) => ({
+    subcategory: { connect: { id: subcategoryId } }
+}));
+
 export class PrismaCompanyRepository implements CompanyRepository {
     async create(data: any): Promise<Company> {
         const dataPayload: any = {
@@ -66,6 +76,9 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 create: (data.interest_category_ids || []).map((categoryId: number) => ({
                     category: { connect: { id: categoryId } }
                 }))
+            },
+            subcategories_of_interest: {
+                create: subcategoryLinks(data.interest_subcategory_ids || [])
             }
         };
         const created = await prisma.company.create({
@@ -74,7 +87,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 sector_ref: true,
                 company_type_ref: true,
                 payment_methods: { include: { method: true } },
-                categories_of_interest: { include: { category: true } }
+                categories_of_interest: { include: { category: true } },
+                subcategories_of_interest: ACTIVE_SUBCATEGORIES_INCLUDE
             }
         });
 
@@ -97,6 +111,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 settings: true,
                 payment_methods: { include: { method: true } },
                 categories_of_interest: { include: { category: true } },
+                subcategories_of_interest: ACTIVE_SUBCATEGORIES_INCLUDE,
                 sector_ref: true,
                 company_type_ref: true,
                 verification: true,
@@ -256,6 +271,15 @@ export class PrismaCompanyRepository implements CompanyRepository {
             };
         }
 
+        // Replace only the links to ACTIVE subcategories: links to inactive ones are preserved (hidden),
+        // so they come back if the backoffice reactivates the subcategory
+        if (data.interest_subcategory_ids) {
+            updatePayload.subcategories_of_interest = {
+                deleteMany: { subcategory: { is_active: true } },
+                create: subcategoryLinks(data.interest_subcategory_ids)
+            };
+        }
+
         // social_media: full replace (deleteMany + recreate)
         if (data.social_media_links && Array.isArray(data.social_media_links)) {
             updatePayload.social_media = {
@@ -277,6 +301,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
                 company_type_ref: true,
                 payment_methods: { include: { method: true } },
                 categories_of_interest: { include: { category: true } },
+                subcategories_of_interest: ACTIVE_SUBCATEGORIES_INCLUDE,
                 social_media: true
             }
         });
@@ -306,6 +331,7 @@ export class PrismaCompanyRepository implements CompanyRepository {
                     settings: true,
                     payment_methods: { include: { method: true } },
                     categories_of_interest: { include: { category: true } },
+                    subcategories_of_interest: ACTIVE_SUBCATEGORIES_INCLUDE,
                     sector_ref: true,
                     company_type_ref: true,
                     verification: true,
@@ -335,6 +361,12 @@ export class PrismaCompanyRepository implements CompanyRepository {
         const categoriesOfInterest = db.categories_of_interest?.map((ci: any) => ({
             id: ci.category.id,
             name: ci.category.name_es,
+        })) ?? [];
+
+        const subcategoriesOfInterest = db.subcategories_of_interest?.map((si: any) => ({
+            id: si.subcategory.id,
+            name: si.subcategory.name_es,
+            category_id: si.subcategory.category_id,
         })) ?? [];
 
         let verificationInfo = null;
@@ -399,7 +431,8 @@ export class PrismaCompanyRepository implements CompanyRepository {
             paymentMethods,
             categoriesOfInterest,
             verificationInfo,
-            socialMedia
+            socialMedia,
+            subcategoriesOfInterest
         );
     }
 
