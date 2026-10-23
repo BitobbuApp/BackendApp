@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { subcategoryDtoSchema } from "../../../subcategories/application/dtos/subcategory.dto";
 
 const categorySchema = Joi.object({
     id: Joi.number().integer().required(),
@@ -69,6 +70,8 @@ const companySizeSchema = Joi.object({
 
 export const listAppMetaDataDtoResponseSchema = Joi.object({
     categories: Joi.array().items(categorySchema).required(),
+    // Active subcategories (flat list, each one points to its category_id)
+    subcategories: Joi.array().items(subcategoryDtoSchema).required(),
     company_types: Joi.array().items(companyTypeSchema).required(),
     notification_types: Joi.array().items(notificationTypeSchema).required(),
     payment_methods: Joi.array().items(paymentMethodSchema).required(),

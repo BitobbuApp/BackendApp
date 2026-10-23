@@ -10,9 +10,11 @@ import { ListVerifDocTypesUseCase } from "../../verifDocTypes/application/listVe
 import { ListPaymentConditionsUseCase } from "../../paymentConditions/application/listPaymentConditionsUseCase";
 import { ListEstimatedMonthlyTransactionsUseCase } from "../../estimatedMonthlyTransactions/application/listEstimatedMonthlyTransactionsUseCase";
 import { ListCompanySizesUseCase } from "../../companySizes/application/listCompanySizesUseCase";
+import { ListSubcategoriesUseCase } from "../../subcategories/application/listSubcategoriesUseCase";
 
 interface ListAppMetaDataOutput {
     categories: any[];
+    subcategories: any[];
     company_types: any[];
     notification_types: any[];
     payment_methods: any[];
@@ -35,6 +37,7 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
     private readonly listPaymentConditionsUseCase: ListPaymentConditionsUseCase;
     private readonly listEstimatedMonthlyTransactionsUseCase: ListEstimatedMonthlyTransactionsUseCase;
     private readonly listCompanySizesUseCase: ListCompanySizesUseCase;
+    private readonly listSubcategoriesUseCase: ListSubcategoriesUseCase;
 
     constructor() {
         super();
@@ -47,6 +50,7 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
         this.listPaymentConditionsUseCase = new ListPaymentConditionsUseCase();
         this.listEstimatedMonthlyTransactionsUseCase = new ListEstimatedMonthlyTransactionsUseCase();
         this.listCompanySizesUseCase = new ListCompanySizesUseCase();
+        this.listSubcategoriesUseCase = new ListSubcategoriesUseCase();
     }
 
     protected async implementation(): Promise<ListAppMetaDataOutput> {
@@ -60,6 +64,7 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
             paymentConditions,
             estimatedMonthlyTransactions,
             companySizes,
+            subcategories,
         ] = await Promise.all([
             this.listCategoriesUseCase.execute({}),
             this.listCompanyTypesUseCase.execute({}),
@@ -70,10 +75,12 @@ export class ListAppMetaDataUseCase extends UseCase<Record<string, never>, ListA
             this.listPaymentConditionsUseCase.execute({}),
             this.listEstimatedMonthlyTransactionsUseCase.execute({}),
             this.listCompanySizesUseCase.execute({}),
+            this.listSubcategoriesUseCase.execute({}),
         ]);
 
         return {
             categories,
+            subcategories,
             company_types: companyTypes,
             notification_types: notificationTypes,
             payment_methods: paymentMethods,
