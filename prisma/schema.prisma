@@ -900,6 +900,7 @@ enum QuoteRevisionAction {
   canceled
   expired
   negotiation_started
+  rejected
 }
 
 enum TransactionRevisionAction {

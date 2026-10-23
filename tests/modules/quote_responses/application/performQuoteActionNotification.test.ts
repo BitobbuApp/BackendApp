@@ -84,6 +84,85 @@ describe('negotiation_started notifications', () => {
     });
 });
 
+describe('rejected notifications', () => {
+    const rejected = { ...result, status: 'rejected', rejection_reason: 'Precio alto' };
+    const emitRejected = () =>
+        (new PerformQuoteActionUseCase() as any).emitSocketEvent(
+            { quoteResponseId: QUOTE_ID, action: 'rejected', actorCompanyId: BUYER, payload: { reason: 'Precio alto' } },
+            rejected
+        );
+
+    beforeEach(() => {
+        stub(prisma.request, 'findUnique', async () => ({ product_service: 'Cemento gris' }));
+    });
+
+    test('without a chat, the supplier is still notified (link to its opportunities)', async () => {
+        stub(prisma.conversation, 'findFirst', async () => null);
+        await emitRejected();
+
+        const notif = notifications.calls[0][0].data;
+        assert.equal(notif.company_id, SUPPLIER);
+        assert.equal(notif.title, 'Tu oferta fue rechazada');
+        assert.match(notif.message, /Cemento gris/);
+        assert.match(notif.message, /Motivo: Precio alto/);
+        assert.equal(notif.link, '/PosiblesClientes');
+        assert.deepEqual(emits.map(e => [e.room, e.event]), [[`company_${SUPPLIER}`, 'notification:new']]);
+        assert.equal(systemMessages.calls.length, 0);
+    });
+
+    test('with a chat, the room gets quote:rejected and the timeline a system message', async () => {
+        stub(prisma.conversation, 'findFirst', async () => ({ id: CONVERSATION_ID, status: 'cancelled' }));
+        await emitRejected();
+
+        assert.equal(notifications.calls[0][0].data.link, `/Chat/${CONVERSATION_ID}`);
+        const roomEvent = emits.find(e => e.room === CONVERSATION_ID);
+        assert.equal(roomEvent?.event, 'quote:rejected');
+        assert.equal(roomEvent?.payload.conversation_status, 'cancelled');
+        // The supplier gets the state event even without the chat open
+        assert.ok(emits.some(e => e.room === `company_${SUPPLIER}` && e.event === 'quote:rejected'));
+        assert.ok(!emits.some(e => e.room === `company_${BUYER}`), 'the buyer (actor) is not notified');
+        assert.equal(systemMessages.calls[0][0].eventKey, 'quote.rejected');
+        assert.equal(systemMessages.calls[0][0].eventPayload.reason, 'Precio alto');
+    });
+});
+
+describe('canceled (supplier withdraws) notifications', () => {
+    const withdrawn = { ...result, status: 'rejected', rejection_reason: 'Oferta retirada por el proveedor' };
+    const emitCanceled = () =>
+        (new PerformQuoteActionUseCase() as any).emitSocketEvent(
+            { quoteResponseId: QUOTE_ID, action: 'canceled', actorCompanyId: SUPPLIER, payload: {} },
+            withdrawn
+        );
+
+    beforeEach(() => {
+        stub(prisma.request, 'findUnique', async () => ({ product_service: 'Cemento gris', company_id: BUYER }));
+    });
+
+    test('the buyer is notified and gets quote:canceled in its company room and in the chat', async () => {
+        stub(prisma.conversation, 'findFirst', async () => ({ id: CONVERSATION_ID, status: 'cancelled' }));
+        await emitCanceled();
+
+        const notif = notifications.calls[0][0].data;
+        assert.equal(notif.company_id, BUYER);
+        assert.equal(notif.title, 'El proveedor retiró su oferta');
+        assert.equal(notif.link, `/Chat/${CONVERSATION_ID}`);
+
+        assert.ok(emits.some(e => e.room === `company_${BUYER}` && e.event === 'notification:new'));
+        assert.ok(emits.some(e => e.room === `company_${BUYER}` && e.event === 'quote:canceled'));
+        assert.ok(emits.some(e => e.room === CONVERSATION_ID && e.event === 'quote:canceled'));
+        assert.ok(!emits.some(e => e.room === `company_${SUPPLIER}`), 'the supplier (actor) is not notified');
+        assert.equal(systemMessages.calls[0][0].eventKey, 'quote.canceled');
+    });
+
+    test('without a chat, the buyer is still notified (link to the request summary)', async () => {
+        stub(prisma.conversation, 'findFirst', async () => null);
+        await emitCanceled();
+
+        assert.equal(notifications.calls[0][0].data.link, `/Requests/${REQUEST_ID}/summary`);
+        assert.deepEqual(emits.map(e => [e.room, e.event]), [[`company_${BUYER}`, 'notification:new']]);
+    });
+});
+
 describe('other quote actions (regression)', () => {
     test('price_updated is emitted only to the conversation room, without notifications', async () => {
         await emit('price_updated', SUPPLIER);

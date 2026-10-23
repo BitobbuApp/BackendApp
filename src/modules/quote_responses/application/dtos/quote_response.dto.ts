@@ -114,6 +114,7 @@ export const receivedQuoteResponseDtoResponseSchema = Joi.object({
     notes: Joi.string().allow(null).optional(),
     has_guarantee: Joi.boolean().allow(null).optional().default(false),
     status: Joi.string().required(),
+    rejection_reason: Joi.string().allow(null, '').optional(),
     created_at: Joi.date().allow(null).optional(),
     updated_at: Joi.date().allow(null).optional(),
     supplier: supplierSummarySchema.optional(),

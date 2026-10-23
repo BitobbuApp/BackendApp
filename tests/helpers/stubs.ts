@@ -35,8 +35,12 @@ let io: any;
 export function spyIO(): SocketEmit[] {
     if (!io) io = initializeSocket({ server: undefined });
     const emits: SocketEmit[] = [];
-    stub(io, 'to', (room: string) => ({
-        emit: (event: string, payload: any) => { emits.push({ room, event, payload }); return true; }
+    // io.to() accepts one room or several: record one emit per room
+    stub(io, 'to', (rooms: string | string[]) => ({
+        emit: (event: string, payload: any) => {
+            [rooms].flat().forEach((room) => emits.push({ room, event, payload }));
+            return true;
+        }
     }));
     return emits;
 }

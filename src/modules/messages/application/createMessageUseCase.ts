@@ -6,7 +6,7 @@ import { Message } from '../domain/entities/message.entity';
 import { UseCase } from '../../../shared/application/useCase';
 import { createMessageDtoRequestSchema, createMessageUseCaseResponseSchema } from './dtos/message.dto';
 import Joi from 'joi';
-import { ConversationAccessDeniedError, ConversationNotFoundError } from '../../conversations/domain/errors/conversation.errors';
+import { ConversationAccessDeniedError, ConversationClosedError, ConversationNotFoundError } from '../../conversations/domain/errors/conversation.errors';
 
 interface CreateMessageDto {
     conversation_id: string;
@@ -40,6 +40,11 @@ export class CreateMessageUseCase extends UseCase<CreateMessageDto, { message: M
 
         if (conversation.participant_1_id !== data.sender_id && conversation.participant_2_id !== data.sender_id) {
             throw new ConversationAccessDeniedError(data.conversation_id);
+        }
+
+        // A closed negotiation (e.g. the buyer rejected the quote) stays visible but read-only
+        if (conversation.status === 'cancelled') {
+            throw new ConversationClosedError(data.conversation_id);
         }
 
         // IDEMPOTENCY STRATEGY: 

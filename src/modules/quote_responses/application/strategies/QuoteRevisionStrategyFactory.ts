@@ -11,6 +11,7 @@ import { FormalQuoteRejectedStrategy } from './FormalQuoteRejectedStrategy';
 import { AcceptedStrategy } from './AcceptedStrategy';
 import { CanceledStrategy } from './CanceledStrategy';
 import { ExpiredStrategy } from './ExpiredStrategy';
+import { RejectedStrategy } from './RejectedStrategy';
 
 const STRATEGIES: Record<string, QuoteRevisionStrategy> = {
     negotiation_started: new NegotiationStartedStrategy(),
@@ -22,6 +23,7 @@ const STRATEGIES: Record<string, QuoteRevisionStrategy> = {
     formal_quote_rejected: new FormalQuoteRejectedStrategy(),
     accepted: new AcceptedStrategy(),
     canceled: new CanceledStrategy(),
+    rejected: new RejectedStrategy(),
     expired: new ExpiredStrategy(),
 };
 
