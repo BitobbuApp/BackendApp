@@ -20,6 +20,16 @@ Used for business sectors.
 - **`icon`**: (Optional) String representing an icon name or URL.
 - **`is_active`**: Boolean indicating if the category is currently available.
 
+### 1.1 Subcategories (`subcategories`)
+Second level of the category taxonomy (flat list; only **active** subcategories of active categories).
+Companies send the ones they work with as `interest_subcategory_ids` (`POST /companies`, `PATCH /companies/:id`);
+their parent categories are added to `interest_category_ids` automatically. `GET /companies/me` returns them in `subcategories_of_interest`.
+- **`id`**: Numeric identifier for API requests.
+- **`category_id`**: Parent category (`categories[].id`).
+- **`name_es` / `name_en`**: Localized UI labels.
+- **`slug`**: Global unique string (`<category-slug>-<name>`).
+- **`sort_order`**: Display order inside its category.
+
 ### 2. Company Types (`company_types`)
 Differentiates between Manufacturers, Wholesalers, etc.
 - **`id`**: Numeric identifier.

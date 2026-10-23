@@ -66,6 +66,7 @@ model Company {
   monthly_transactions     EstimatedMonthlyTransaction? @relation(fields: [monthly_transactions_id], references: [id])
   sector_ref               Category?                    @relation("CompanySector", fields: [sector_id], references: [id])
   categories_of_interest   CompanyCategoryOfInterest[]
+  subcategories_of_interest CompanySubcategoryOfInterest[]
   commercial_profile       CompanyCommercialProfile?
   contacts                 CompanyContact[]
   locations                CompanyLocation[]
@@ -192,8 +193,28 @@ model Category {
   categories_of_interest CompanyCategoryOfInterest[]
   offers                 CompanyOffer[]              @relation("OfferCategory")
   requests               Request[]                   @relation("RequestCategory")
+  subcategories          Subcategory[]
 
   @@map("categories")
+}
+
+/// Second level of the category taxonomy. Never deleted: deactivated with is_active = false.
+model Subcategory {
+  id          Int                            @id @default(autoincrement()) @db.SmallInt
+  category_id Int                            @db.SmallInt
+  slug        String                         @unique @db.VarChar(120)
+  name_es     String                         @db.VarChar(100)
+  name_en     String                         @db.VarChar(100)
+  is_active   Boolean                        @default(true)
+  sort_order  Int                            @default(0) @db.SmallInt
+  created_at  DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime                       @updatedAt @db.Timestamptz(6)
+  category    Category                       @relation(fields: [category_id], references: [id])
+  companies   CompanySubcategoryOfInterest[]
+
+  @@unique([category_id, name_es])
+  @@index([category_id, is_active])
+  @@map("subcategories")
 }
 
 model CompanyTypeDict {
@@ -286,6 +307,19 @@ model CompanyCategoryOfInterest {
 
   @@id([company_id, category_id])
   @@map("company_categories_of_interest")
+}
+
+/// Subcategories a company works with. Links to inactive subcategories are kept (hidden), never deleted.
+model CompanySubcategoryOfInterest {
+  company_id     String      @db.Uuid
+  subcategory_id Int         @db.SmallInt
+  created_at     DateTime    @default(now()) @db.Timestamptz(6)
+  company        Company     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  subcategory    Subcategory @relation(fields: [subcategory_id], references: [id])
+
+  @@id([company_id, subcategory_id])
+  @@index([subcategory_id])
+  @@map("company_subcategories_of_interest")
 }
 
 model CompanyOperatingCountry {
@@ -900,6 +934,7 @@ enum QuoteRevisionAction {
   canceled
   expired
   negotiation_started
+  rejected
 }
 
 enum TransactionRevisionAction {

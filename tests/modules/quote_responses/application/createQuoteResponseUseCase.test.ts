@@ -26,8 +26,7 @@ const input = (overrides: any = {}) => ({
 /** Builds the use case with a fake repository that echoes what it receives. */
 function setup(request: { target_company_id: string | null; company_offer_id: string | null } | null) {
     stub(prisma.request, 'findUnique', async () => request);
-    stub(prisma.conversation, 'findFirst', async () => ({ id: CONVERSATION_ID }));
-    const negotiate = recorder(async () => ({ status: 'negotiating' }));
+    const negotiate = recorder(async () => ({ status: 'negotiating', conversation_id: CONVERSATION_ID }));
     stub(PerformQuoteActionUseCase.prototype, 'execute', negotiate);
 
     const create = recorder(async (data: any) => ({

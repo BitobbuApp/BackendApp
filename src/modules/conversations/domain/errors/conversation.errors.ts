@@ -11,3 +11,9 @@ export class ConversationAccessDeniedError extends ApplicationError {
         super(403, `Forbidden: conversation ${id} does not belong to the authenticated company`);
     }
 }
+
+export class ConversationClosedError extends ApplicationError {
+    constructor(id: string) {
+        super(409, `Conversation ${id} is closed (read-only)`, "CONVERSATION_CLOSED", "CONFLICT");
+    }
+}

@@ -16,8 +16,10 @@ export const createQuoteResponseDtoRequestSchema = Joi.object({
     status: Joi.string().valid('pending', 'accepted', 'rejected', 'negotiating', 'expired').default('pending')
 });
 
+// Status changes are not allowed here: they go through the state machine (POST /:id/action)
 export const updateQuoteResponseDtoRequestSchema = Joi.object({
     id: Joi.string().uuid().required(),
+    requester_company_id: Joi.string().uuid().required(),
     company_offer_id: Joi.string().uuid().allow(null).optional(),
     unit_price_usd: Joi.number().precision(2).min(0).optional(),
     quantity: Joi.number().precision(2).min(0).optional(),
@@ -26,9 +28,7 @@ export const updateQuoteResponseDtoRequestSchema = Joi.object({
     delivery_time: Joi.string().max(100).allow(null, '').optional(),
     estimated_delivery_hours: Joi.number().integer().min(0).allow(null).optional(),
     notes: Joi.string().allow(null, '').optional(),
-    has_guarantee: Joi.boolean().optional(),
-    status: Joi.string().valid('pending', 'accepted', 'rejected', 'negotiating', 'expired').optional(),
-    rejection_reason: Joi.string().allow(null, '').optional()
+    has_guarantee: Joi.boolean().optional()
 });
 
 export const listQuoteResponsesDtoRequestSchema = Joi.object({
@@ -114,6 +114,7 @@ export const receivedQuoteResponseDtoResponseSchema = Joi.object({
     notes: Joi.string().allow(null).optional(),
     has_guarantee: Joi.boolean().allow(null).optional().default(false),
     status: Joi.string().required(),
+    rejection_reason: Joi.string().allow(null, '').optional(),
     created_at: Joi.date().allow(null).optional(),
     updated_at: Joi.date().allow(null).optional(),
     supplier: supplierSummarySchema.optional(),

@@ -326,7 +326,15 @@ export class PrismaQuoteResponseRepository implements QuoteResponseRepository {
     }
 
     async delete(id: string): Promise<void> {
-        await prisma.quoteResponse.delete({ where: { id } });
+        await prisma.$transaction(async (tx) => {
+            const deleted = await tx.quoteResponse.delete({ where: { id } });
+
+            // Mirror of create(): keep the parent Request's response_count in sync
+            await tx.request.update({
+                where: { id: deleted.request_id },
+                data: { response_count: { decrement: 1 } }
+            });
+        });
     }
 
 

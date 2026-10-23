@@ -26,7 +26,9 @@ const VALID_ACTIONS = [
     'formal_quote_rejected',
     'accepted',
     'canceled',
-    'expired',
+    'rejected',
+    // 'expired' is intentionally not accepted here: it is a system action (ExpiredStrategy, future cron),
+    // and exposing it would let any company expire someone else's quote.
 ];
 
 const inputSchema = Joi.object({
@@ -38,6 +40,9 @@ const inputSchema = Joi.object({
 }).options({ stripUnknown: true });
 
 const outputSchema = Joi.object().unknown(true);
+
+/** Actions that close the negotiation (the chat becomes read-only history). */
+const NEGOTIATION_CLOSING_ACTIONS = ['rejected', 'canceled'];
 
 /**
  * Socket event map — maps each action to the event name emitted to the conversation room.
@@ -52,6 +57,7 @@ const SOCKET_EVENTS: Record<string, string> = {
     formal_quote_rejected: 'quote:formal_rejected',
     accepted: 'quote:accepted',
     canceled: 'quote:canceled',
+    rejected: 'quote:rejected',
     expired: 'quote:expired',
 };
 
@@ -77,10 +83,17 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
         });
 
         // 2. See if there's a linked transaction (useful when action is 'accepted')
-        const transaction = await prisma.transaction.findUnique({
-            where: { quote_response_id: data.quoteResponseId },
-            select: { id: true },
-        });
+        //    and the negotiation conversation (useful to open the chat after 'negotiation_started')
+        const [transaction, conversation] = await Promise.all([
+            prisma.transaction.findUnique({
+                where: { quote_response_id: data.quoteResponseId },
+                select: { id: true },
+            }),
+            prisma.conversation.findFirst({
+                where: { quote_response_id: data.quoteResponseId },
+                select: { id: true },
+            }),
+        ]);
 
         // 3. Emit socket event
         this.emitSocketEvent(data, result, transaction?.id);
@@ -102,6 +115,7 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
             delivery_method_id: result.delivery_method_id,
             rejection_reason: result.rejection_reason,
             transaction_id: transaction?.id,
+            conversation_id: conversation?.id ?? null,
             created_at: result.created_at,
             updated_at: result.updated_at,
         };
@@ -122,6 +136,13 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
                 where: { quote_response_id: data.quoteResponseId },
                 select: { id: true, status: true },
             });
+
+            // Closing actions (buyer rejects / supplier withdraws) notify the counterparty even if no chat exists,
+            // and their state event also goes to the counterparty's company room (it may not have the chat open)
+            let counterpartyRoom: string | null = null;
+            if (NEGOTIATION_CLOSING_ACTIONS.includes(data.action)) {
+                counterpartyRoom = await this.notifyNegotiationClosed(data, result, conversation?.id ?? null);
+            }
 
             if (!conversation) {
                 logger.debug(`No conversation found for quote_response ${data.quoteResponseId}, skipping socket emit.`);
@@ -214,9 +235,11 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
                 logger.info(`🔔 Notification created for supplier ${result.supplier_id} (quote_accepted)`);
 
             } else {
-                // Normal flow: emit strictly to the conversation room
-                io.to(conversation.id).emit(eventName, payload);
-                logger.info(`📡 Socket event "${eventName}" emitted to conversation ${conversation.id}`);
+                // Normal flow: emit to the conversation room (+ the counterparty's company room for closing actions).
+                // A single emit to several rooms reaches each socket only once.
+                const rooms = counterpartyRoom ? [conversation.id, counterpartyRoom] : conversation.id;
+                io.to(rooms).emit(eventName, payload);
+                logger.info(`📡 Socket event "${eventName}" emitted to ${[rooms].flat().join(', ')}`);
             }
 
             // Create system message for ALL quote actions to have a detailed timeline
@@ -230,6 +253,7 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
                 formal_quote_rejected: 'quote.formal_rejected',
                 accepted: 'quote.accepted',
                 canceled: 'quote.canceled',
+                rejected: 'quote.rejected',
                 expired: 'quote.expired'
             };
 
@@ -263,5 +287,47 @@ export class PerformQuoteActionUseCase extends UseCase<PerformQuoteActionDto, an
             // Socket errors should never break the API response
             logger.warn({ err }, `Failed to emit socket event for action "${data.action}"`);
         }
+    }
+
+    /**
+     * 🔔 Tells the counterparty that the negotiation was closed:
+     * - rejected (by the buyer)  → the supplier
+     * - canceled (supplier withdrew) → the buyer
+     * Returns the counterparty's company room.
+     */
+    private async notifyNegotiationClosed(data: PerformQuoteActionDto, result: any, conversationId: string | null): Promise<string> {
+        const io = getIO();
+        const request = await prisma.request.findUnique({
+            where: { id: result.request_id },
+            select: { product_service: true, company_id: true },
+        });
+        const reason = result.rejection_reason;
+        const product = request?.product_service ? ` para "${request.product_service}"` : '';
+        const withdrawn = data.action === 'canceled';
+
+        const counterpartyId = withdrawn ? request!.company_id : result.supplier_id;
+        const counterpartyRoom = `company_${counterpartyId}`;
+        const notif = await new CreateNotificationUseCase().execute({
+            companyId: counterpartyId,
+            typeId: NOTIFICATION_TYPE.GENERAL,
+            title: withdrawn ? 'El proveedor retiró su oferta' : 'Tu oferta fue rechazada',
+            message: withdrawn
+                ? `El proveedor retiró su oferta${product}. La negociación quedó cerrada.`
+                : `El comprador rechazó tu oferta${product}.${reason ? ` Motivo: ${reason}` : ''}`,
+            link: conversationId
+                ? `/Chat/${conversationId}`
+                : withdrawn ? `/Requests/${result.request_id}/summary` : '/PosiblesClientes',
+            entityType: 'quote_response',
+            entityId: data.quoteResponseId,
+        });
+        io.to(counterpartyRoom).emit('notification:new', {
+            id: notif.id,
+            title: notif.title,
+            message: notif.message,
+            link: notif.link,
+            createdAt: notif.createdAt,
+        });
+        logger.info(`🔔 Notification created for company ${counterpartyId} (quote_${data.action})`);
+        return counterpartyRoom;
     }
 }
