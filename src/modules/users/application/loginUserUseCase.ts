@@ -133,7 +133,7 @@ export class LoginUserUseCase extends UseCase<LoginDto, LoginResult> {
             userId: user.id,
             companyId: user?.company_id ?? null,
             email: user.email,
-            tv: (user as any).token_version ?? 0,
+            tv: user.token_version,
         });
 
         return {

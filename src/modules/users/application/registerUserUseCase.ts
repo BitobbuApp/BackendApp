@@ -144,7 +144,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             userId: newUser.id,
             companyId: newUser.company_id ?? null,
             email: newUser.email,
-            tv: (newUser as any).token_version ?? 0,
+            tv: newUser.token_version,
         });
 
         return {

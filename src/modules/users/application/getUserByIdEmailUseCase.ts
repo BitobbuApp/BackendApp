@@ -49,7 +49,7 @@ export class GetUserByIdEmailUseCase extends UseCase<GetUserByIdEmailInput, any>
             companyId: user.company_id ?? null,
             email: user.email,
             is_active: user.is_active,
-            token_version: (user as any).token_version ?? 0,
+            token_version: user.token_version,
         };
     }
 }
