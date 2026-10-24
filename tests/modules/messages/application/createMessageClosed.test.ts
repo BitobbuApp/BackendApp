@@ -6,9 +6,10 @@ import { ConversationClosedError } from '../../../../src/modules/conversations/d
 const CONVERSATION_ID = '88888888-8888-4888-8888-888888888888';
 const BUYER = '22222222-2222-4222-8222-222222222222';
 const SUPPLIER = '33333333-3333-4333-8333-333333333333';
+const TX_ID = '77777777-7777-4777-8777-777777777777';
 const MESSAGE_ID = '99999999-9999-4999-8999-999999999999';
 
-function setup(status: string) {
+function setup(status: string, reviewed = false) {
     const created: any[] = [];
     const messageRepo: any = {
         findByClientMsgId: async () => null,
@@ -18,10 +19,11 @@ function setup(status: string) {
         },
     };
     const conversationRepo: any = {
-        findById: async () => ({ id: CONVERSATION_ID, participant_1_id: BUYER, participant_2_id: SUPPLIER, status }),
+        findById: async () => ({ id: CONVERSATION_ID, participant_1_id: BUYER, participant_2_id: SUPPLIER, status, transaction_id: TX_ID }),
         updateLastMessage: async () => undefined,
     };
-    return { useCase: new CreateMessageUseCase(messageRepo, conversationRepo), created };
+    const hasReviewed = async () => reviewed;
+    return { useCase: new CreateMessageUseCase(messageRepo, conversationRepo, hasReviewed), created };
 }
 
 const send = (useCase: CreateMessageUseCase) =>
@@ -32,6 +34,18 @@ describe('CreateMessageUseCase — closed conversations', () => {
         const { useCase, created } = setup('cancelled');
         await assert.rejects(send(useCase), ConversationClosedError);
         assert.equal(created.length, 0);
+    });
+
+    test('pending_review: the party that already reviewed can no longer write', async () => {
+        const { useCase, created } = setup('pending_review', true);
+        await assert.rejects(send(useCase), ConversationClosedError);
+        assert.equal(created.length, 0);
+    });
+
+    test('pending_review: the party that has not reviewed yet can still write', async () => {
+        const { useCase, created } = setup('pending_review', false);
+        await send(useCase);
+        assert.equal(created.length, 1);
     });
 
     test('an active conversation accepts messages (regression)', async () => {
