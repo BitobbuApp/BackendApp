@@ -1,6 +1,8 @@
 import { Worker } from 'bullmq';
 import { redisConnection } from '../../redis';
 import { SendRfqMatchEmailUseCase } from '../../../../modules/notifications/application/sendRfqMatchEmailUseCase';
+import { ProcessPasswordResetJob } from '../../../../modules/auth/application/processPasswordResetJob';
+
 import logger from '../../logger';
 
 export const notificationsWorker = new Worker(
@@ -13,6 +15,11 @@ export const notificationsWorker = new Worker(
           companyId: job.data.companyId,
           requestId: job.data.requestId
         });
+        break;
+      }
+      case 'password-reset-email': {
+        const jobProcessor = new ProcessPasswordResetJob();
+        await jobProcessor.execute(job.data);
         break;
       }
       default:

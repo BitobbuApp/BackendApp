@@ -24,5 +24,6 @@ if (files.length === 0) {
 const { status } = spawnSync('npx', ['tsx', '--test', '--test-force-exit', ...files], {
     stdio: 'inherit',
     shell: true,
+    env: { ...process.env, NODE_ENV: 'test' },
 });
 process.exit(status ?? 1);
