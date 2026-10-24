@@ -15,6 +15,7 @@ import { deliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/h
 import { reviewRoutes } from "./modules/reviews/infrastructure/http/reviewRoutes";
 import { dashboardRoutes } from "./modules/dashboard/infrastructure/http/dashboardRoutes";
 import { notificationRoutes } from "./modules/notifications/infrastructure/http/notificationRoutes";
+import { authRoutes } from "./modules/auth/infrastructure/http/authRoutes";
 
 // Admin imports
 import { adminAuthRoutes } from "./modules/admins/infrastructure/http/adminAuthRoutes";
@@ -53,6 +54,7 @@ export async function routes(app: FastifyInstance) {
     app.register(deliveryMethodRoutes, { prefix: '/delivery-methods' });
     app.register(reviewRoutes, { prefix: '/reviews' });
     app.register(notificationRoutes, { prefix: '/notifications' });
+    app.register(authRoutes, { prefix: '/auth' });
 
     // Admin Routes
     app.register(adminAuthRoutes, { prefix: '/admin/auth' });
