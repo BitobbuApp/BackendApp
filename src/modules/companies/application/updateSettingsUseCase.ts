@@ -10,6 +10,7 @@ interface UpdateSettingsInput {
     receive_email_notifications?: boolean;
     receive_whatsapp_notifications?: boolean;
     receive_web_notifications?: boolean;
+    two_factor_required?: boolean;
 }
 
 export class UpdateSettingsUseCase extends UseCase<UpdateSettingsInput, CompanySettings> {
