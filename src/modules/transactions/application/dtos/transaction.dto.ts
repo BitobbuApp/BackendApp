@@ -31,6 +31,8 @@ export const transactionDtoResponseSchema = Joi.object({
     supplier_confirmed: Joi.boolean().required(),
     buyer_confirmed_at: Joi.date().allow(null).optional(),
     supplier_confirmed_at: Joi.date().allow(null).optional(),
+    buyer_review_status: Joi.string().optional(),
+    supplier_review_status: Joi.string().optional(),
     buyer_name: Joi.string().allow(null).optional(),
     supplier_name: Joi.string().allow(null).optional(),
     created_at: Joi.date().allow(null).optional(),
