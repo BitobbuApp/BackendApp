@@ -10,6 +10,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             name: offer.name!,
             description: offer.description ?? null,
             ...(offer.category_id !== undefined && { category_id: offer.category_id }),
+            ...(offer.subcategory_id !== undefined && { subcategory_id: offer.subcategory_id }),
             ...(offer.supplier_type_id !== undefined && { supplier_type_id: offer.supplier_type_id }),
             base_price_usd: offer.base_price_usd ?? null,
             ...(offer.unit_id !== undefined && { unit_id: offer.unit_id }),
@@ -44,7 +45,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             include: {
                 photos: true,
                 pricing_tiers: true,
-                category: true,
+                category: true, subcategory: true,
                 supplier_type: true,
                 unit_of_measure: true,
             }
@@ -74,7 +75,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
                         min_quantity: 'asc'
                     }
                 }, 
-                category: true, 
+                category: true, subcategory: true, 
                 supplier_type: true, 
                 unit_of_measure: true,
                 company: {
@@ -100,7 +101,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     async findByCompanyId(companyId: string): Promise<CompanyOffer[]> {
         const list = await prisma.companyOffer.findMany({
             where: { company_id: companyId, deleted_at: null },
-            include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true }
+            include: { photos: true, pricing_tiers: true, category: true, subcategory: true, supplier_type: true, unit_of_measure: true }
         });
         return list.map((item: any) => this.mapToEntity(item));
     }
@@ -113,7 +114,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
                 skip,
                 take: limit,
                 where: { deleted_at: null },
-                include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true },
+                include: { photos: true, pricing_tiers: true, category: true, subcategory: true, supplier_type: true, unit_of_measure: true },
                 orderBy: { created_at: 'desc' }
             })
         ]);
@@ -139,6 +140,10 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
 
         if (filters.categoryId) {
             where.category_id = filters.categoryId;
+        }
+
+        if (filters.subcategoryId) {
+            where.subcategory_id = filters.subcategoryId;
         }
 
         if (filters.supplierTypeId) {
@@ -181,7 +186,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
                 include: {
                     photos: true,
                     pricing_tiers: true,
-                    category: true,
+                    category: true, subcategory: true,
                     supplier_type: true,
                     unit_of_measure: true,
                     company: {
@@ -204,6 +209,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             ...(offer.name !== undefined && { name: offer.name }),
             ...(offer.description !== undefined && { description: offer.description }),
             ...(offer.category_id !== undefined && { category_id: offer.category_id }),
+            ...(offer.subcategory_id !== undefined && { subcategory_id: offer.subcategory_id }),
             ...(offer.supplier_type_id !== undefined && { supplier_type_id: offer.supplier_type_id }),
             ...(offer.base_price_usd !== undefined && { base_price_usd: offer.base_price_usd }),
             ...(offer.unit_id !== undefined && { unit_id: offer.unit_id }),
@@ -239,7 +245,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
         const updated = await prisma.companyOffer.update({
             where: { id },
             data: dataToUpdate,
-            include: { photos: true, pricing_tiers: true, category: true, supplier_type: true, unit_of_measure: true }
+            include: { photos: true, pricing_tiers: true, category: true, subcategory: true, supplier_type: true, unit_of_measure: true }
         });
         return this.mapToEntity(updated);
     }
@@ -305,7 +311,9 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             db.updated_at,
             photos,
             tiers,
-            company_details
+            company_details,
+            db.subcategory_id ?? null,
+            db.subcategory?.name_es ?? null
         );
     }
 }

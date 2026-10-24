@@ -19,6 +19,8 @@ export const createCompanyOfferDtoRequestSchema = Joi.object({
     name: Joi.string().max(200).required(),
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
+    // Optional second level of the category (must belong to it; empty string clears it)
+    subcategory_id: Joi.number().integer().min(1).allow(null, "").optional(),
     supplier_type_id: Joi.number().integer().min(1).allow(null).optional(),
     base_price_usd: Joi.number().precision(2).min(0).allow(null).optional(),
     unit_id: Joi.number().integer().min(1).allow(null).optional(),
@@ -39,6 +41,8 @@ export const updateCompanyOfferDtoRequestSchema = Joi.object({
     name: Joi.string().max(200).optional(),
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
+    // Optional second level of the category (must belong to it; empty string clears it)
+    subcategory_id: Joi.number().integer().min(1).allow(null, "").optional(),
     supplier_type_id: Joi.number().integer().min(1).allow(null).optional(),
     base_price_usd: Joi.number().precision(2).min(0).allow(null).optional(),
     unit_id: Joi.number().integer().min(1).allow(null).optional(),
@@ -99,6 +103,8 @@ export const companyOfferDtoResponseSchema = Joi.object({
     description: Joi.string().allow('', null).optional(),
     category_id: Joi.number().integer().allow(null).optional(),
     category: Joi.string().allow('', null).optional(),
+    subcategory_id: Joi.number().integer().allow(null).optional(),
+    subcategory: Joi.string().allow('', null).optional(),
     supplier_type_id: Joi.number().integer().allow(null).optional(),
     supplier_type: Joi.string().allow('', null).optional(),
     base_price_usd: Joi.number().allow(null).optional(),
@@ -120,6 +126,7 @@ export const companyOfferDtoResponseSchema = Joi.object({
 export const searchMarketplaceDtoRequestSchema = Joi.object({
     searchTerm: Joi.string().allow('', null).optional(),
     categoryId: Joi.number().integer().min(1).allow(null).optional(),
+    subcategoryId: Joi.number().integer().min(1).allow(null).optional(),
     supplierTypeId: Joi.number().integer().min(1).allow(null).optional(),
     minPrice: Joi.number().min(0).allow(null).optional(),
     maxPrice: Joi.number().min(0).allow(null).optional(),
