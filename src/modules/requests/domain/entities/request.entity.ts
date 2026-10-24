@@ -74,7 +74,10 @@ export class RequestEntity {
         public target_company_id: string | null = null,
         public company_offer_id: string | null = null,
         public target_company: RequestTargetCompanyEntity | null = null,
-        public offer: RequestOfferEntity | null = null
+        public offer: RequestOfferEntity | null = null,
+        // Optional second level of the category
+        public subcategory_id: number | null = null,
+        public subcategory: string | null = null
     ) { }
 
     get is_direct(): boolean {

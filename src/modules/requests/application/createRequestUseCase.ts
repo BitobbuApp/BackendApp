@@ -19,6 +19,9 @@ import { NOTIFICATION_TYPE } from "../../notifications/domain/notificationTypes.
 import { getIO } from "../../../shared/infrastructure/socket";
 import logger from "../../../shared/infrastructure/logger";
 import { directRequestFields } from "./helpers/directRequestFields";
+import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
+import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
+import { resolveCategoryAndSubcategory } from "../../subcategories/application/helpers/resolveSubcategory";
 
 interface CreateRequestDto {
     company_id: string;
@@ -28,6 +31,7 @@ interface CreateRequestDto {
     unit_id?: number;
     description?: string | null;
     category_id?: number | null;
+    subcategory_id?: number | null | '';
     status?: string;
     type: number;
     payment_condition_id?: string | null;
@@ -59,6 +63,8 @@ interface RequestResult {
     description: string | null;
     category: string | null;
     category_id: number | null;
+    subcategory_id: number | null;
+    subcategory: string | null;
     status: string;
     type: string;
     payment_condition_id?: string | null;
@@ -80,6 +86,7 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
     private readonly uploadDocumentUseCase: UploadDocumentUseCase;
     private readonly companyOfferRepository: CompanyOfferRepository;
     private readonly invitationRepository: RequestInvitationRepository;
+    private readonly subcategoryRepository: SubcategoryRepository;
 
     constructor() {
         super();
@@ -87,6 +94,7 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
         this.uploadDocumentUseCase = new UploadDocumentUseCase(storageService);
         this.companyOfferRepository = new PrismaCompanyOfferRepository();
         this.invitationRepository = new PrismaRequestInvitationRepository();
+        this.subcategoryRepository = new PrismaSubcategoryRepository();
     }
 
     protected async implementation(data: CreateRequestDto): Promise<RequestResult> {
@@ -141,10 +149,19 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
 
             (repoData as any).target_company_id = offer.company_id;
             (repoData as any).company_offer_id = offer.id;
+            // The offer's subcategory is inherited only when the form keeps the offer's category
+            const keepsOfferCategory = !repoData.category_id || repoData.category_id === offer.category_id;
             if (!repoData.category_id && offer.category_id) {
                 repoData.category_id = offer.category_id;
             }
+            if (keepsOfferCategory && !repoData.subcategory_id && offer.subcategory_id) {
+                const [active] = await this.subcategoryRepository.findActiveByIds([offer.subcategory_id]);
+                if (active) repoData.subcategory_id = active.id;
+            }
         }
+
+        // Optional subcategory: must be active and belong to the category (or sets the category)
+        Object.assign(repoData, await resolveCategoryAndSubcategory(this.subcategoryRepository, repoData));
 
         const created = await this.requestRepository.create(repoData as any);
 
@@ -166,6 +183,8 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
             description: created.description,
             category: created.category,
             category_id: (created as any).category_id ?? null,
+            subcategory_id: created.subcategory_id,
+            subcategory: created.subcategory,
             status: created.status,
             type: (created as any).type,
             payment_condition_id: created.payment_condition_id,

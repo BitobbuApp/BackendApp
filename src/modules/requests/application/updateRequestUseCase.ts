@@ -4,6 +4,9 @@ import { PrismaRequestRepository } from "../infrastructure/persistence/PrismaReq
 import { RequestNotFoundError } from "../domain/errors/request.errors";
 import { updateRequestDtoRequestSchema, requestDtoResponseSchema } from "./dtos/request.dto";
 import Joi from "joi";
+import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
+import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
+import { resolveCategoryAndSubcategory } from "../../subcategories/application/helpers/resolveSubcategory";
 
 interface UpdateRequestDto {
     id: string;
@@ -13,6 +16,7 @@ interface UpdateRequestDto {
     unit_id?: number;
     description?: string | null;
     category_id?: number | null;
+    subcategory_id?: number | null | '';
     status?: string;
     expiration_date?: Date | null;
     payment_condition_id?: string | null;
@@ -24,10 +28,12 @@ export class UpdateRequestUseCase extends UseCase<UpdateRequestDto, any> {
     protected inputSchema: Joi.Schema = updateRequestDtoRequestSchema;
     protected outputSchema: Joi.Schema = requestDtoResponseSchema;
     private readonly requestRepository: RequestRepository;
+    private readonly subcategoryRepository: SubcategoryRepository;
 
     constructor() {
         super();
         this.requestRepository = new PrismaRequestRepository();
+        this.subcategoryRepository = new PrismaSubcategoryRepository();
     }
 
     protected async implementation(data: UpdateRequestDto): Promise<any> {
@@ -36,7 +42,13 @@ export class UpdateRequestUseCase extends UseCase<UpdateRequestDto, any> {
         const existingRequest = await this.requestRepository.findById(id);
         if (!existingRequest) throw new RequestNotFoundError(id);
 
-        const updated = await this.requestRepository.update(id, updateData);
+        // Optional subcategory: validated against the category; changing the category clears a mismatching one
+        Object.assign(updateData, await resolveCategoryAndSubcategory(this.subcategoryRepository, updateData, {
+            category_id: existingRequest.category_id,
+            subcategory_id: existingRequest.subcategory_id,
+        }));
+
+        const updated = await this.requestRepository.update(id, updateData as any);
         return {
             id: updated.id,
             company_id: updated.company_id,
@@ -48,6 +60,8 @@ export class UpdateRequestUseCase extends UseCase<UpdateRequestDto, any> {
             description: updated.description,
             category: updated.category,
             category_id: (updated as any).category_id ?? null,
+            subcategory_id: updated.subcategory_id,
+            subcategory: updated.subcategory,
             status: updated.status,
             type: (updated as any).type,
             payment_condition_id: updated.payment_condition_id,

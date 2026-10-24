@@ -23,3 +23,9 @@ export class InvalidSubcategoriesError extends ApplicationError {
         super(400, `Invalid or inactive subcategories: ${ids.join(', ')}`, "INVALID_SUBCATEGORIES", "VALIDATION", { ids });
     }
 }
+
+export class SubcategoryCategoryMismatchError extends ApplicationError {
+    constructor(subcategoryId: number, categoryId: number) {
+        super(400, `Subcategory ${subcategoryId} does not belong to category ${categoryId}`, "SUBCATEGORY_CATEGORY_MISMATCH", "VALIDATION");
+    }
+}
