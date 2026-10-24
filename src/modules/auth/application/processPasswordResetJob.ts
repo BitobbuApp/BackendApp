@@ -82,6 +82,7 @@ export class ProcessPasswordResetJob {
         await this.emailService.sendTemplate({
             to: user.email,
             templateKey: 'password_reset',
+            critical: true,
             variables: {
                 first_name: user.first_name,
                 reset_url: resetUrl,

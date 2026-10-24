@@ -5,6 +5,9 @@ import { EncryptionService } from '../../../shared/application/services/encrypti
 import { TotpService } from '../../../shared/application/services/totpService';
 import { TwoFactorInvalidError } from '../domain/errors/auth.errors';
 import { ApplicationError } from '../../../shared/domain/error';
+import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
+import { EmailService } from '../../../shared/application/services/email.service';
+import { notifyTwoFactorChange } from './helpers/notifyTwoFactorChange';
 import { TwoFactorAttemptGuard } from '../domain/services/twoFactorAttemptGuard';
 
 interface RegenerateRecoveryCodesInput {
@@ -27,6 +30,7 @@ export class RegenerateRecoveryCodesUseCase extends UseCase<RegenerateRecoveryCo
     });
 
     protected outputSchema = Joi.any();
+    private readonly emailService: EmailService = new MailgunEmailAdapter();
 
     private readonly encryptionService: EncryptionService;
     private readonly totpService: TotpService;
@@ -92,6 +96,8 @@ export class RegenerateRecoveryCodesUseCase extends UseCase<RegenerateRecoveryCo
                 },
             });
         });
+
+        notifyTwoFactorChange(this.emailService, user, 'códigos de respaldo regenerados', ip);
 
         return {
             recovery_codes: rawCodes,

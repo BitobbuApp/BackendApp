@@ -5,6 +5,9 @@ import { TotpService } from '../../../shared/application/services/totpService';
 import { EncryptionService } from '../../../shared/application/services/encryptionService';
 import { TwoFactorInvalidError } from '../domain/errors/auth.errors';
 import { ApplicationError } from '../../../shared/domain/error';
+import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
+import { EmailService } from '../../../shared/application/services/email.service';
+import { notifyTwoFactorChange } from './helpers/notifyTwoFactorChange';
 import { JwtService } from '../../../shared/application/services/jwtService';
 import { TwoFactorAttemptGuard } from '../domain/services/twoFactorAttemptGuard';
 
@@ -42,6 +45,7 @@ export class EnableTwoFactorUseCase extends UseCase<EnableTwoFactorInput, Enable
     });
 
     protected outputSchema = Joi.any();
+    private readonly emailService: EmailService = new MailgunEmailAdapter();
 
     private readonly totpService: TotpService;
     private readonly encryptionService: EncryptionService;
@@ -134,6 +138,8 @@ export class EnableTwoFactorUseCase extends UseCase<EnableTwoFactorInput, Enable
             email: updatedUser.email,
             tv: updatedUser.token_version,
         });
+
+        notifyTwoFactorChange(this.emailService, user, 'activado', ip);
 
         return {
             success: true,

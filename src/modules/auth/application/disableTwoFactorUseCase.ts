@@ -10,6 +10,9 @@ import {
 } from '../domain/errors/auth.errors';
 import { InvalidCredentialsError } from '../../users/domain/errors/user.errors';
 import { ApplicationError } from '../../../shared/domain/error';
+import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
+import { EmailService } from '../../../shared/application/services/email.service';
+import { notifyTwoFactorChange } from './helpers/notifyTwoFactorChange';
 import { JwtService } from '../../../shared/application/services/jwtService';
 import { TwoFactorAttemptGuard } from '../domain/services/twoFactorAttemptGuard';
 
@@ -37,6 +40,7 @@ export class DisableTwoFactorUseCase extends UseCase<DisableTwoFactorInput, Disa
     });
 
     protected outputSchema = Joi.any();
+    private readonly emailService: EmailService = new MailgunEmailAdapter();
 
     private readonly passwordHasher: PasswordHasher;
     private readonly encryptionService: EncryptionService;
@@ -137,6 +141,8 @@ export class DisableTwoFactorUseCase extends UseCase<DisableTwoFactorInput, Disa
             email: updatedUser.email,
             tv: updatedUser.token_version,
         });
+
+        notifyTwoFactorChange(this.emailService, user, 'desactivado', ip);
 
         return {
             success: true,
