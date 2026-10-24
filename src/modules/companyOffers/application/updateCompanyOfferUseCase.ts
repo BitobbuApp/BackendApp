@@ -5,6 +5,9 @@ import { PrismaCompanyOfferRepository } from "../infrastructure/persistence/Pris
 import { CompanyOfferNotFoundError, CompanyOfferAccessDeniedError } from "../domain/errors/companyOffer.errors";
 import { updateCompanyOfferDtoRequestSchema, companyOfferDtoResponseSchema } from "./dtos/companyOffer.dto";
 import Joi from "joi";
+import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
+import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
+import { resolveCategoryAndSubcategory } from "../../subcategories/application/helpers/resolveSubcategory";
 
 interface UpdateCompanyOfferPhotoDto {
     url: string;
@@ -23,6 +26,7 @@ interface UpdateCompanyOfferDto {
     name?: string;
     description?: string | null;
     category_id?: number | null;
+    subcategory_id?: number | null | "";
     supplier_type_id?: number | null;
     base_price_usd?: number | null;
     unit_id?: number | null;
@@ -39,10 +43,12 @@ export class UpdateCompanyOfferUseCase extends UseCase<UpdateCompanyOfferDto, an
     protected inputSchema: Joi.Schema = updateCompanyOfferDtoRequestSchema;
     protected outputSchema: Joi.Schema = companyOfferDtoResponseSchema;
     private readonly companyOfferRepository: CompanyOfferRepository;
+    private readonly subcategoryRepository: SubcategoryRepository;
 
     constructor() {
         super();
         this.companyOfferRepository = new PrismaCompanyOfferRepository();
+        this.subcategoryRepository = new PrismaSubcategoryRepository();
     }
 
     protected async implementation(data: UpdateCompanyOfferDto): Promise<any> {
@@ -56,6 +62,12 @@ export class UpdateCompanyOfferUseCase extends UseCase<UpdateCompanyOfferDto, an
 
         const { requester_company_id, ...rest } = data;
         const payload: any = { ...rest };
+
+        // Optional subcategory: validated against the category; changing the category clears a mismatching one
+        Object.assign(payload, await resolveCategoryAndSubcategory(this.subcategoryRepository, payload, {
+            category_id: existingOffer.category_id,
+            subcategory_id: existingOffer.subcategory_id,
+        }));
         if (payload.base_price_usd !== undefined) {
             payload.base_price_usd = payload.base_price_usd;
         }

@@ -4,7 +4,7 @@ import logger from '../logger';
 import { EmailService } from '../../application/services/email.service';
 import { EmailMessage } from '../../domain/notifications/emailMessage';
 import { EmailConfig, loadEmailConfig } from '../config/emailConfig';
-import { MAILGUN_TEMPLATES } from '../../constants/email/email.constants';
+import { MAILGUN_TEMPLATES, MAILGUN_SUBJECTS } from '../../constants/email/email.constants';
 
 export class MailgunEmailAdapter implements EmailService {
     private client: any;
@@ -43,7 +43,7 @@ export class MailgunEmailAdapter implements EmailService {
             const messageData: any = {
                 from: `${this.config.fromName} <${this.config.fromAddress}>`,
                 to: message.to,
-                subject: message.subject || 'Bitobbu Notification',
+                subject: message.subject ?? MAILGUN_SUBJECTS[message.templateKey] ?? 'Bitobbu',
                 template: templateNameStr,
             };
 
@@ -69,7 +69,9 @@ export class MailgunEmailAdapter implements EmailService {
                 details: error.details || error.response?.body || error.response?.text,
                 to: message.to,
                 templateKey: message.templateKey
-            }, 'Failed to send template email (safe fail)');
+            }, message.critical ? 'Failed to send critical template email' : 'Failed to send template email (safe fail)');
+
+            if (message.critical) throw error;
         }
     }
 }

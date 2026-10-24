@@ -36,7 +36,7 @@ export const authMiddleware = async (request: FastifyRequest, reply: FastifyRepl
 
         const decoded = jwtService.verifyToken(token);
 
-        if (!decoded || !decoded.userId || !decoded.email) {
+        if (!decoded || !decoded.userId || !decoded.email || decoded.purpose || decoded.actorType === 'admin') {
             return ApiResponse.error(reply, "Invalid or expired token", 401, undefined, "AUTH_INVALID_TOKEN", "AUTHENTICATION");
         }
 
@@ -45,6 +45,11 @@ export const authMiddleware = async (request: FastifyRequest, reply: FastifyRepl
             userId: decoded.userId,
             email: decoded.email,
         });
+
+        // 2. Invalidate sessions if token_version does not match (session revocation)
+        if (decoded.tv !== undefined && decoded.tv !== validUser.token_version) {
+            return ApiResponse.error(reply, "Session revoked. Please log in again.", 401, undefined, "SESSION_REVOKED", "AUTHENTICATION");
+        }
 
         request.user = {
             userId: validUser.userId,

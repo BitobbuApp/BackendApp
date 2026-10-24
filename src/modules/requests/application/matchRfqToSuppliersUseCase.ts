@@ -84,12 +84,18 @@ export class MatchRfqToSuppliersUseCase extends UseCase<MatchInput, void> {
                 else if (mainLocation.country_id === request.country_id) score += 0.175;
             }
 
+            // Suppliers that work the RFQ's subcategory are prioritized (bigger than any location bonus)
+            const matchesSubcategory = !!request.subcategory_id &&
+                (supplier.subcategories_of_interest ?? []).some((s: any) => s.id === request.subcategory_id);
+            if (matchesSubcategory) score += 0.5;
+
             // Check Plan Tier. For MVP, assume it's stored in some property, let's say company_type_id or maybe just 0.
             // if (supplier.planTier === 'Pro') score += 0.10; // Left commented per instructions logic
 
             return {
                 companyId: supplier.id,
-                score
+                score,
+                matchesSubcategory
             };
         });
 
@@ -99,7 +105,10 @@ export class MatchRfqToSuppliersUseCase extends UseCase<MatchInput, void> {
         // 5. Tier Allocation
         const finalCandidates = scoredCandidates.map((candidate, index) => {
             let tier = 2;
-            if (scoredCandidates.length <= 10) {
+            if (candidate.matchesSubcategory) {
+                // Works the RFQ's subcategory: always first tier
+                tier = 1;
+            } else if (scoredCandidates.length <= 10) {
                 // all are tier 1
                 tier = 1;
             } else {

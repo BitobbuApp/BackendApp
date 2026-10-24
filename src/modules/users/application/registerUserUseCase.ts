@@ -3,6 +3,7 @@ import { UserRepository } from '../domain/repositories/user.repository';
 import { PrismaUserRepository } from "../infrastructure/persistence/PrismaUserRepository";
 import { UserAlreadyExistsError } from '../domain/errors/user.errors';
 import bcrypt from 'bcrypt';
+import { PasswordHasher } from '../../../shared/application/services/passwordHasher';
 import { UseCase } from '../../../shared/application/useCase';
 import { registerUserDtoRequestSchema, registerUserDtoResponseSchema } from './dtos/register.dto';
 import { VENEZUELA_COUNTRY_ID } from '../../../shared/constants/geo.constants';
@@ -74,7 +75,8 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             if (userExist) throw new UserAlreadyExistsError(userData.email);
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const passwordHasher = new PasswordHasher();
+        const hashedPassword = await passwordHasher.hash(password);
         const newUser = await this.userRepository.create({
             id: '',
             company_id: null,
@@ -95,6 +97,19 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             updated_at: new Date(),
             last_access: null
         } as any);
+
+        // Store initial password in password history (non-blocking safety)
+        try {
+            const { prisma } = await import('../../../shared/infrastructure/database');
+            await prisma.passwordHistory.create({
+                data: {
+                    user_id: newUser.id,
+                    password_hash: hashedPassword,
+                },
+            });
+        } catch (e) {
+            // Logged or handled gracefully if table not yet migrated
+        }
 
         if (newUser.company_id) {
             await this.verificationRepository.upsertVerification({
@@ -129,6 +144,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             userId: newUser.id,
             companyId: newUser.company_id ?? null,
             email: newUser.email,
+            tv: newUser.token_version,
         });
 
         return {

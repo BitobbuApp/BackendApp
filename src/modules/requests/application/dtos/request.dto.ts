@@ -10,6 +10,8 @@ export const createRequestDtoRequestSchema = Joi.object({
     unit_id: Joi.number().integer().min(1).default(1),
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
+    // Optional second level of the category (must belong to it; empty string clears it)
+    subcategory_id: Joi.number().integer().min(1).allow(null, "").optional(),
     status: Joi.string().valid(
         'active', 'paused', 'expired', 'completed', 'expiring_soon', 'closed'
     ).default('active'),
@@ -33,6 +35,8 @@ export const updateRequestDtoRequestSchema = Joi.object({
     unit_id: Joi.number().integer().min(1).optional(),
     description: Joi.string().allow(null, '').optional(),
     category_id: Joi.number().integer().min(1).allow(null).optional(),
+    // Optional second level of the category (must belong to it; empty string clears it)
+    subcategory_id: Joi.number().integer().min(1).allow(null, "").optional(),
     status: Joi.string().valid(
         'active', 'paused', 'expired', 'completed', 'expiring_soon', 'closed'
     ).optional(),
@@ -88,6 +92,8 @@ export const requestDtoResponseSchema = Joi.object({
     description: Joi.string().allow(null).optional(),
     category: Joi.string().allow(null).optional(),
     category_id: Joi.number().integer().allow(null).optional(),
+    subcategory_id: Joi.number().integer().allow(null).optional(),
+    subcategory: Joi.string().allow(null).optional(),
     status: Joi.string().required(),
     type: Joi.string().valid('product', 'service').required(),
     payment_condition_id: Joi.string().uuid().allow(null).optional(),
@@ -152,6 +158,8 @@ export const marketplaceRequestDtoResponseSchema = Joi.object({
     description: Joi.string().allow(null).optional(),
     category: Joi.string().allow(null).optional(),
     category_id: Joi.number().integer().allow(null).optional(),
+    subcategory_id: Joi.number().integer().allow(null).optional(),
+    subcategory: Joi.string().allow(null).optional(),
     status: Joi.string().required(),
     type: Joi.string().valid('product', 'service').required(),
     payment_condition_id: Joi.string().uuid().allow(null).optional(),

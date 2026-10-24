@@ -8,6 +8,8 @@ interface ListMarketplaceRequestsInput {
     exclude_company_id: string;
     page: number;
     limit: number;
+    category_id?: number;
+    subcategory_ids?: number[];
 }
 
 export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceRequestsInput, any> {
@@ -15,6 +17,8 @@ export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceReque
         exclude_company_id: Joi.string().uuid().required(),
         page: Joi.number().integer().min(1).default(1),
         limit: Joi.number().integer().min(1).max(100).default(10),
+        category_id: Joi.number().integer().min(1).optional(),
+        subcategory_ids: Joi.array().items(Joi.number().integer().min(1)).max(100).optional(),
     });
     protected outputSchema: Joi.Schema = marketplaceRequestListDtoResponseSchema;
     private readonly requestRepository: RequestRepository;
@@ -28,7 +32,8 @@ export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceReque
         const result = await this.requestRepository.findExcludingCompany(
             input.exclude_company_id,
             input.page,
-            input.limit
+            input.limit,
+            { category_id: input.category_id, subcategory_ids: input.subcategory_ids }
         );
 
         return {
@@ -48,6 +53,8 @@ export class ListMarketplaceRequestsUseCase extends UseCase<ListMarketplaceReque
                 description: r.description,
                 category_id: r.category_id,
                 category: r.category?.name_es ?? null,
+                subcategory_id: r.subcategory_id ?? null,
+                subcategory: r.subcategory?.name_es ?? null,
                 status: r.status,
                 type: r.type,
                 reach_service: r.reach_service,

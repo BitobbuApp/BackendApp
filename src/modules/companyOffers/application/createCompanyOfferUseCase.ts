@@ -6,6 +6,9 @@ import { createCompanyOfferDtoRequestSchema, companyOfferDtoResponseSchema } fro
 import Joi from "joi";
 import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
 import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
+import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
+import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
+import { resolveCategoryAndSubcategory } from "../../subcategories/application/helpers/resolveSubcategory";
 
 interface CreateCompanyOfferPhotoDto {
     url: string;
@@ -23,6 +26,7 @@ interface CreateCompanyOfferDto {
     name: string;
     description?: string | null;
     category_id?: number | null;
+    subcategory_id?: number | null | "";
     supplier_type_id?: number | null;
     base_price_usd?: number | null;
     unit_id?: number | null;
@@ -41,16 +45,21 @@ export class CreateCompanyOfferUseCase extends UseCase<CreateCompanyOfferDto, an
     protected outputSchema: Joi.Schema = companyOfferDtoResponseSchema;
     private readonly companyOfferRepository: CompanyOfferRepository;
     private readonly uploadDocumentUseCase: UploadDocumentUseCase;
+    private readonly subcategoryRepository: SubcategoryRepository;
 
     constructor() {
         super();
         this.companyOfferRepository = new PrismaCompanyOfferRepository();
         this.uploadDocumentUseCase = new UploadDocumentUseCase(storageService);
+        this.subcategoryRepository = new PrismaSubcategoryRepository();
     }
 
     protected async implementation(data: CreateCompanyOfferDto): Promise<any> {
         const payload: any = { ...data };
-        
+
+        // Optional subcategory: must be active and belong to the category (or sets the category)
+        Object.assign(payload, await resolveCategoryAndSubcategory(this.subcategoryRepository, payload));
+
         const files: Array<{ url: string; sort_order?: number }> = [];
         
         if (data.rawFiles && data.rawFiles.length > 0) {

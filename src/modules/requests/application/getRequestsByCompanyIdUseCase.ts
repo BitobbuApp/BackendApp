@@ -36,6 +36,8 @@ export class GetRequestsByCompanyIdUseCase extends UseCase<GetRequestsByCompanyI
                 description: request.description,
                 category_id: request.category_id,
                 category: request.category,
+                subcategory_id: request.subcategory_id,
+                subcategory: request.subcategory,
                 status: request.status,
                 type: (request as any).type,
                 expiration_date: request.expiration_date,

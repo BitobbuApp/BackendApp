@@ -44,6 +44,9 @@ export class CompanyOffer {
         public updated_at: Date | null = null,
         public photos: CompanyOfferPhoto[] = [],
         public pricing_tiers: CompanyOfferPricingTier[] = [],
-        public company_details: any | null = null
+        public company_details: any | null = null,
+        // Optional second level of the category
+        public subcategory_id: number | null = null,
+        public subcategory: string | null = null
     ) { }
 }
