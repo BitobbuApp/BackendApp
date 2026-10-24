@@ -9,6 +9,7 @@ import { EnableTwoFactorUseCase } from '../../application/enableTwoFactorUseCase
 import { DisableTwoFactorUseCase } from '../../application/disableTwoFactorUseCase';
 import { RegenerateRecoveryCodesUseCase } from '../../application/regenerateRecoveryCodesUseCase';
 import { VerifyLoginTwoFactorUseCase } from '../../application/verifyLoginTwoFactorUseCase';
+import { GetTwoFactorStatusUseCase } from '../../application/getTwoFactorStatusUseCase';
 import { JwtService } from '../../../../shared/application/services/jwtService';
 
 const jwtService = new JwtService();
@@ -63,6 +64,7 @@ export async function authRoutes(app: FastifyInstance) {
 
         const result = await useCase.execute({
             token: body.token,
+            ip: request.ip,
         });
 
         return ApiResponse.success(reply, result, 'Token válido');
@@ -98,6 +100,12 @@ export async function authRoutes(app: FastifyInstance) {
         });
 
         return ApiResponse.success(reply, result, 'Inicio de sesión exitoso');
+    });
+
+    // GET /auth/2fa/status (own 2FA state + company policy, for the Security settings screen)
+    app.get('/2fa/status', { preHandler: [authMiddleware] } as any, async (request: any, reply: FastifyReply) => {
+        const result = await new GetTwoFactorStatusUseCase().execute({ userId: request.user.userId });
+        return ApiResponse.success(reply, result, 'Estado de 2FA');
     });
 
     // POST /auth/2fa/setup (Initiate setup, get Base32 secret and QR URI)

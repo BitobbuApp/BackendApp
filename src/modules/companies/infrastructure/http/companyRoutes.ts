@@ -26,6 +26,7 @@ import { SubmitVerificationDocumentUseCase } from '../../application/submitVerif
 
 import { GetSettingsUseCase } from '../../application/getSettingsUseCase';
 import { UpdateSettingsUseCase } from '../../application/updateSettingsUseCase';
+import { assertOwnCompany } from './assertOwnCompany';
 import { GetCompanyReviewsUseCase } from '../../application/getCompanyReviewsUseCase';
 
 export async function companyRoutes(app: FastifyInstance) {
@@ -170,12 +171,14 @@ export async function companyRoutes(app: FastifyInstance) {
     // ==========================================
 
     app.get('/:companyId/settings', { preHandler: [authMiddleware] } as any, async (request: FastifyRequest<{ Params: { companyId: string } }>, reply: FastifyReply) => {
+        assertOwnCompany(request, request.params.companyId);
         const useCase = new GetSettingsUseCase();
         const result = await useCase.execute(request.params.companyId);
         return ApiResponse.success(reply, result, "Settings found");
     });
 
     app.patch('/:companyId/settings', { preHandler: [authMiddleware] } as any, async (request: any, reply: any) => {
+        assertOwnCompany(request, request.params.companyId);
         const useCase = new UpdateSettingsUseCase();
         const result = await useCase.execute({ ...request.body as any, company_id: request.params.companyId });
         return ApiResponse.success(reply, result, "Settings updated");

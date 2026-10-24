@@ -2,10 +2,12 @@ import Joi from 'joi';
 import { UseCase } from '../../../shared/application/useCase';
 import { prisma } from '../../../shared/infrastructure/database';
 import { TokenGenerator } from '../../../shared/application/services/tokenGenerator';
-import { ResetTokenInvalidError } from '../domain/errors/auth.errors';
+import { ResetTokenInvalidError, TooManyRequestsError } from '../domain/errors/auth.errors';
+import { RateLimiter } from '../../../shared/application/services/rateLimiter';
 
 interface ValidateResetTokenInput {
     token: string;
+    ip?: string | undefined;
 }
 
 interface ValidateResetTokenOutput {
@@ -17,11 +19,17 @@ interface ValidateResetTokenOutput {
 export class ValidateResetTokenUseCase extends UseCase<ValidateResetTokenInput, ValidateResetTokenOutput> {
     protected inputSchema = Joi.object({
         token: Joi.string().required().trim(),
+        ip: Joi.string().allow('', null).optional(),
     });
 
     protected outputSchema = Joi.any();
 
-    protected async implementation({ token }: ValidateResetTokenInput): Promise<ValidateResetTokenOutput> {
+    protected async implementation({ token, ip }: ValidateResetTokenInput): Promise<ValidateResetTokenOutput> {
+        if (ip) {
+            const limit = await RateLimiter.consume({ key: `rl:validate:ip:${ip}`, maxAttempts: 60, windowSeconds: 900 });
+            if (!limit.allowed) throw new TooManyRequestsError();
+        }
+
         const tokenHash = TokenGenerator.hashToken(token);
         const now = new Date();
 
