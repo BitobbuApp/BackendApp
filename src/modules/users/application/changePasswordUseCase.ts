@@ -91,6 +91,7 @@ export class ChangePasswordUseCase extends UseCase<ChangePasswordInput, ChangePa
             templateKey: 'password_updated',
             variables: {
                 first_name: user.first_name,
+                login_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`,
                 changed_at: passwordChangedAt.toISOString(),
                 ip: ip || 'Desconocida',
             },

@@ -18,7 +18,7 @@ const variablesByKey: Record<string, Record<string, string | number>> = {
         requested_at: new Date().toISOString(),
         ip: '127.0.0.1',
     },
-    password_updated: { first_name: 'Ana', changed_at: new Date().toISOString(), ip: '127.0.0.1' },
+    password_updated: { first_name: 'Ana', login_url: `${frontendUrl}/login`, changed_at: new Date().toISOString(), ip: '127.0.0.1' },
     two_factor_changed: { first_name: 'Ana', action: 'activado', changed_at: new Date().toISOString(), ip: '127.0.0.1' },
 };
 
