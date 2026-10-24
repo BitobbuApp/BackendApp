@@ -3,6 +3,7 @@ import { TokenGenerator } from '../../../shared/application/services/tokenGenera
 import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
 import { EmailService } from '../../../shared/application/services/email.service';
 import logger from '../../../shared/infrastructure/logger';
+import { formatEmailDate } from '../../../shared/application/services/formatEmailDate';
 
 export interface ProcessPasswordResetJobData {
     email: string;
@@ -87,7 +88,7 @@ export class ProcessPasswordResetJob {
                 first_name: user.first_name,
                 reset_url: resetUrl,
                 expires_in_minutes: ttlMinutes,
-                requested_at: now.toISOString(),
+                requested_at: formatEmailDate(now, user.timezone),
                 ip: ip || 'Desconocida',
             },
         });

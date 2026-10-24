@@ -10,6 +10,7 @@ import { JwtService } from '../../../shared/application/services/jwtService';
 import { ApplicationError } from '../../../shared/domain/error';
 import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
 import { EmailService } from '../../../shared/application/services/email.service';
+import { formatEmailDate } from '../../../shared/application/services/formatEmailDate';
 
 interface ChangePasswordInput {
     userId: string;
@@ -92,7 +93,7 @@ export class ChangePasswordUseCase extends UseCase<ChangePasswordInput, ChangePa
             variables: {
                 first_name: user.first_name,
                 login_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`,
-                changed_at: passwordChangedAt.toISOString(),
+                changed_at: formatEmailDate(passwordChangedAt, (user as any).timezone),
                 ip: ip || 'Desconocida',
             },
         }).catch(() => null);

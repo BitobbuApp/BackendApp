@@ -1,6 +1,7 @@
 // Sends one real email through the production adapter to check a Mailgun template (subject, button, variables).
 // Usage: npx tsx scripts/sendTestEmail.ts <to> [password_reset|password_updated|two_factor_changed]
 import 'dotenv/config';
+import { formatEmailDate } from '../src/shared/application/services/formatEmailDate';
 import { MailgunEmailAdapter } from '../src/shared/infrastructure/notifications/mailgunEmailAdapter';
 
 const [to, key = 'password_reset'] = process.argv.slice(2);
@@ -15,11 +16,11 @@ const variablesByKey: Record<string, Record<string, string | number>> = {
         first_name: 'Ana',
         reset_url: `${frontendUrl}/reset-password?token=PRUEBA-NO-VALIDO`,
         expires_in_minutes: Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 20,
-        requested_at: new Date().toISOString(),
+        requested_at: formatEmailDate(new Date()),
         ip: '127.0.0.1',
     },
-    password_updated: { first_name: 'Ana', login_url: `${frontendUrl}/login`, changed_at: new Date().toISOString(), ip: '127.0.0.1' },
-    two_factor_changed: { first_name: 'Ana', action: 'activado', changed_at: new Date().toISOString(), ip: '127.0.0.1' },
+    password_updated: { first_name: 'Ana', login_url: `${frontendUrl}/login`, changed_at: formatEmailDate(new Date()), ip: '127.0.0.1' },
+    two_factor_changed: { first_name: 'Ana', action: 'activado', changed_at: formatEmailDate(new Date()), ip: '127.0.0.1' },
 };
 
 new MailgunEmailAdapter()

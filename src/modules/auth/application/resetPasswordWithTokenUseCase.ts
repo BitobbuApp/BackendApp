@@ -16,6 +16,7 @@ import { TwoFactorVerifier, TwoFactorCheck } from '../domain/services/twoFactorV
 import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
 import { EmailService } from '../../../shared/application/services/email.service';
 import { ApplicationError } from '../../../shared/domain/error';
+import { formatEmailDate } from '../../../shared/application/services/formatEmailDate';
 
 const MAX_TOKEN_ATTEMPTS = 5;
 
@@ -201,7 +202,7 @@ export class ResetPasswordWithTokenUseCase extends UseCase<ResetPasswordWithToke
             variables: {
                 first_name: user.first_name,
                 login_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`,
-                changed_at: passwordChangedAt.toISOString(),
+                changed_at: formatEmailDate(passwordChangedAt, user.timezone),
                 ip: ip || 'Desconocida',
             },
         }).catch(() => null);
