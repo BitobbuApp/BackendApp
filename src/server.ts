@@ -8,6 +8,9 @@ import logger from './shared/infrastructure/logger'
 
 const app = fastify({
     loggerInstance: logger,
+    // Number of reverse proxies in front of the app (0 = none). `true` would trust any client-sent X-Forwarded-For
+    // and make per-IP rate limits spoofable.
+    trustProxy: Number(process.env.TRUST_PROXY_HOPS) > 0 ? Number(process.env.TRUST_PROXY_HOPS) : false,
 });
 
 import { errorHandler } from './shared/infrastructure/http/errorHandler'

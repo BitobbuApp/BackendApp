@@ -2,6 +2,7 @@ import { UseCase } from "../../../shared/application/useCase";
 import { QuoteResponseRepository } from "../domain/repositories/quote_response.repository";
 import { PrismaQuoteResponseRepository } from "../infrastructure/persistence/PrismaQuoteResponseRepository";
 import { QuoteResponseNotFoundError } from "../domain/errors/quote_response.errors";
+import { assertSupplierCanEditQuote } from "./helpers/quoteOwnership";
 import { updateQuoteResponseDtoRequestSchema, quoteResponseDtoResponseSchema } from "./dtos/quote_response.dto";
 import Joi from "joi";
 
@@ -15,8 +16,7 @@ interface UpdateQuoteResponseDto {
     delivery_time?: string | null;
     notes?: string | null;
     has_guarantee?: boolean;
-    status?: string;
-    rejection_reason?: string | null;
+    requester_company_id: string;
 }
 
 export class UpdateQuoteResponseUseCase extends UseCase<UpdateQuoteResponseDto, any> {
@@ -32,10 +32,14 @@ export class UpdateQuoteResponseUseCase extends UseCase<UpdateQuoteResponseDto, 
     protected async implementation(data: UpdateQuoteResponseDto): Promise<any> {
         const existing = await this.quoteResponseRepository.findById(data.id);
         if (!existing) throw new QuoteResponseNotFoundError(data.id);
+        assertSupplierCanEditQuote(existing as any, data.requester_company_id);
 
-        const updated = await this.quoteResponseRepository.update(data.id, data);
+        const { requester_company_id, ...changes } = data;
+        const updated = await this.quoteResponseRepository.update(data.id, changes);
         return {
             id: updated.id,
+            request_id: updated.request_id,
+            supplier_id: updated.supplier_id,
             company_offer_id: updated.company_offer_id,
             unit_price_usd: Number(updated.unit_price_usd),
             quantity: updated.quantity,

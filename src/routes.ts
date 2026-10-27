@@ -15,6 +15,7 @@ import { deliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/h
 import { reviewRoutes } from "./modules/reviews/infrastructure/http/reviewRoutes";
 import { dashboardRoutes } from "./modules/dashboard/infrastructure/http/dashboardRoutes";
 import { notificationRoutes } from "./modules/notifications/infrastructure/http/notificationRoutes";
+import { authRoutes } from "./modules/auth/infrastructure/http/authRoutes";
 
 // Admin imports
 import { adminAuthRoutes } from "./modules/admins/infrastructure/http/adminAuthRoutes";
@@ -27,6 +28,7 @@ import { adminPlanRoutes } from "./modules/plansCatalog/infrastructure/http/admi
 import { adminLookupRoutes } from "./modules/lookups/infrastructure/http/adminLookupRoutes";
 import { adminGeographyRoutes } from "./modules/countries/infrastructure/http/adminGeographyRoutes";
 import { adminCityRoutes } from "./modules/cities/infrastructure/http/adminCityRoutes";
+import { adminSubcategoryRoutes } from "./modules/subcategories/infrastructure/http/adminSubcategoryRoutes";
 import { adminRfqRoutes } from "./modules/requests/infrastructure/http/adminRfqRoutes";
 import { adminQuoteResponseRoutes } from "./modules/quote_responses/infrastructure/http/adminQuoteResponseRoutes";
 import { adminTransactionRoutes } from "./modules/transactions/infrastructure/http/adminTransactionRoutes";
@@ -52,6 +54,7 @@ export async function routes(app: FastifyInstance) {
     app.register(deliveryMethodRoutes, { prefix: '/delivery-methods' });
     app.register(reviewRoutes, { prefix: '/reviews' });
     app.register(notificationRoutes, { prefix: '/notifications' });
+    app.register(authRoutes, { prefix: '/auth' });
 
     // Admin Routes
     app.register(adminAuthRoutes, { prefix: '/admin/auth' });
@@ -64,6 +67,7 @@ export async function routes(app: FastifyInstance) {
     app.register(adminLookupRoutes, { prefix: '/admin/lookups' });
     app.register(adminGeographyRoutes, { prefix: '/admin/geography' });
     app.register(adminCityRoutes, { prefix: '/admin/geography/cities' });
+    app.register(adminSubcategoryRoutes, { prefix: '/admin/subcategories' });
     app.register(adminDeliveryMethodRoutes, { prefix: '/admin/delivery-methods' });
     app.register(adminCurrencyRoutes, { prefix: '/admin/currencies' });
     app.register(adminExchangeRateRoutes, { prefix: '/admin/exchange-rates' });

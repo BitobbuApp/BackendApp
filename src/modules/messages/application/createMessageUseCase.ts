@@ -6,7 +6,8 @@ import { Message } from '../domain/entities/message.entity';
 import { UseCase } from '../../../shared/application/useCase';
 import { createMessageDtoRequestSchema, createMessageUseCaseResponseSchema } from './dtos/message.dto';
 import Joi from 'joi';
-import { ConversationAccessDeniedError, ConversationNotFoundError } from '../../conversations/domain/errors/conversation.errors';
+import { prisma } from '../../../shared/infrastructure/database';
+import { ConversationAccessDeniedError, ConversationClosedError, ConversationNotFoundError } from '../../conversations/domain/errors/conversation.errors';
 
 interface CreateMessageDto {
     conversation_id: string;
@@ -17,19 +18,33 @@ interface CreateMessageDto {
     file_name?: string | null;
 }
 
+/** True when the company already submitted its review of the transaction */
+const hasSubmittedReview = async (transactionId: string, companyId: string): Promise<boolean> => {
+    const tx = await prisma.transaction.findUnique({
+        where: { id: transactionId },
+        select: { buyer_id: true, buyer_review_status: true, supplier_review_status: true },
+    });
+    if (!tx) return false;
+    const status = tx.buyer_id === companyId ? tx.buyer_review_status : tx.supplier_review_status;
+    return status === 'submitted';
+};
+
 export class CreateMessageUseCase extends UseCase<CreateMessageDto, { message: Message, isDuplicate: boolean }> {
     protected inputSchema: Joi.Schema = createMessageDtoRequestSchema;
     protected outputSchema: Joi.Schema = createMessageUseCaseResponseSchema;
     private readonly messageRepository: IMessageRepository;
     private readonly conversationRepository: IConversationRepository;
+    private readonly hasReviewed: (transactionId: string, companyId: string) => Promise<boolean>;
 
     constructor(
         messageRepository?: IMessageRepository,
-        conversationRepository?: IConversationRepository
+        conversationRepository?: IConversationRepository,
+        hasReviewed?: (transactionId: string, companyId: string) => Promise<boolean>
     ) {
         super();
         this.messageRepository = messageRepository ?? new PrismaMessageRepository();
         this.conversationRepository = conversationRepository ?? new PrismaConversationRepository();
+        this.hasReviewed = hasReviewed ?? hasSubmittedReview;
     }
 
     protected async implementation(data: CreateMessageDto): Promise<{ message: Message, isDuplicate: boolean }> {
@@ -40,6 +55,17 @@ export class CreateMessageUseCase extends UseCase<CreateMessageDto, { message: M
 
         if (conversation.participant_1_id !== data.sender_id && conversation.participant_2_id !== data.sender_id) {
             throw new ConversationAccessDeniedError(data.conversation_id);
+        }
+
+        // A closed negotiation (e.g. the buyer rejected the quote) stays visible but read-only
+        if (conversation.status === 'cancelled') {
+            throw new ConversationClosedError(data.conversation_id);
+        }
+
+        // Whoever already submitted their review is done with this chat: history only while the other side reviews
+        if (conversation.status === 'pending_review' && conversation.transaction_id
+            && await this.hasReviewed(conversation.transaction_id, data.sender_id)) {
+            throw new ConversationClosedError(data.conversation_id);
         }
 
         // IDEMPOTENCY STRATEGY: 

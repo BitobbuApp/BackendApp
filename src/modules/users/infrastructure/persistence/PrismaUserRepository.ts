@@ -138,7 +138,8 @@ export class PrismaUserRepository implements UserRepository {
             createdUser.is_active, 
             createdUser.last_access,
             createdUser.created_at, 
-            createdUser.updated_at
+            createdUser.updated_at,
+            createdUser.token_version
         );    
         } catch (error) {
             throw error;
@@ -170,7 +171,8 @@ export class PrismaUserRepository implements UserRepository {
             found.is_active, 
             found.last_access,
             found.created_at, 
-            found.updated_at
+            found.updated_at,
+            found.token_version
         );
     }
 
@@ -199,7 +201,8 @@ export class PrismaUserRepository implements UserRepository {
             found.is_active, 
             found.last_access,
             found.created_at, 
-            found.updated_at
+            found.updated_at,
+            found.token_version
         );
     }
 
@@ -235,7 +238,8 @@ export class PrismaUserRepository implements UserRepository {
             updated.is_active, 
             updated.last_access,
             updated.created_at, 
-            updated.updated_at
+            updated.updated_at,
+            updated.token_version
         );
     }
 

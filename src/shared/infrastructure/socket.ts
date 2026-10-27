@@ -2,6 +2,8 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { FastifyInstance } from 'fastify';
 import logger from './logger';
 import { registerMessageHandlers } from '../../modules/messages/infrastructure/socket/messageHandler';
+import { registerTypingHandlers } from '../../modules/messages/infrastructure/socket/typingHandler';
+import { registerConversationRoomHandlers } from '../../modules/conversations/infrastructure/socket/conversationRoomHandler';
 import { JwtService } from '../application/services/jwtService';
 
 let io: SocketIOServer;
@@ -59,19 +61,9 @@ export const initializeSocket = (app: any) => {
 
         // Registrar módulos
         registerMessageHandlers(socket);
-
-        // Evento genérico para unirse a salas (conversaciones)
-        socket.on('join_conversation', (conversationId: string) => {
-            // TODO: Opcional: Validar si el usuario pertenece a esta conversación en la BD.
-            socket.join(conversationId);
-            logger.info(`Socket ${socket.id} se unió a la conversación: ${conversationId}`);
-        });
-
-        // Evento genérico para salir de salas
-        socket.on('leave_conversation', (conversationId: string) => {
-            socket.leave(conversationId);
-            logger.info(`Socket ${socket.id} abandonó la conversación: ${conversationId}`);
-        });
+        registerTypingHandlers(socket);
+        // Salas de conversación (join valida que la empresa sea participante)
+        registerConversationRoomHandlers(socket);
 
         socket.on('disconnect', () => {
             logger.info(`🔌 Cliente desconectado: ${socket.id}`);

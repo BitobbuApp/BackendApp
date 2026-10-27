@@ -49,7 +49,10 @@ export function registerMessageHandlers(socket: Socket) {
             
         } catch (error: any) {
             console.error('[Socket send_message error]', error);
-            const errorResp = { status: 'error', message: 'Failed to process message' };
+            // Business errors (e.g. closed conversation) are safe to show; anything else stays generic
+            const errorResp = error?.isOperational && error?.statusCode < 500
+                ? { status: 'error', code: error.code, message: error.message }
+                : { status: 'error', message: 'Failed to process message' };
             if (callback) callback(errorResp);
             else socket.emit('message_error', errorResp);
         }

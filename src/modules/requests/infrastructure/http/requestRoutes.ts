@@ -21,10 +21,16 @@ export async function requestRoutes(app: FastifyInstance) {
         async (request: any, reply: any) => {
             const query = request.query || {};
             const useCase = new ListMarketplaceRequestsUseCase();
+            // subcategory_ids comes as CSV: ?subcategory_ids=1,5,9
+            const subcategoryIds = query.subcategory_ids
+                ? String(query.subcategory_ids).split(',').map((id: string) => id.trim()).filter(Boolean)
+                : undefined;
             const result = await useCase.execute({
                 exclude_company_id: request.user.companyId,
                 page: query.page ? parseInt(query.page, 10) : 1,
-                limit: query.limit ? parseInt(query.limit, 10) : 10
+                limit: query.limit ? parseInt(query.limit, 10) : 10,
+                ...(query.category_id && { category_id: query.category_id }),
+                ...(subcategoryIds?.length && { subcategory_ids: subcategoryIds }),
             });
             return ApiResponse.success(reply, result, "Marketplace requests found");
         }
@@ -81,7 +87,10 @@ export async function requestRoutes(app: FastifyInstance) {
             reply: FastifyReply
         ) => {
             const useCase = new GetRequestByIdUseCase();
-            const result = await useCase.execute(request.params.id);
+            const result = await useCase.execute({
+                id: request.params.id,
+                requester_company_id: request.user?.companyId ?? null
+            });
             return ApiResponse.success(reply, result, "Request found");
         }
     );

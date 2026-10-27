@@ -21,10 +21,17 @@ model User {
   updated_at          DateTime               @updatedAt @db.Timestamptz(6)
   preferred_language  String                 @default("es") @db.Char(2)
   timezone            String                 @default("America/Caracas") @db.VarChar(50)
+  token_version       Int                    @default(0)
+  password_changed_at DateTime?              @db.Timestamptz(6)
   notifications       Notification[]
   requests            Request[]
   onboarding_statuses UserOnboardingStatus[]
   company             Company?               @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  password_reset_tokens PasswordResetToken[]
+  password_history      PasswordHistory[]
+  two_factor            UserTwoFactor?
+  recovery_codes        UserRecoveryCode[]
+  security_events       SecurityEvent[]
 
   @@map("users")
 }
@@ -66,6 +73,7 @@ model Company {
   monthly_transactions     EstimatedMonthlyTransaction? @relation(fields: [monthly_transactions_id], references: [id])
   sector_ref               Category?                    @relation("CompanySector", fields: [sector_id], references: [id])
   categories_of_interest   CompanyCategoryOfInterest[]
+  subcategories_of_interest CompanySubcategoryOfInterest[]
   commercial_profile       CompanyCommercialProfile?
   contacts                 CompanyContact[]
   locations                CompanyLocation[]
@@ -82,7 +90,8 @@ model Company {
   quote_response_revisions QuoteResponseRevision[]      @relation("QuoteResponseRevisionActor")
   quote_responses          QuoteResponse[]
   requests                 Request[]
-  authored_reviews         Review[]                     @relation("ReviewAuthor")
+  targeted_requests        Request[]                    @relation("RequestTargetCompany")
+  authored_reviews        Review[]                     @relation("ReviewAuthor")
   received_reviews         Review[]                     @relation("ReviewTarget")
   subscriptions            Subscription[]
   transaction_revisions    TransactionRevision[]        @relation("TransactionRevisionActor")
@@ -191,8 +200,30 @@ model Category {
   categories_of_interest CompanyCategoryOfInterest[]
   offers                 CompanyOffer[]              @relation("OfferCategory")
   requests               Request[]                   @relation("RequestCategory")
+  subcategories          Subcategory[]
 
   @@map("categories")
+}
+
+/// Second level of the category taxonomy. Never deleted: deactivated with is_active = false.
+model Subcategory {
+  id          Int                            @id @default(autoincrement()) @db.SmallInt
+  category_id Int                            @db.SmallInt
+  slug        String                         @unique @db.VarChar(120)
+  name_es     String                         @db.VarChar(100)
+  name_en     String                         @db.VarChar(100)
+  is_active   Boolean                        @default(true)
+  sort_order  Int                            @default(0) @db.SmallInt
+  created_at  DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime                       @updatedAt @db.Timestamptz(6)
+  category    Category                       @relation(fields: [category_id], references: [id])
+  companies   CompanySubcategoryOfInterest[]
+  requests    Request[]                      @relation("RequestSubcategory")
+  offers      CompanyOffer[]                 @relation("OfferSubcategory")
+
+  @@unique([category_id, name_es])
+  @@index([category_id, is_active])
+  @@map("subcategories")
 }
 
 model CompanyTypeDict {
@@ -287,6 +318,19 @@ model CompanyCategoryOfInterest {
   @@map("company_categories_of_interest")
 }
 
+/// Subcategories a company works with. Links to inactive subcategories are kept (hidden), never deleted.
+model CompanySubcategoryOfInterest {
+  company_id     String      @db.Uuid
+  subcategory_id Int         @db.SmallInt
+  created_at     DateTime    @default(now()) @db.Timestamptz(6)
+  company        Company     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  subcategory    Subcategory @relation(fields: [subcategory_id], references: [id])
+
+  @@id([company_id, subcategory_id])
+  @@index([subcategory_id])
+  @@map("company_subcategories_of_interest")
+}
+
 model CompanyOperatingCountry {
   company_id String  @db.Uuid
   country_id Int     @db.SmallInt
@@ -372,6 +416,7 @@ model CompanySettings {
   email_notifications    Boolean  @default(true)
   web_notifications      Boolean  @default(true)
   whatsapp_notifications Boolean  @default(false)
+  two_factor_required    Boolean  @default(false)
   updated_at             DateTime @default(now()) @db.Timestamptz(6)
   created_at             DateTime @default(now()) @db.Timestamptz(6)
   company                Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
@@ -442,10 +487,16 @@ model Request {
   reach_service        String?           @db.VarChar(200)
   state_id             Int?              @db.SmallInt
   serial_number        Int               @unique @default(autoincrement())
+  target_company_id    String?           @db.Uuid
+  company_offer_id     String?           @db.Uuid
+  subcategory_id       Int?              @db.SmallInt
   conversations        Conversation[]
   quote_responses      QuoteResponse[]
   files                RequestFile[]
+  target_company       Company?          @relation("RequestTargetCompany", fields: [target_company_id], references: [id])
+  offer                CompanyOffer?     @relation(fields: [company_offer_id], references: [id])
   category             Category?         @relation("RequestCategory", fields: [category_id], references: [id])
+  subcategory          Subcategory?      @relation("RequestSubcategory", fields: [subcategory_id], references: [id])
   city                 City?             @relation("RequestCity", fields: [city_id], references: [id])
   company              Company           @relation(fields: [company_id], references: [id])
   country              Country?          @relation("RequestCountry", fields: [country_id], references: [id])
@@ -455,6 +506,8 @@ model Request {
   user                 User?             @relation(fields: [user_id], references: [id])
   requestInvitations   RequestInvitation[]
 
+  @@index([target_company_id, status])
+  @@index([subcategory_id])
   @@map("requests")
 }
 
@@ -475,6 +528,7 @@ model CompanyOffer {
   name              String              @db.VarChar(200)
   description       String?
   category_id       Int?                @db.SmallInt
+  subcategory_id    Int?                @db.SmallInt
   supplier_type_id  Int?                @db.SmallInt
   base_price_usd    Decimal?            @db.Decimal(12, 2)
   unit_id           Int?                @db.SmallInt
@@ -483,15 +537,20 @@ model CompanyOffer {
   video_url         String?
   is_active         Boolean             @default(true)
   rating            Decimal?            @default(0.00) @db.Decimal(3, 2)
+  deleted_at        DateTime?           @db.Timestamptz(6)
   created_at        DateTime            @default(now()) @db.Timestamptz(6)
   updated_at        DateTime            @default(now()) @db.Timestamptz(6)
   photos            CompanyOfferPhoto[]
+  pricing_tiers     CompanyOfferPricingTier[]
   category          Category?           @relation("OfferCategory", fields: [category_id], references: [id])
+  subcategory       Subcategory?        @relation("OfferSubcategory", fields: [subcategory_id], references: [id])
   company           Company             @relation(fields: [company_id], references: [id])
   supplier_type     CompanyTypeDict?    @relation("OfferCompanyType", fields: [supplier_type_id], references: [id])
   unit_of_measure   UnitOfMeasureDict?  @relation(fields: [unit_id], references: [id])
   quote_responses   QuoteResponse[]
+  direct_requests   Request[]
 
+  @@index([subcategory_id])
   @@map("company_offers")
 }
 
@@ -504,6 +563,18 @@ model CompanyOfferPhoto {
   offer      CompanyOffer @relation(fields: [offer_id], references: [id], onDelete: Cascade)
 
   @@map("company_offer_photos")
+}
+
+model CompanyOfferPricingTier {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  offer_id     String       @db.Uuid
+  min_quantity Int
+  max_quantity Int?
+  price_usd    Decimal      @db.Decimal(12, 2)
+  created_at   DateTime     @default(now()) @db.Timestamptz(6)
+  offer        CompanyOffer @relation(fields: [offer_id], references: [id], onDelete: Cascade)
+
+  @@map("company_offer_pricing_tiers")
 }
 
 model QuoteResponse {
@@ -879,6 +950,7 @@ enum QuoteRevisionAction {
   canceled
   expired
   negotiation_started
+  rejected
 }
 
 enum TransactionRevisionAction {
@@ -941,3 +1013,91 @@ model RequestInvitation {
   @@index([status, created_at])
   @@map("request_invitations")
 }
+
+model PasswordResetToken {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String    @db.Uuid
+  token_hash       String    @unique @db.Char(64)
+  expires_at       DateTime  @db.Timestamptz(6)
+  used_at          DateTime? @db.Timestamptz(6)
+  invalidated_at   DateTime? @db.Timestamptz(6)
+  failed_attempts  Int       @default(0) @db.SmallInt
+  requested_ip     String?   @db.VarChar(45)
+  requested_ua     String?   @db.VarChar(255)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  user             User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at])
+  @@index([expires_at])
+  @@map("password_reset_tokens")
+}
+
+model PasswordHistory {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String   @db.Uuid
+  password_hash  String   @db.VarChar(255)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@map("password_history")
+}
+
+model UserTwoFactor {
+  user_id            String    @id @db.Uuid
+  secret_ciphertext  String
+  secret_iv          String    @db.VarChar(32)
+  secret_tag         String    @db.VarChar(32)
+  key_version        Int       @default(1) @db.SmallInt
+  enabled_at         DateTime? @db.Timestamptz(6)
+  last_used_step     BigInt?
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime  @updatedAt @db.Timestamptz(6)
+  user               User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_two_factor")
+}
+
+model UserRecoveryCode {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  code_hash   String    @db.Char(64)
+  used_at     DateTime? @db.Timestamptz(6)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("user_recovery_codes")
+}
+
+model SecurityEvent {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?           @db.Uuid
+  company_id  String?           @db.Uuid
+  event_type  SecurityEventType
+  ip          String?           @db.VarChar(45)
+  user_agent  String?           @db.VarChar(255)
+  metadata    Json?
+  created_at  DateTime          @default(now()) @db.Timestamptz(6)
+  user        User?             @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([event_type, created_at])
+  @@map("security_events")
+}
+
+enum SecurityEventType {
+  password_reset_requested
+  password_reset_completed
+  password_reset_failed
+  password_changed
+  password_reuse_rejected
+  two_factor_enrolled
+  two_factor_disabled
+  two_factor_failed
+  recovery_code_used
+  recovery_codes_regenerated
+  login_failed
+  login_locked
+}
+

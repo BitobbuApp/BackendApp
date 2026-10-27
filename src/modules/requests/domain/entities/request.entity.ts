@@ -30,6 +30,20 @@ export interface RequestCompanyEntity {
     locations: any[];
 }
 
+export interface RequestTargetCompanyEntity {
+    id: string;
+    trade_name: string;
+    logo_url: string | null;
+}
+
+export interface RequestOfferEntity {
+    id: string;
+    name: string;
+    base_price_usd: number | null;
+    moq: number | null;
+    pricing_tiers: Array<{ min_quantity: number; max_quantity: number | null; price_usd: number }>;
+}
+
 export class RequestEntity {
     constructor(
         public id: string,
@@ -55,6 +69,18 @@ export class RequestEntity {
         public files: RequestFileEntity[] = [],
         public serial_number: number | null = null,
         public created_at: Date | null = null,
-        public updated_at: Date | null = null
+        public updated_at: Date | null = null,
+        // Direct RFQ (from a marketplace product): only the target supplier can see/quote it
+        public target_company_id: string | null = null,
+        public company_offer_id: string | null = null,
+        public target_company: RequestTargetCompanyEntity | null = null,
+        public offer: RequestOfferEntity | null = null,
+        // Optional second level of the category
+        public subcategory_id: number | null = null,
+        public subcategory: string | null = null
     ) { }
+
+    get is_direct(): boolean {
+        return this.target_company_id !== null;
+    }
 }
