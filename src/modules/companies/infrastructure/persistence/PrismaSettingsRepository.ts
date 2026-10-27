@@ -15,11 +15,13 @@ export class PrismaSettingsRepository implements SettingsRepository {
             update: {
                 ...(settings.receive_email_notifications !== undefined && { email_notifications: settings.receive_email_notifications }),
                 ...(settings.receive_web_notifications !== undefined && { web_notifications: settings.receive_web_notifications }),
+                ...(settings.two_factor_required !== undefined && { two_factor_required: settings.two_factor_required }),
             },
             create: {
                 company_id: companyId,
                 email_notifications: settings.receive_email_notifications ?? true,
                 web_notifications: settings.receive_web_notifications ?? true,
+                two_factor_required: settings.two_factor_required ?? false,
             }
         });
         return this.mapToEntity(updated);
@@ -29,7 +31,8 @@ export class PrismaSettingsRepository implements SettingsRepository {
         return new CompanySettings(
             db.company_id,
             db.email_notifications,
-            db.web_notifications
+            db.web_notifications,
+            db.two_factor_required ?? false
         );
     }
 }

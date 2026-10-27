@@ -24,10 +24,10 @@ async function startWorker() {
         console.log('[worker] BullMQ background worker started successfully 🚀');
 
         await app.listen({
-            port: Number(process.env.PORT) || 3001,
+            port: Number(process.env.PORT_WORKER) || 3001,
             host: '0.0.0.0'
         });
-        console.log(`[worker] Health check server listening on port ${Number(process.env.PORT) || 3001}`);
+        console.log(`[worker] Health check server listening on port ${Number(process.env.PORT_WORKER) || 3001}`);
     } catch (error) {
         console.error('[worker] Failed to start background worker:', error);
         process.exit(1);

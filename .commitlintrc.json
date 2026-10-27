@@ -1,6 +1,8 @@
 {
     "extends": ["@commitlint/config-conventional", "gitmoji"],
     "rules": {
+        "subject-empty": [0],
+        "type-empty": [0],
         "header-case": [2, "always", "lower-case"],
         "header-max-length": [2, "always", 120],
         "body-case": [2, "always", "lower-case"],

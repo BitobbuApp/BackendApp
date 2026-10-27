@@ -2,12 +2,14 @@ import { QuoteResponseNotFoundError } from "../../domain/errors/quote_response.e
 import { QuoteRevisionStrategy, QuoteActionParams } from './QuoteRevisionStrategy';
 import { QuoteResponse, ResponseStatus } from '../../domain/entities/quote_response.entity';
 import { assertActorRole } from '../helpers/assertActorRole';
+import { assertSupplierCanStartNegotiation } from '../helpers/directRequestRules';
 import { assertTransition } from '../../domain/quoteResponseStateMachine';
 import { prisma } from '../../../../shared/infrastructure/database';
 
 /**
  * NegotiationStartedStrategy
  * Buyer opens the chat to start negotiation.
+ * On direct RFQs (from a marketplace product) the target supplier can also open it.
  * 
  * This strategy:
  * 1. Transitions QuoteResponse status to `negotiating`
@@ -18,12 +20,21 @@ import { prisma } from '../../../../shared/infrastructure/database';
  */
 export class NegotiationStartedStrategy implements QuoteRevisionStrategy {
     readonly action = 'negotiation_started';
-    readonly allowedActors = ['buyer' as const];
+    readonly allowedActors = ['buyer' as const, 'supplier' as const];
 
     async execute(params: QuoteActionParams): Promise<QuoteResponse> {
         const { quoteResponseId, actorCompanyId } = params;
 
         const actorContext = await assertActorRole(quoteResponseId, actorCompanyId, this.allowedActors, this.action);
+
+        // Suppliers may only open the negotiation on direct RFQs addressed to them
+        if (actorContext.role === 'supplier') {
+            const { request } = await prisma.quoteResponse.findUniqueOrThrow({
+                where: { id: quoteResponseId },
+                select: { request: { select: { target_company_id: true } } },
+            });
+            assertSupplierCanStartNegotiation(request.target_company_id, actorContext.supplierCompanyId);
+        }
 
         return prisma.$transaction(async (tx) => {
             // 1. Load the full quote response

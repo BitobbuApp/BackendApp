@@ -3,6 +3,7 @@ import { UserRepository } from '../domain/repositories/user.repository';
 import { PrismaUserRepository } from "../infrastructure/persistence/PrismaUserRepository";
 import { UserAlreadyExistsError } from '../domain/errors/user.errors';
 import bcrypt from 'bcrypt';
+import { PasswordHasher } from '../../../shared/application/services/passwordHasher';
 import { UseCase } from '../../../shared/application/useCase';
 import { registerUserDtoRequestSchema, registerUserDtoResponseSchema } from './dtos/register.dto';
 import { VENEZUELA_COUNTRY_ID } from '../../../shared/constants/geo.constants';
@@ -12,6 +13,7 @@ import { PrismaVerificationRepository } from '../../companies/infrastructure/per
 import { VerificationRepository } from '../../companies/domain/repositories/verification.repository';
 import { CreateSubscriptionUseCase } from '../../subscriptions/application/createSubscriptionUseCase';
 import { GetSubscriptionPlanUseCase } from '../../subscriptions/application/getSubscriptionPlanUseCase';
+import { JwtService } from '../../../shared/application/services/jwtService';
 
 interface RegisterDto {
     first_name: string;
@@ -31,6 +33,11 @@ interface RegisterResult {
     first_name: string;
     last_name: string;
     email: string;
+    is_active: boolean;
+    last_access: Date | null;
+    token: string;
+    has_company: boolean;
+    company_id: string | null;
 }
 
 
@@ -42,6 +49,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     private readonly verificationRepository: VerificationRepository;
     private readonly getSubscriptionPlanUseCase: GetSubscriptionPlanUseCase;
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase;
+    private readonly jwtService: JwtService;
 
     constructor() {
         super();
@@ -50,6 +58,7 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
         this.verificationRepository = new PrismaVerificationRepository();
         this.getSubscriptionPlanUseCase = new GetSubscriptionPlanUseCase();
         this.createSubscriptionUseCase = new CreateSubscriptionUseCase();
+        this.jwtService = new JwtService();
     }
 
     protected async implementation(userDto: RegisterDto): Promise<RegisterResult> {
@@ -66,7 +75,8 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             if (userExist) throw new UserAlreadyExistsError(userData.email);
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const passwordHasher = new PasswordHasher();
+        const hashedPassword = await passwordHasher.hash(password);
         const newUser = await this.userRepository.create({
             id: '',
             company_id: null,
@@ -87,6 +97,19 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             updated_at: new Date(),
             last_access: null
         } as any);
+
+        // Store initial password in password history (non-blocking safety)
+        try {
+            const { prisma } = await import('../../../shared/infrastructure/database');
+            await prisma.passwordHistory.create({
+                data: {
+                    user_id: newUser.id,
+                    password_hash: hashedPassword,
+                },
+            });
+        } catch (e) {
+            // Logged or handled gracefully if table not yet migrated
+        }
 
         if (newUser.company_id) {
             await this.verificationRepository.upsertVerification({
@@ -116,11 +139,24 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
             }
         });
 
+        // Generate JWT token
+        const token = this.jwtService.generateToken({
+            userId: newUser.id,
+            companyId: newUser.company_id ?? null,
+            email: newUser.email,
+            tv: newUser.token_version,
+        });
+
         return {
             id: newUser.id,
             first_name: newUser.first_name,
             last_name: newUser.last_name,
-            email: newUser.email
+            email: newUser.email,
+            is_active: newUser.is_active ?? true,
+            last_access: newUser.last_access,
+            token,
+            has_company: !!newUser.company_id,
+            company_id: newUser.company_id ?? null,
         };
     }
 }

@@ -5,6 +5,9 @@ import { PrismaCompanyRepository } from "../infrastructure/persistence/PrismaCom
 import { createCompanyDtoRequestSchema, createCompanyDtoResponseSchema } from "./dtos/company.dto";
 import Joi from "joi";
 import { CompanyAlreadyExistsError } from "../domain/errors/company.errors";
+import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
+import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
+import { deriveInterestTaxonomy, findSelectedSubcategories } from "./helpers/interestTaxonomy";
 
 interface CreateCompanyInput {
     trade_name: string;
@@ -39,6 +42,7 @@ interface CreateCompanyInput {
 
     payment_method_ids?: number[];
     interest_category_ids?: number[];
+    interest_subcategory_ids?: number[];
     creatorId: string;
 }
 
@@ -57,11 +61,13 @@ export class CreateCompanyUseCase extends UseCase<CreateCompanyInput, CreateComp
     protected outputSchema: Joi.Schema = createCompanyDtoResponseSchema;
     private readonly companyRepository: CompanyRepository;
     private readonly updateUserUseCase: UpdateUserUseCase;
+    private readonly subcategoryRepository: SubcategoryRepository;
 
     constructor() {
         super();
         this.companyRepository = new PrismaCompanyRepository();
         this.updateUserUseCase = new UpdateUserUseCase();
+        this.subcategoryRepository = new PrismaSubcategoryRepository();
     }
 
     protected async implementation(data: CreateCompanyInput): Promise<CreateCompanyOutput> {
@@ -72,6 +78,10 @@ export class CreateCompanyUseCase extends UseCase<CreateCompanyInput, CreateComp
                 throw new CompanyAlreadyExistsError(data.tax_id);
             }
         }
+
+        // Subcategories add their parent categories to the categories of interest
+        const selected = await findSelectedSubcategories(this.subcategoryRepository, data.interest_subcategory_ids);
+        Object.assign(data, deriveInterestTaxonomy(data, { categoryIds: [], subcategories: [] }, selected));
 
         const company = await this.companyRepository.create(data);
 

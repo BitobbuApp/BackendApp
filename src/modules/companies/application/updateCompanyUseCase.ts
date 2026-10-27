@@ -6,6 +6,9 @@ import Joi from "joi";
 import { CompanyNotFoundError } from "../domain/errors/company.errors";
 import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
 import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
+import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
+import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
+import { deriveInterestTaxonomy, findSelectedSubcategories } from "./helpers/interestTaxonomy";
 
 interface UpdateCompanyInput {
     id: string;
@@ -42,6 +45,7 @@ interface UpdateCompanyInput {
 
     payment_method_ids?: number[];
     interest_category_ids?: number[];
+    interest_subcategory_ids?: number[];
     social_media_links?: Array<{ platform: string; url: string }>;
 
     rawFiles?: Array<{ file_name: string; buffer: Buffer; mime_type: string }>;
@@ -53,10 +57,12 @@ export class UpdateCompanyUseCase extends UseCase<UpdateCompanyInput, any> {
     });
     protected outputSchema: Joi.Schema = createCompanyDtoResponseSchema;
     private readonly companyRepository: CompanyRepository;
+    private readonly subcategoryRepository: SubcategoryRepository;
 
     constructor() {
         super();
         this.companyRepository = new PrismaCompanyRepository();
+        this.subcategoryRepository = new PrismaSubcategoryRepository();
     }
 
     protected async implementation(data: UpdateCompanyInput): Promise<any> {
@@ -81,6 +87,13 @@ export class UpdateCompanyUseCase extends UseCase<UpdateCompanyInput, any> {
                 updateData.logo_url = `${publicUrlBase}/${result.fileKey}`;
             }
         }
+
+        // Subcategories add their parent categories; removing a category drops its subcategories
+        const selected = await findSelectedSubcategories(this.subcategoryRepository, updateData.interest_subcategory_ids);
+        Object.assign(updateData, deriveInterestTaxonomy(updateData, {
+            categoryIds: (existing.categories_of_interest ?? []).map((c: any) => c.id),
+            subcategories: existing.subcategories_of_interest ?? [],
+        }, selected));
 
         const updatedCompany = await this.companyRepository.update(id, updateData);
 

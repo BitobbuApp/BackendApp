@@ -37,7 +37,7 @@ export const adminAuthMiddleware = async (request: FastifyRequest, reply: Fastif
             return ApiResponse.error(reply, "Invalid or expired token", 401, undefined, "AUTH_INVALID_TOKEN", "AUTHENTICATION");
         }
 
-        if (decoded.actorType !== 'admin' || !decoded.adminId || !decoded.role) {
+        if (decoded.actorType !== 'admin' || !decoded.adminId || !decoded.role || decoded.purpose) {
             return ApiResponse.error(reply, "Unauthorized access", 403, undefined, "AUTHORIZATION_ERROR", "AUTHORIZATION");
         }
         /*

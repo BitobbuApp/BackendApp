@@ -12,8 +12,21 @@ const pool = new Pool({
     connectionString,
     max: 10,                // max simultaneous connections this service holds
     idleTimeoutMillis: 30000,  // release idle connections after 30s
-    connectionTimeoutMillis: 5000, // fail fast if no connection is available in 5s
+    // Opening a connection through the Supabase pooler (TLS + auth) can take several seconds when it opens
+    // many at once (e.g. /metadata/app runs ~11 queries in parallel on a cold pool): 5s was too tight
+    connectionTimeoutMillis: 10000,
+    // TCP keep-alive so idle pooled connections are not silently dropped and have to be re-opened
+    keepAlive: true,
 });
+
+// An idle client dropped by the pooler emits 'error' on the pool; without a listener it crashes the process
+pool.on('error', (err) => {
+    logger.error(err, '❌ PostgreSQL pool error (idle client)');
+});
+
+// TODO: cache /metadata/app (Redis) — catalogs rarely change and every app load runs ~11 queries;
+// invalidate it when the BackOffice changes a catalog (lookups, subcategories, geography).
+
 const adapter = new PrismaPg(pool);
 
 export const prisma = new PrismaClient({

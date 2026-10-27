@@ -1,6 +1,20 @@
-import { RequestRepository, RequestListResult } from "../../domain/repositories/request.repository";
+import { RequestRepository, RequestListResult, MarketplaceRequestFilters } from "../../domain/repositories/request.repository";
 import { RequestEntity, RequestFileEntity } from "../../domain/entities/request.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
+
+// Relations needed to describe a direct RFQ (target supplier + marketplace offer)
+const DIRECT_REQUEST_INCLUDE = {
+    target_company: { select: { id: true, trade_name: true, logo_url: true } },
+    offer: {
+        select: {
+            id: true,
+            name: true,
+            base_price_usd: true,
+            moq: true,
+            pricing_tiers: { orderBy: { min_quantity: 'asc' as const } }
+        }
+    }
+};
 
 export class PrismaRequestRepository implements RequestRepository {
     private buildAdminWhere(filters: any) {
@@ -55,6 +69,9 @@ export class PrismaRequestRepository implements RequestRepository {
             state_id: (request as any).state_id ?? null,
             city_id: (request as any).city_id ?? null,
             reach_service: (request as any).reach_service ?? null,
+            target_company_id: request.target_company_id ?? null,
+            company_offer_id: request.company_offer_id ?? null,
+            subcategory_id: request.subcategory_id ?? null,
         };
 
         if (request.files && request.files.length > 0) {
@@ -68,7 +85,7 @@ export class PrismaRequestRepository implements RequestRepository {
 
         const created = await prisma.request.create({
             data: dataPayload,
-            include: { files: true, unit_of_measure: true, category: true }
+            include: { files: true, unit_of_measure: true, category: true, subcategory: true, ...DIRECT_REQUEST_INCLUDE }
         });
         return this.mapToEntity(created);
     }
@@ -79,7 +96,8 @@ export class PrismaRequestRepository implements RequestRepository {
             include: {
                 files: true,
                 unit_of_measure: true,
-                category: true,
+                category: true, subcategory: true,
+                ...DIRECT_REQUEST_INCLUDE,
                 company: {
                     select: {
                         id: true,
@@ -119,7 +137,7 @@ export class PrismaRequestRepository implements RequestRepository {
                 skip,
                 take: limit,
                 orderBy: { created_at: 'desc' },
-                include: { files: true, unit_of_measure: true, category: true }
+                include: { files: true, unit_of_measure: true, category: true, subcategory: true, ...DIRECT_REQUEST_INCLUDE }
             })
         ]);
 
@@ -131,11 +149,23 @@ export class PrismaRequestRepository implements RequestRepository {
         };
     }
 
-    async findExcludingCompany(excludeCompanyId: string, page: number, limit: number): Promise<RequestListResult> {
+    async findExcludingCompany(
+        excludeCompanyId: string,
+        page: number,
+        limit: number,
+        filters: MarketplaceRequestFilters = {}
+    ): Promise<RequestListResult> {
         const skip = (page - 1) * limit;
+        // Open RFQs are visible to every seller; direct RFQs only to their target supplier
         const where = {
             company_id: { not: excludeCompanyId },
             status: 'active' as any,
+            OR: [
+                { target_company_id: null },
+                { target_company_id: excludeCompanyId }
+            ],
+            ...(filters.category_id && { category_id: filters.category_id }),
+            ...(filters.subcategory_ids?.length && { subcategory_id: { in: filters.subcategory_ids } }),
         };
 
         const [total, data] = await Promise.all([
@@ -148,7 +178,8 @@ export class PrismaRequestRepository implements RequestRepository {
                 include: {
                     files: true,
                     unit_of_measure: true,
-                    category: true,
+                    category: true, subcategory: true,
+                    ...DIRECT_REQUEST_INCLUDE,
                     quote_responses: {
                         where: { supplier_id: excludeCompanyId },
                         select: { id: true, status: true }
@@ -199,6 +230,7 @@ export class PrismaRequestRepository implements RequestRepository {
                 ...( (request as any).unit_id !== undefined && { unit_id: (request as any).unit_id }),
                 ...(request.description !== undefined && { description: request.description }),
                 ...( (request as any).category_id !== undefined && { category_id: (request as any).category_id }),
+                ...(request.subcategory_id !== undefined && { subcategory_id: request.subcategory_id }),
                 ...(request.status !== undefined && { status: request.status as any }),
                 ...( (request as any).type !== undefined && { type: (request as any).type as any }),
                 ...(request.expiration_date !== undefined && { expiration_date: request.expiration_date }),
@@ -212,7 +244,7 @@ export class PrismaRequestRepository implements RequestRepository {
                 ...( (request as any).city_id !== undefined && { city_id: (request as any).city_id }),
                 ...( (request as any).reach_service !== undefined && { reach_service: (request as any).reach_service }),
             } as any,
-            include: { files: true, unit_of_measure: true, category: true }
+            include: { files: true, unit_of_measure: true, category: true, subcategory: true }
         });
         return this.mapToEntity(updated);
     }
@@ -234,7 +266,7 @@ export class PrismaRequestRepository implements RequestRepository {
                 orderBy: { created_at: 'desc' },
                 include: {
                     unit_of_measure: true,
-                    category: true,
+                    category: true, subcategory: true,
                     company: {
                         select: {
                             id: true,
@@ -270,7 +302,7 @@ export class PrismaRequestRepository implements RequestRepository {
             orderBy: { id: 'asc' },
             include: {
                 unit_of_measure: true,
-                category: true,
+                category: true, subcategory: true,
                 company: {
                     select: {
                         id: true,
@@ -342,7 +374,31 @@ export class PrismaRequestRepository implements RequestRepository {
             files,
             db.serial_number,
             db.created_at,
-            db.updated_at
+            db.updated_at,
+            db.target_company_id ?? null,
+            db.company_offer_id ?? null,
+            db.target_company ? {
+                id: db.target_company.id,
+                trade_name: db.target_company.trade_name,
+                logo_url: db.target_company.logo_url ?? null,
+            } : null,
+            db.offer ? PrismaRequestRepository.mapOffer(db.offer) : null,
+            db.subcategory_id ?? null,
+            db.subcategory?.name_es ?? null
         );
+    }
+
+    static mapOffer(offer: any) {
+        return {
+            id: offer.id,
+            name: offer.name,
+            base_price_usd: offer.base_price_usd != null ? Number(offer.base_price_usd) : null,
+            moq: offer.moq ?? null,
+            pricing_tiers: (offer.pricing_tiers || []).map((t: any) => ({
+                min_quantity: t.min_quantity,
+                max_quantity: t.max_quantity ?? null,
+                price_usd: Number(t.price_usd),
+            })),
+        };
     }
 }

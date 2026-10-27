@@ -1,6 +1,6 @@
 // src/modules/companyOffers/infrastructure/persistence/PrismaCompanyOfferRepository.ts
 import { CompanyOfferRepository } from "../../domain/repositories/companyOffer.repository";
-import { CompanyOffer, CompanyOfferPhoto } from "../../domain/entities/companyOffer.entity";
+import { CompanyOffer, CompanyOfferPhoto, CompanyOfferPricingTier } from "../../domain/entities/companyOffer.entity";
 import { prisma } from '../../../../shared/infrastructure/database';
 
 export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
@@ -10,6 +10,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             name: offer.name!,
             description: offer.description ?? null,
             ...(offer.category_id !== undefined && { category_id: offer.category_id }),
+            ...(offer.subcategory_id !== undefined && { subcategory_id: offer.subcategory_id }),
             ...(offer.supplier_type_id !== undefined && { supplier_type_id: offer.supplier_type_id }),
             base_price_usd: offer.base_price_usd ?? null,
             ...(offer.unit_id !== undefined && { unit_id: offer.unit_id }),
@@ -29,11 +30,22 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             };
         }
 
+        if (offer.pricing_tiers && offer.pricing_tiers.length > 0) {
+            dataToCreate.pricing_tiers = {
+                create: offer.pricing_tiers.map((tier: Partial<CompanyOfferPricingTier>) => ({
+                    min_quantity: tier.min_quantity!,
+                    max_quantity: tier.max_quantity ?? null,
+                    price_usd: tier.price_usd!
+                }))
+            };
+        }
+
         const created = await prisma.companyOffer.create({
             data: dataToCreate,
             include: {
                 photos: true,
-                category: true,
+                pricing_tiers: true,
+                category: true, subcategory: true,
                 supplier_type: true,
                 unit_of_measure: true,
             }
@@ -42,9 +54,45 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     }
 
     async findById(id: string): Promise<CompanyOffer | null> {
-        const found = await prisma.companyOffer.findUnique({
-            where: { id },
-            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
+        return this.findOneWithDetails({ id, deleted_at: null });
+    }
+
+    async findActiveById(id: string): Promise<CompanyOffer | null> {
+        return this.findOneWithDetails({ id, is_active: true, deleted_at: null });
+    }
+
+    private async findOneWithDetails(where: any): Promise<CompanyOffer | null> {
+        const found = await prisma.companyOffer.findFirst({
+            where,
+            include: { 
+                photos: {
+                    orderBy: {
+                        sort_order: 'asc'
+                    }
+                }, 
+                pricing_tiers: {
+                    orderBy: {
+                        min_quantity: 'asc'
+                    }
+                }, 
+                category: true, subcategory: true, 
+                supplier_type: true, 
+                unit_of_measure: true,
+                company: {
+                    include: {
+                        locations: true,
+                        received_reviews: {
+                            take: 3,
+                            orderBy: { created_at: 'desc' },
+                            include: {
+                                author: {
+                                    select: { trade_name: true, legal_name: true }
+                                }
+                            }
+                        }
+                    }
+                } 
+            }
         });
         if (!found) return null;
         return this.mapToEntity(found);
@@ -52,8 +100,8 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
 
     async findByCompanyId(companyId: string): Promise<CompanyOffer[]> {
         const list = await prisma.companyOffer.findMany({
-            where: { company_id: companyId },
-            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
+            where: { company_id: companyId, deleted_at: null },
+            include: { photos: true, pricing_tiers: true, category: true, subcategory: true, supplier_type: true, unit_of_measure: true }
         });
         return list.map((item: any) => this.mapToEntity(item));
     }
@@ -61,12 +109,92 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
     async findAllWithPagination(page: number, limit: number): Promise<{ data: CompanyOffer[], total: number }> {
         const skip = (page - 1) * limit;
         const [total, list] = await Promise.all([
-            prisma.companyOffer.count(),
+            prisma.companyOffer.count({ where: { deleted_at: null } }),
             prisma.companyOffer.findMany({
                 skip,
                 take: limit,
-                include: { photos: true, category: true, supplier_type: true, unit_of_measure: true },
+                where: { deleted_at: null },
+                include: { photos: true, pricing_tiers: true, category: true, subcategory: true, supplier_type: true, unit_of_measure: true },
                 orderBy: { created_at: 'desc' }
+            })
+        ]);
+
+        return {
+            total,
+            data: list.map((item: any) => this.mapToEntity(item))
+        };
+    }
+
+    async searchMarketplace(filters: any, pagination: { page: number; limit: number }): Promise<{ data: CompanyOffer[], total: number }> {
+        const { page, limit } = pagination;
+        const skip = (page - 1) * limit;
+
+        const where: any = { is_active: true, deleted_at: null };
+
+        if (filters.searchTerm) {
+            where.OR = [
+                { name: { contains: filters.searchTerm, mode: 'insensitive' } },
+                { description: { contains: filters.searchTerm, mode: 'insensitive' } }
+            ];
+        }
+
+        if (filters.categoryId) {
+            where.category_id = filters.categoryId;
+        }
+
+        if (filters.subcategoryId) {
+            where.subcategory_id = filters.subcategoryId;
+        }
+
+        if (filters.supplierTypeId) {
+            where.supplier_type_id = filters.supplierTypeId;
+        }
+
+        if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+            where.base_price_usd = {};
+            if (filters.minPrice !== undefined) where.base_price_usd.gte = filters.minPrice;
+            if (filters.maxPrice !== undefined) where.base_price_usd.lte = filters.maxPrice;
+        }
+
+        if (filters.countryId || filters.stateId) {
+            where.company = {
+                locations: {
+                    some: {
+                        ...(filters.countryId && { country_id: filters.countryId }),
+                        ...(filters.stateId && { state_id: filters.stateId })
+                    }
+                }
+            };
+        }
+
+        let orderBy: any = { created_at: 'desc' }; // 'newest' default
+        if (filters.sortBy === 'price_asc') {
+            orderBy = { base_price_usd: 'asc' };
+        } else if (filters.sortBy === 'price_desc') {
+            orderBy = { base_price_usd: 'desc' };
+        } else if (filters.sortBy === 'rating_desc') {
+            orderBy = { rating: 'desc' };
+        }
+
+        const [total, list] = await Promise.all([
+            prisma.companyOffer.count({ where }),
+            prisma.companyOffer.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy,
+                include: {
+                    photos: true,
+                    pricing_tiers: true,
+                    category: true, subcategory: true,
+                    supplier_type: true,
+                    unit_of_measure: true,
+                    company: {
+                        include: {
+                            locations: true
+                        }
+                    }
+                }
             })
         ]);
 
@@ -81,6 +209,7 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             ...(offer.name !== undefined && { name: offer.name }),
             ...(offer.description !== undefined && { description: offer.description }),
             ...(offer.category_id !== undefined && { category_id: offer.category_id }),
+            ...(offer.subcategory_id !== undefined && { subcategory_id: offer.subcategory_id }),
             ...(offer.supplier_type_id !== undefined && { supplier_type_id: offer.supplier_type_id }),
             ...(offer.base_price_usd !== undefined && { base_price_usd: offer.base_price_usd }),
             ...(offer.unit_id !== undefined && { unit_id: offer.unit_id }),
@@ -102,21 +231,62 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             };
         }
 
+        if (offer.pricing_tiers !== undefined) {
+            dataToUpdate.pricing_tiers = {
+                deleteMany: {},
+                create: offer.pricing_tiers.map((tier: Partial<CompanyOfferPricingTier>) => ({
+                    min_quantity: tier.min_quantity!,
+                    max_quantity: tier.max_quantity ?? null,
+                    price_usd: tier.price_usd!
+                }))
+            };
+        }
+
         const updated = await prisma.companyOffer.update({
             where: { id },
             data: dataToUpdate,
-            include: { photos: true, category: true, supplier_type: true, unit_of_measure: true }
+            include: { photos: true, pricing_tiers: true, category: true, subcategory: true, supplier_type: true, unit_of_measure: true }
         });
         return this.mapToEntity(updated);
     }
 
     async delete(id: string): Promise<void> {
-        await prisma.companyOffer.delete({ where: { id } });
+        await prisma.companyOffer.update({
+            where: { id },
+            data: { deleted_at: new Date(), is_active: false }
+        });
     }
 
-    private mapToEntity(db: any): CompanyOffer {
+    private mapToEntity = (db: any): CompanyOffer => {
         const photos = db.photos?.map((p: any) => new CompanyOfferPhoto(
             p.id, p.offer_id, p.url, p.sort_order, p.created_at
+        )) || [];
+
+        let company_details = null;
+        if (db.company) {
+            company_details = {
+                trade_name: db.company.trade_name,
+                legal_name: db.company.legal_name,
+                logo_url: db.company.logo_url,
+                average_rating: db.company.average_rating ? Number(db.company.average_rating) : 0,
+                review_count: db.company.review_count || 0,
+                locations: db.company.locations?.map((l: any) => ({
+                    country_id: l.country_id,
+                    state_id: l.state_id,
+                    city_id: l.city_id
+                })) || [],
+                recent_reviews: db.company.received_reviews?.map((r: any) => ({
+                    id: r.id,
+                    rating: Number(r.rating),
+                    comment: r.comment,
+                    created_at: r.created_at,
+                    author_name: r.author?.trade_name || r.author?.legal_name || 'Comprador verificado'
+                })) || []
+            };
+        }
+
+        const tiers = db.pricing_tiers?.map((t: any) => new CompanyOfferPricingTier(
+            t.id, t.offer_id, t.min_quantity, t.max_quantity, t.price_usd ? Number(t.price_usd) : 0, t.created_at
         )) || [];
 
         return new CompanyOffer(
@@ -136,9 +306,14 @@ export class PrismaCompanyOfferRepository implements CompanyOfferRepository {
             db.video_url,
             db.is_active,
             db.rating ? Number(db.rating) : 0,
+            db.deleted_at ?? null,
             db.created_at,
             db.updated_at,
-            photos
+            photos,
+            tiers,
+            company_details,
+            db.subcategory_id ?? null,
+            db.subcategory?.name_es ?? null
         );
     }
 }

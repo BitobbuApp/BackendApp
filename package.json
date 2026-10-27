@@ -13,7 +13,8 @@
     "start": "node dist/index.js",
     "start:prod": "node --env-file=.env.prod dist/index.js",
     "prisma:prod": "dotenv -e .env.prod -- npx prisma",
-    "test": "jest",
+    "test": "jest && npm run test:node",
+    "test:node": "node scripts/run-node-tests.mjs",
     "prepare": "husky"
   },
   "keywords": [],

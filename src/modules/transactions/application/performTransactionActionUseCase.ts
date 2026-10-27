@@ -144,7 +144,7 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
                     typeId: NOTIFICATION_TYPE.PAYMENT_UPLOADED,
                     title: 'Pago recibido',
                     message: 'Un comprador subió el comprobante de pago. Por favor revísalo.',
-                    link: `/Negotiations/${conversation.id}`,
+                    link: `/Chat/${conversation.id}`,
                     entityType: 'transaction',
                     entityId: data.transactionId,
                 });
@@ -161,7 +161,7 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
                     typeId: NOTIFICATION_TYPE.ORDER_SHIPPED,
                     title: 'Pedido enviado',
                     message: 'El proveedor ha marcado tu pedido como enviado.',
-                    link: `/Negotiations/${conversation.id}`,
+                    link: `/Chat/${conversation.id}`,
                     entityType: 'transaction',
                     entityId: data.transactionId,
                 });
@@ -178,7 +178,7 @@ export class PerformTransactionActionUseCase extends UseCase<PerformTransactionA
                     typeId: NOTIFICATION_TYPE.DELIVERY_CONFIRMED,
                     title: 'Entrega confirmada ✅',
                     message: 'El comprador ha confirmado la recepción del pedido.',
-                    link: `/Negotiations/${conversation.id}`,
+                    link: `/Chat/${conversation.id}`,
                     entityType: 'transaction',
                     entityId: data.transactionId,
                 });

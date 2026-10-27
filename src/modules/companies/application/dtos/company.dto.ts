@@ -39,6 +39,8 @@ export const createCompanyDtoRequestSchema = Joi.object({
     // Arrays
     payment_method_ids: Joi.array().items(Joi.number().integer().min(1)).default([]),
     interest_category_ids: Joi.array().items(Joi.number().integer().min(1)).default([]),
+    // Their parent categories are added to interest_category_ids automatically
+    interest_subcategory_ids: Joi.array().items(Joi.number().integer().min(1)).unique().default([]),
     creatorId: Joi.string().uuid().optional()
 });
 
@@ -91,6 +93,8 @@ export const updateCompanyDtoRequestSchema = Joi.object({
     // Arrays
     payment_method_ids: Joi.array().items(Joi.number().integer().min(1)),
     interest_category_ids: Joi.array().items(Joi.number().integer().min(1)),
+    // Their parent categories are added to interest_category_ids automatically
+    interest_subcategory_ids: Joi.array().items(Joi.number().integer().min(1)).unique(),
 
     // Social media links
     social_media_links: Joi.array().items(
@@ -169,6 +173,12 @@ export const companyWithRelationsSchema = Joi.object({
     categories_of_interest: Joi.array().items(Joi.object({
         id: Joi.number().integer().required(),
         name: Joi.string().required(),
+    })).optional(),
+    // Active subcategories only (links to inactive ones are kept but hidden)
+    subcategories_of_interest: Joi.array().items(Joi.object({
+        id: Joi.number().integer().required(),
+        name: Joi.string().required(),
+        category_id: Joi.number().integer().required(),
     })).optional(),
     verification_info: Joi.object({
         status: Joi.string().required(),

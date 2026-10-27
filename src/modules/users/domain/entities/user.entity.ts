@@ -19,7 +19,9 @@ export class User {
         public is_active: boolean | null,
         public last_access: Date | null,
         public created_at: Date | null,
-        public updated_at: Date | null
+        public updated_at: Date | null,
+        /** Bumped on password change / 2FA changes; a session token is valid only for the version it was issued at */
+        public token_version: number = 0
     ) {
         this.id = id;
         this.company_id = company_id;
@@ -39,5 +41,6 @@ export class User {
         this.last_access = last_access;
         this.created_at = created_at;
         this.updated_at = updated_at;
+        this.token_version = token_version;
     }
 }
