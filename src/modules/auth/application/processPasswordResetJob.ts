@@ -3,6 +3,7 @@ import { TokenGenerator } from '../../../shared/application/services/tokenGenera
 import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
 import { EmailService } from '../../../shared/application/services/email.service';
 import logger from '../../../shared/infrastructure/logger';
+import { getFrontendUrl } from '../../../shared/application/services/frontendUrl';
 import { formatEmailDate } from '../../../shared/application/services/formatEmailDate';
 
 export interface ProcessPasswordResetJobData {
@@ -77,7 +78,7 @@ export class ProcessPasswordResetJob {
         });
 
         // 5. Send email via Mailgun template
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontendUrl = getFrontendUrl();
         const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
         await this.emailService.sendTemplate({

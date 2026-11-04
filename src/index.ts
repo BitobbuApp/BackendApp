@@ -1,4 +1,10 @@
-import 'dotenv/config'; // MUST be first — loads .env before any other module runs
-import { start } from './server';
+import { loadConfig } from './bootstrap';
 
-start();
+// Secrets must be loaded before any module that reads config at import time (prisma, redis, S3, JWT).
+async function main() {
+    await loadConfig('api');
+    const { start } = await import('./server');
+    await start();
+}
+
+main();
