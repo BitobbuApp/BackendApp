@@ -38,7 +38,6 @@ export const initializeSocket = (app: any) => {
             const decoded = jwtService.verifyToken(cleanToken);
             
             // Almacenar el payload del usuario (contiene companyId, userId, etc.) en el socket
-            console.log(decoded)
             socket.data.user = decoded;
             
             next();
