@@ -3,9 +3,9 @@
 const bootstrap = {
     NODE_ENV: 'dev',
     INFISICAL_SITE_URL: process.env.INFISICAL_SITE_URL || 'https://app.infisical.com',
-    INFISICAL_PROJECT_ID: process.env.INFISICAL_PROJECT_ID || "c0fd251b-52e9-4277-bbc4-1b112fde2c3e",
+    INFISICAL_PROJECT_ID: process.env.INFISICAL_PROJECT_ID || "",
     INFISICAL_ENV: process.env.INFISICAL_ENV || 'dev',
-    INFISICAL_CREDENTIALS_FILE: process.env.INFISICAL_CREDENTIALS_FILE || "C:/projects/bootstrap.json",
+    INFISICAL_CREDENTIALS_FILE: process.env.INFISICAL_CREDENTIALS_FILE || "",
 }
 
 module.exports = {
