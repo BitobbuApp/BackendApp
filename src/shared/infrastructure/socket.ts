@@ -1,10 +1,12 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { FastifyInstance } from 'fastify';
 import logger from './logger';
 import { registerMessageHandlers } from '../../modules/messages/infrastructure/socket/messageHandler';
 import { registerTypingHandlers } from '../../modules/messages/infrastructure/socket/typingHandler';
 import { registerConversationRoomHandlers } from '../../modules/conversations/infrastructure/socket/conversationRoomHandler';
 import { JwtService } from '../application/services/jwtService';
+import { redisConnection } from './redis';
 
 let io: SocketIOServer;
 
@@ -20,6 +22,14 @@ export const initializeSocket = (app: any) => {
             methods: ['GET', 'POST'],
         },
     });
+
+    // Redis adapter: rooms and emits reach sockets connected to any API instance (PM2 cluster).
+    // The adapter needs its own publisher and subscriber connections.
+    const pubClient = redisConnection.duplicate();
+    const subClient = redisConnection.duplicate();
+    pubClient.on('error', (err) => logger.error(err, '❌ Socket.IO Redis adapter (pub) error'));
+    subClient.on('error', (err) => logger.error(err, '❌ Socket.IO Redis adapter (sub) error'));
+    io.adapter(createAdapter(pubClient, subClient));
 
     // 2. Middleware de Autenticación
     io.use((socket, next) => {
