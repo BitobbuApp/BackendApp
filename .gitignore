@@ -135,3 +135,6 @@ Thumbs.db
 
 # Local dev TODO notes
 todo/
+
+# settings export (contains secrets)
+settings-export*.sql

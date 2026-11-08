@@ -23,6 +23,8 @@ async function startWorker() {
 
         await connectDatabase();
         await connectRedis();
+        const { settings } = await import('./modules/settings/application/settingsService');
+        await settings.init();
         console.log('[worker] BullMQ background worker started successfully 🚀');
 
         await app.listen({

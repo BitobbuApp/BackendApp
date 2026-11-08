@@ -10,28 +10,10 @@ const common = {
     REDIS_URL: Joi.string().uri({ scheme: ['redis', 'rediss'] }).required(),
     JWT_SECRET: Joi.string().min(32).required(),
     TWO_FACTOR_ENC_KEY: base64Key32.required(),
-    S3_REGION: Joi.string().required(),
-    S3_ENDPOINT: Joi.string().uri().required(),
-    S3_ACCESS_KEY_ID: Joi.string().required(),
-    S3_SECRET_ACCESS_KEY: Joi.string().required(),
-    S3_BUCKET_NAME: Joi.string().required(),
-    S3_PUBLIC_URL: Joi.string().uri().required(),
-    FRONTEND_URL: Joi.string().uri().required(),
-    EMAIL_ENABLED: Joi.string().valid('true', 'false').default('false'),
-    EMAIL_FROM_ADDRESS: Joi.string().email(),
 };
 
-// Mirrors loadEmailConfig(): the code accepts these alternatives, so the schema must too.
-const EMAIL_API_KEY_SOURCES = ['EMAIL_MAILGUN_API_KEY', 'MAILGUN_API_KEY', 'EMAIL_MAILGUN_SMTP_PASS'];
-const EMAIL_DOMAIN_SOURCES = ['EMAIL_MAILGUN_DOMAIN', 'EMAIL_MAILGUN_SMTP_USER'];
-
-function emailProblems(values: Record<string, string | undefined>): string[] {
-    if (values.EMAIL_ENABLED !== 'true') return [];
-    const problems: string[] = [];
-    if (!EMAIL_API_KEY_SOURCES.some((k) => values[k])) problems.push(`one of ${EMAIL_API_KEY_SOURCES.join('/')} (any.required)`);
-    if (!EMAIL_DOMAIN_SOURCES.some((k) => values[k])) problems.push(`one of ${EMAIL_DOMAIN_SOURCES.join('/')} (any.required)`);
-    return problems;
-}
+// Operational config (email, telegram, storage, URLs, limits) lives in the system_settings table;
+// only what is needed to boot and reach the DB/Redis is validated here.
 
 const schemas = {
     api: Joi.object({
@@ -46,7 +28,6 @@ export function validateConfig(processName: 'api' | 'worker', values: Record<str
     // Only variable names and rule types — never values.
     const problems = [
         ...(error?.details.map((d) => `${d.path.join('.')} (${d.type})`) ?? []),
-        ...emailProblems(values),
     ];
     if (problems.length > 0) {
         throw new Error(`Invalid configuration: ${problems.join(', ')}`);

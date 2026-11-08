@@ -6,9 +6,8 @@ import { TelegramErrorNotifierService } from '../notifications/telegramErrorNoti
 import { randomUUID } from 'crypto';
 
 export function errorHandler(app: any) {
-    // Initialize the notifier (will parse config and fail fast if invalid)
-    const telegramConfig = parseTelegramConfig();
-    const notifier = new TelegramErrorNotifierService(telegramConfig);
+    // Config is resolved per alert so changes from system settings apply without a restart
+    const notifier = new TelegramErrorNotifierService(parseTelegramConfig);
 
     app.setErrorHandler((error: Error, request: FastifyRequest, reply: FastifyReply) => {
         // Notify critical error

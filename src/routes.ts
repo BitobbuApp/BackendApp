@@ -34,6 +34,7 @@ import { adminQuoteResponseRoutes } from "./modules/quote_responses/infrastructu
 import { adminTransactionRoutes } from "./modules/transactions/infrastructure/http/adminTransactionRoutes";
 import { adminDeliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/http/adminDeliveryMethodRoutes";
 import { adminCurrencyRoutes } from "./modules/currencies/infrastructure/http/adminCurrencyRoutes";
+import { adminSettingsRoutes, publicSettingsRoutes } from './modules/settings/infrastructure/http/adminSettingsRoutes';
 import { adminExchangeRateRoutes } from "./modules/exchangeRates/infrastructure/http/adminExchangeRateRoutes";
 
 export async function routes(app: FastifyInstance) {
@@ -70,6 +71,8 @@ export async function routes(app: FastifyInstance) {
     app.register(adminSubcategoryRoutes, { prefix: '/admin/subcategories' });
     app.register(adminDeliveryMethodRoutes, { prefix: '/admin/delivery-methods' });
     app.register(adminCurrencyRoutes, { prefix: '/admin/currencies' });
+    app.register(adminSettingsRoutes, { prefix: '/admin/settings' });
+    app.register(publicSettingsRoutes, { prefix: '/metadata/settings' });
     app.register(adminExchangeRateRoutes, { prefix: '/admin/exchange-rates' });
     app.register(adminRfqRoutes, { prefix: '/admin/rfqs' });
     app.register(adminQuoteResponseRoutes, { prefix: '/admin/quote-responses' });
