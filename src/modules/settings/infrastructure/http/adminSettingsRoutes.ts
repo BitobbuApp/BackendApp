@@ -4,11 +4,11 @@ import { adminAuthMiddleware } from '../../../../shared/infrastructure/http/midd
 import { adminScopeMiddleware } from '../../../../shared/infrastructure/http/middlewares/adminScopeMiddleware';
 import { PrismaAdminRepository } from '../../../admins/infrastructure/persistence/PrismaAdminRepository';
 import { MailgunEmailAdapter } from '../../../../shared/infrastructure/notifications/mailgunEmailAdapter';
-import { ApplicationError } from '../../../../shared/domain/error';
+import { ApplicationError, ValidationError } from '../../../../shared/domain/error';
 import { REGISTRY_BY_KEY } from '../../domain/settingsRegistry';
-import { settings } from '../../application/settingsService';
+import { settings, SettingsValidationError } from '../../application/settingsService';
 
-const GROUPS = ['email', 'telegram', 'storage', 'app', 'limits', 'features'];
+const GROUPS = ['email', 'telegram', 'storage', 'app', 'limits', 'features', 'plans', 'payments'];
 
 async function testTelegram(): Promise<string> {
     const token = settings.get<string>('telegram.bot_token');
@@ -31,6 +31,28 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
         const { group } = request.query;
         if (group && !GROUPS.includes(group)) throw new ApplicationError(400, 'Invalid group', 'VALIDATION_ERROR', 'VALIDATION');
         return ApiResponse.success(reply, settings.list(group), 'Settings retrieved successfully');
+    });
+
+    // Saves a whole form at once: { values: { "email.enabled": true, "email.from_name": "Bitobbu" } }.
+    // All-or-nothing: if any value is invalid nothing is written and every error is returned.
+    app.put('/', guard, async (request: FastifyRequest<{ Body: { values?: Record<string, unknown> } }>, reply: FastifyReply) => {
+        const values = request.body?.values;
+        if (!values || typeof values !== 'object' || Array.isArray(values) || !Object.keys(values).length) {
+            throw new ApplicationError(400, 'values must be a non-empty object', 'VALIDATION_ERROR', 'VALIDATION');
+        }
+        const adminId = request.admin!.adminId;
+        let keys: string[];
+        try {
+            keys = await settings.setMany(values, adminId);
+        } catch (e: any) {
+            if (e instanceof SettingsValidationError) throw new ValidationError(e.errors);
+            throw e;
+        }
+        // One audit entry per batch; secrets only record that they changed.
+        await adminRepo.logAuditAction(adminId, 'update', 'system_setting', null, {
+            changes: Object.fromEntries(keys.map((k) => [k, REGISTRY_BY_KEY.get(k)!.secret ? '(changed)' : values[k]])),
+        });
+        return ApiResponse.success(reply, settings.list(), 'Settings updated successfully');
     });
 
     app.put('/:key', guard, async (request: FastifyRequest<{ Params: { key: string }, Body: { value: unknown } }>, reply: FastifyReply) => {

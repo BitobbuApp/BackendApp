@@ -25,6 +25,9 @@ async function startWorker() {
         await connectRedis();
         const { settings } = await import('./modules/settings/application/settingsService');
         await settings.init();
+        // Settings must be loaded first: the schedule runs in the business timezone.
+        const { scheduleSubscriptionMaintenance } = await import('./shared/infrastructure/queue/subscriptions/subscriptions.queue');
+        await scheduleSubscriptionMaintenance(settings.get<string>('plans.usage_timezone') || 'America/Caracas');
         console.log('[worker] BullMQ background worker started successfully 🚀');
 
         await app.listen({

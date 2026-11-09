@@ -28,7 +28,15 @@ function coerce(def: SettingDefinition, raw: unknown): unknown {
 export function validateSettingValue(def: SettingDefinition, value: unknown): unknown {
     const v = coerce(def, value);
     if (v === undefined) throw new Error(`Invalid value for ${def.key}: expected ${def.type}`);
+    if (def.pattern && !def.pattern.test(String(v))) throw new Error(`Invalid format for ${def.key}`);
     return v;
+}
+
+/** Carries every invalid field of a batch so the form can show them all at once. */
+export class SettingsValidationError extends Error {
+    constructor(public readonly errors: string[]) {
+        super(errors.join('; '));
+    }
 }
 
 export function maskSecret(value: unknown): string | null {
@@ -115,20 +123,38 @@ export class SettingsService {
     }
 
     async set(key: string, value: unknown, adminId?: string): Promise<void> {
-        const def = REGISTRY_BY_KEY.get(key);
-        if (!def) throw new Error(`Unknown setting: ${key}`);
-        const v = validateSettingValue(def, value);
-        await prisma.systemSetting.upsert({
-            where: { key },
+        await this.setMany({ [key]: value }, adminId);
+    }
+
+    /**
+     * Saves several settings as one change: every value is validated first and all rows are written
+     * in a single transaction, so a form never ends up half applied. Other processes are notified once.
+     */
+    async setMany(values: Record<string, unknown>, adminId?: string): Promise<string[]> {
+        const errors: string[] = [];
+        const entries: Array<{ def: SettingDefinition; value: unknown }> = [];
+        for (const [key, raw] of Object.entries(values)) {
+            const def = REGISTRY_BY_KEY.get(key);
+            if (!def) { errors.push(`Unknown setting: ${key}`); continue; }
+            try { entries.push({ def, value: validateSettingValue(def, raw) }); } catch (e: any) { errors.push(e.message); }
+        }
+        if (errors.length) throw new SettingsValidationError(errors);
+        if (!entries.length) return [];
+
+        const now = new Date();
+        await prisma.$transaction(entries.map(({ def, value }) => prisma.systemSetting.upsert({
+            where: { key: def.key },
             create: {
-                key, group: def.group, value: v as any, value_type: def.type,
+                key: def.key, group: def.group, value: value as any, value_type: def.type,
                 is_secret: !!def.secret, description: def.description ?? null,
                 updated_by_admin_id: adminId ?? null,
             },
-            update: { value: v as any, updated_by_admin_id: adminId ?? null, updated_at: new Date() },
-        });
+            update: { value: value as any, updated_by_admin_id: adminId ?? null, updated_at: now },
+        })));
         await this.reload();
-        try { await redisConnection.publish(CHANNEL, key); } catch (e) { logger.error(e, 'settings publish failed'); }
+        const keys = entries.map((e) => e.def.key);
+        try { await redisConnection.publish(CHANNEL, keys.join(',')); } catch (e) { logger.error(e, 'settings publish failed'); }
+        return keys;
     }
 
     /** Admin view: effective values, secrets masked. */

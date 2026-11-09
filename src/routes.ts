@@ -24,6 +24,8 @@ import { adminDashboardRoutes } from "./modules/dashboard/infrastructure/http/ad
 import { adminUserRoutes } from "./modules/users/infrastructure/http/adminUserRoutes";
 import { adminVerificationRoutes } from "./modules/companies/infrastructure/http/adminVerificationRoutes";
 import { adminSubscriptionRoutes } from "./modules/subscriptions/infrastructure/http/adminSubscriptionRoutes";
+import { adminSubscriptionPaymentRoutes } from "./modules/subscriptions/infrastructure/http/adminSubscriptionPaymentRoutes";
+import { subscriptionRoutes } from "./modules/subscriptions/infrastructure/http/subscriptionRoutes";
 import { adminPlanRoutes } from "./modules/plansCatalog/infrastructure/http/adminPlanRoutes";
 import { adminLookupRoutes } from "./modules/lookups/infrastructure/http/adminLookupRoutes";
 import { adminGeographyRoutes } from "./modules/countries/infrastructure/http/adminGeographyRoutes";
@@ -55,6 +57,7 @@ export async function routes(app: FastifyInstance) {
     app.register(deliveryMethodRoutes, { prefix: '/delivery-methods' });
     app.register(reviewRoutes, { prefix: '/reviews' });
     app.register(notificationRoutes, { prefix: '/notifications' });
+    app.register(subscriptionRoutes, { prefix: '/subscriptions' });
     app.register(authRoutes, { prefix: '/auth' });
 
     // Admin Routes
@@ -64,6 +67,7 @@ export async function routes(app: FastifyInstance) {
     app.register(adminUserRoutes, { prefix: '/admin/users' });
     app.register(adminVerificationRoutes, { prefix: '/admin/verifications' });
     app.register(adminSubscriptionRoutes, { prefix: '/admin/subscriptions' });
+    app.register(adminSubscriptionPaymentRoutes, { prefix: '/admin/subscription-payments' });
     app.register(adminPlanRoutes, { prefix: '/admin/plans' });
     app.register(adminLookupRoutes, { prefix: '/admin/lookups' });
     app.register(adminGeographyRoutes, { prefix: '/admin/geography' });
