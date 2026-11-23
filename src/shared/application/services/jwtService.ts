@@ -1,3 +1,4 @@
+import { settings } from '../../../modules/settings/application/settingsService';
 import jwt from 'jsonwebtoken';
 
 export interface TokenUserPayload {
@@ -31,7 +32,7 @@ export class JwtService {
         }
     }
 
-    generateToken(payload: TokenUserPayload, expiresIn: string = '1h'): string {
+    generateToken(payload: TokenUserPayload, expiresIn: string = settings.get<string>('limits.jwt_session_ttl') ?? '1h'): string {
         return jwt.sign(payload, this.secret, { expiresIn } as any);
     }
 
@@ -47,7 +48,7 @@ export class JwtService {
      * Generates a short-lived step token (e.g., mfa verification or mfa enrollment)
      * with an explicit purpose claim.
      */
-    generateStepToken(payload: { userId: string; email: string; purpose: 'mfa' | 'mfa_enroll' }, expiresIn: string = '5m'): string {
+    generateStepToken(payload: { userId: string; email: string; purpose: 'mfa' | 'mfa_enroll' }, expiresIn: string = settings.get<string>('limits.jwt_step_ttl') ?? '5m'): string {
         return jwt.sign(payload, this.secret, { expiresIn } as any);
     }
 

@@ -7,6 +7,7 @@ import { PrismaVerificationRepository } from "../infrastructure/persistence/Pris
 import { UploadDocumentUseCase } from "../../documents/application/UploadDocumentUseCase";
 import { storageService } from "../../../shared/infrastructure/storage/storageInstance";
 import { ApplicationError } from "../../../shared/domain/error";
+import { settings } from "../../settings/application/settingsService";
 
 interface SubmitDocumentInput {
     company_id: string;
@@ -42,7 +43,7 @@ export class SubmitVerificationDocumentUseCase extends UseCase<SubmitDocumentInp
             buffer: file.buffer
         });
 
-        const publicUrlBase = process.env.S3_PUBLIC_URL || '';
+        const publicUrlBase = settings.get<string>('storage.public_url') || '';
         const fileUrl = `${publicUrlBase}/${result.fileKey}`;
 
         // Al subir un documento, actualizamos el estado de la verificación general

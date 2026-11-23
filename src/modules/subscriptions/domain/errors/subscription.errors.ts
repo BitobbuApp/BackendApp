@@ -1,19 +1,19 @@
 import { ApplicationError } from '../../../../shared/domain/error';
 
-export class SubscriptionExpiredError extends ApplicationError {
-  constructor(message = 'Your subscription has expired.') {
-    super(402, message, 'PAYMENT_REQUIRED' as any, 'BUSINESS_RULE' as any);
-  }
-}
+const LABELS: Record<string, string> = {
+  quote: 'cotizaciones por mes',
+  offer: 'ofertas activas',
+};
 
-export class TrialExpiredError extends ApplicationError {
-  constructor(message = 'Your trial period has expired.') {
-    super(402, message, 'PAYMENT_REQUIRED' as any, 'BUSINESS_RULE' as any);
-  }
-}
-
-export class UsageLimitReachedError extends ApplicationError {
-  constructor(message = 'You have reached the usage limit for your current subscription plan.') {
-    super(402, message, 'PAYMENT_REQUIRED' as any, 'BUSINESS_RULE' as any);
+/** 402 with the numbers the client needs to show an upgrade prompt. */
+export class PlanLimitReachedError extends ApplicationError {
+  constructor(operation: 'quote' | 'offer', limit: number, used: number, planCode: string) {
+    super(
+      402,
+      `Alcanzaste el límite de ${LABELS[operation]} de tu plan (${used}/${limit}).`,
+      'PLAN_LIMIT_REACHED',
+      'BUSINESS',
+      { operation, limit, used, plan_code: planCode },
+    );
   }
 }

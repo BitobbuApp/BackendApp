@@ -3,6 +3,7 @@ import { UseCase } from '../../../shared/application/useCase';
 import { StorageService } from '../../../shared/domain/storage/StorageService';
 import { UploadDocumentUseCase } from '../../documents/application/UploadDocumentUseCase';
 import { ApplicationError } from '../../../shared/domain/error';
+import { settings } from "../../settings/application/settingsService";
 
 interface UploadChatFileInput {
     companyId: string;
@@ -15,7 +16,7 @@ interface UploadChatFileOutput {
     mime_type: string;
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = () => settings.get<number>('limits.upload_max_bytes') ?? 5242880;
 
 const inputSchema = Joi.object({
     companyId: Joi.string().uuid().required(),
@@ -47,7 +48,7 @@ export class UploadChatFileUseCase extends UseCase<UploadChatFileInput, UploadCh
         const file = this._rawFiles[0];
 
         // 1. Validate file size
-        if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length > MAX_FILE_SIZE) {
+        if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length > MAX_FILE_SIZE()) {
             throw new ApplicationError(400, 'File exceeds the 5MB limit or is invalid.', 'VALIDATION_ERROR', 'VALIDATION');
         }
 
@@ -59,7 +60,7 @@ export class UploadChatFileUseCase extends UseCase<UploadChatFileInput, UploadCh
         });
 
         // 3. Build the public URL
-        const publicUrlBase = process.env.S3_PUBLIC_URL || '';
+        const publicUrlBase = settings.get<string>('storage.public_url') || '';
         const publicUrl = `${publicUrlBase}/${result.fileKey}`;
 
         return {

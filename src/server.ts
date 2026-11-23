@@ -44,6 +44,7 @@ app.get('/', async () => {
 // Import the socket initialization function
 import { initializeSocket } from './shared/infrastructure/socket';
 import { connectRedis } from './shared/infrastructure/redis';
+import { settings } from './modules/settings/application/settingsService';
 
 /**
  * Run the server!
@@ -52,6 +53,7 @@ export const start = async () => {
     try {
         await connectDatabase();
         await connectRedis();
+        await settings.init();
         
         // Initialize Socket.io attached to Fastify's native node server
         initializeSocket(app);

@@ -7,6 +7,7 @@ import { assertTransition } from '../../domain/transactionStateMachine';
 import { PrismaTransactionRepository } from '../../infrastructure/persistence/PrismaTransactionRepository';
 import { UploadDocumentUseCase } from "../../../documents/application/UploadDocumentUseCase";
 import { storageService } from "../../../../shared/infrastructure/storage/storageInstance";
+import { settings } from "../../../settings/application/settingsService";
 
 /**
  * PaymentUploadedStrategy
@@ -30,7 +31,7 @@ export class PaymentUploadedStrategy implements TransactionStrategy {
                 tenantId: actorCompanyId,
                 buffer: payload.rawFiles[0].buffer
             });
-            const publicUrlBase = process.env.S3_PUBLIC_URL || '';
+            const publicUrlBase = settings.get<string>('storage.public_url') || '';
             paymentProofUrl = `${publicUrlBase}/${result.fileKey}`;
         }
 

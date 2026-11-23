@@ -3,12 +3,17 @@ import { TelegramConfig } from '../config/telegramConfig';
 import logger from '../logger';
 
 export class TelegramErrorNotifierService implements ErrorNotifierService {
-    private config: TelegramConfig;
+    private readonly configSource: TelegramConfig | (() => TelegramConfig);
     private dedupeCache: Map<string, number>;
     private readonly DEDUPE_WINDOW_MS = 60 * 1000; // 60 seconds
 
-    constructor(config: TelegramConfig) {
-        this.config = config;
+    // Resolved per use so a provider can reflect settings changed at runtime.
+    private get config(): TelegramConfig {
+        return typeof this.configSource === "function" ? this.configSource() : this.configSource;
+    }
+
+    constructor(config: TelegramConfig | (() => TelegramConfig)) {
+        this.configSource = config;
         this.dedupeCache = new Map<string, number>();
     }
 

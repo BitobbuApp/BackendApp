@@ -18,8 +18,9 @@ import { EmailService } from '../../../shared/application/services/email.service
 import { ApplicationError } from '../../../shared/domain/error';
 import { getFrontendUrl } from '../../../shared/application/services/frontendUrl';
 import { formatEmailDate } from '../../../shared/application/services/formatEmailDate';
+import { settings } from '../../settings/application/settingsService';
 
-const MAX_TOKEN_ATTEMPTS = 5;
+const MAX_TOKEN_ATTEMPTS = () => settings.get<number>('limits.reset_token_max_attempts') ?? 5;
 
 interface ResetPasswordWithTokenInput {
     token: string;
@@ -103,7 +104,7 @@ export class ResetPasswordWithTokenUseCase extends UseCase<ResetPasswordWithToke
             tokenRecord.used_at !== null ||
             tokenRecord.invalidated_at !== null ||
             tokenRecord.expires_at <= now ||
-            tokenRecord.failed_attempts >= MAX_TOKEN_ATTEMPTS
+            tokenRecord.failed_attempts >= MAX_TOKEN_ATTEMPTS()
         ) {
             throw new ResetTokenInvalidError();
         }
@@ -141,7 +142,7 @@ export class ResetPasswordWithTokenUseCase extends UseCase<ResetPasswordWithToke
                 data: { failed_attempts: { increment: 1 } },
                 select: { failed_attempts: true },
             });
-            if (spent.failed_attempts > MAX_TOKEN_ATTEMPTS) {
+            if (spent.failed_attempts > MAX_TOKEN_ATTEMPTS()) {
                 throw new ResetTokenInvalidError();
             }
 
@@ -157,7 +158,7 @@ export class ResetPasswordWithTokenUseCase extends UseCase<ResetPasswordWithToke
 
             if (!twoFactorCheck) {
                 await TwoFactorAttemptGuard.registerFailure(user.id);
-                if (spent.failed_attempts >= MAX_TOKEN_ATTEMPTS) {
+                if (spent.failed_attempts >= MAX_TOKEN_ATTEMPTS()) {
                     await prisma.passwordResetToken.update({ where: { id: tokenRecord.id }, data: { invalidated_at: now } });
                 }
                 await prisma.securityEvent.create({
@@ -170,7 +171,7 @@ export class ResetPasswordWithTokenUseCase extends UseCase<ResetPasswordWithToke
                     },
                 }).catch(() => null);
 
-                if (spent.failed_attempts >= MAX_TOKEN_ATTEMPTS) {
+                if (spent.failed_attempts >= MAX_TOKEN_ATTEMPTS()) {
                     throw new ResetTokenInvalidError('Se ha alcanzado el límite de intentos permitidos. El enlace ha sido invalidado.');
                 }
                 throw new TwoFactorInvalidError();

@@ -9,6 +9,7 @@ import { UploadDocumentUseCase } from "../../documents/application/UploadDocumen
 import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
 import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
 import { resolveCategoryAndSubcategory } from "../../subcategories/application/helpers/resolveSubcategory";
+import { settings } from "../../settings/application/settingsService";
 
 interface CreateCompanyOfferPhotoDto {
     url: string;
@@ -63,7 +64,7 @@ export class CreateCompanyOfferUseCase extends UseCase<CreateCompanyOfferDto, an
         const files: Array<{ url: string; sort_order?: number }> = [];
         
         if (data.rawFiles && data.rawFiles.length > 0) {
-            const publicUrlBase = process.env.S3_PUBLIC_URL || 'https://pub-763f58343d734ddfbcf74e591370f038.r2.dev';
+            const publicUrlBase = settings.get<string>('storage.public_url') || '';
 
             console.log("Raw files to upload: ", data.rawFiles.map(f => ({ file_name: f.file_name, mime_type: f.mime_type })));
 
