@@ -9,6 +9,7 @@ import { storageService } from "../../../shared/infrastructure/storage/storageIn
 import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
 import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
 import { deriveInterestTaxonomy, findSelectedSubcategories } from "./helpers/interestTaxonomy";
+import { settings } from "../../settings/application/settingsService";
 
 interface UpdateCompanyInput {
     id: string;
@@ -83,7 +84,7 @@ export class UpdateCompanyUseCase extends UseCase<UpdateCompanyInput, any> {
                     buffer: logoFile.buffer
                 });
 
-                const publicUrlBase = process.env.S3_PUBLIC_URL || '';
+                const publicUrlBase = settings.get<string>('storage.public_url') || '';
                 updateData.logo_url = `${publicUrlBase}/${result.fileKey}`;
             }
         }

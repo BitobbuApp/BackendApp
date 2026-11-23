@@ -1,7 +1,8 @@
 import { RateLimiter } from '../../../../shared/application/services/rateLimiter';
 import { TooManyRequestsError } from '../errors/auth.errors';
+import { settings } from '../../../settings/application/settingsService';
 
-export const MAX_2FA_FAILURES_PER_HOUR = 10;
+export const MAX_2FA_FAILURES_PER_HOUR = () => settings.get<number>('limits.max_2fa_failures_per_hour') ?? 10;
 const WINDOW_SECONDS = 3600;
 
 const keyFor = (userId: string) => `rl:totp:user:${userId}`;
@@ -12,7 +13,7 @@ const keyFor = (userId: string) => `rl:totp:user:${userId}`;
  */
 export const TwoFactorAttemptGuard = {
     async isBlocked(userId: string): Promise<boolean> {
-        const result = await RateLimiter.check(keyFor(userId), MAX_2FA_FAILURES_PER_HOUR, true);
+        const result = await RateLimiter.check(keyFor(userId), MAX_2FA_FAILURES_PER_HOUR(), true);
         return !result.allowed;
     },
 
@@ -25,7 +26,7 @@ export const TwoFactorAttemptGuard = {
     async registerFailure(userId: string): Promise<void> {
         await RateLimiter.consume({
             key: keyFor(userId),
-            maxAttempts: MAX_2FA_FAILURES_PER_HOUR,
+            maxAttempts: MAX_2FA_FAILURES_PER_HOUR(),
             windowSeconds: WINDOW_SECONDS,
             failClosed: true,
         });

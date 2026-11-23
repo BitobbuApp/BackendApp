@@ -27,11 +27,13 @@ export async function adminPlanRoutes(app: FastifyInstance) {
         return ApiResponse.success(reply, result, "Plan updated successfully");
     });
 
-    app.patch('/:id/status', { preHandler: [adminAuthMiddleware, adminScopeMiddleware(['superadmin', 'catalog_admin'])] as any }, async (request: FastifyRequest<{ Params: { id: string }, Body: { status: string, reason?: string } }>, reply: FastifyReply) => {
+    app.patch('/:id/status', { preHandler: [adminAuthMiddleware, adminScopeMiddleware(['superadmin', 'catalog_admin'])] as any }, async (request: FastifyRequest<{ Params: { id: string }, Body: { status?: string | boolean, is_active?: boolean, reason?: string } }>, reply: FastifyReply) => {
         const useCase = new AdminUpdatePlanUseCase();
-        const result = await useCase.execute({ 
-            id: request.params.id, 
-            data: { is_active: request.body.status === 'active' } 
+        const { status, is_active } = request.body;
+        const result = await useCase.execute({
+            id: request.params.id,
+            // BackOffice sends a boolean; older clients send 'active'/'inactive'.
+            data: { is_active: is_active ?? (status === true || status === 'active') }
         });
         return ApiResponse.success(reply, result, "Plan status updated successfully");
     });

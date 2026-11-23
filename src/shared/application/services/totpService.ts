@@ -1,3 +1,4 @@
+import { settings } from '../../../modules/settings/application/settingsService';
 import crypto from 'crypto';
 
 // Base32 alphabet according to RFC 4648
@@ -19,7 +20,7 @@ export class TotpService {
     private readonly issuer: string;
 
     constructor() {
-        this.issuer = process.env.TOTP_ISSUER || 'Bitobbu';
+        this.issuer = settings.get<string>('app.totp_issuer') || 'Bitobbu';
     }
 
     /**

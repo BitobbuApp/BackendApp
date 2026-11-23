@@ -11,9 +11,9 @@ import { EmailService } from '../../../shared/application/services/email.service
 import { MailgunEmailAdapter } from '../../../shared/infrastructure/notifications/mailgunEmailAdapter';
 import { PrismaVerificationRepository } from '../../companies/infrastructure/persistence/PrismaVerificationRepository';
 import { VerificationRepository } from '../../companies/domain/repositories/verification.repository';
-import { CreateSubscriptionUseCase } from '../../subscriptions/application/createSubscriptionUseCase';
-import { GetSubscriptionPlanUseCase } from '../../subscriptions/application/getSubscriptionPlanUseCase';
+import { subscriptionLifecycle } from '../../subscriptions/application/subscriptionLifecycleService';
 import { JwtService } from '../../../shared/application/services/jwtService';
+import logger from '../../../shared/infrastructure/logger';
 
 interface RegisterDto {
     first_name: string;
@@ -47,8 +47,6 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
     private readonly userRepository: UserRepository;
     private readonly emailService: EmailService;
     private readonly verificationRepository: VerificationRepository;
-    private readonly getSubscriptionPlanUseCase: GetSubscriptionPlanUseCase;
-    private readonly createSubscriptionUseCase: CreateSubscriptionUseCase;
     private readonly jwtService: JwtService;
 
     constructor() {
@@ -56,8 +54,6 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
         this.userRepository = new PrismaUserRepository();
         this.emailService = new MailgunEmailAdapter();
         this.verificationRepository = new PrismaVerificationRepository();
-        this.getSubscriptionPlanUseCase = new GetSubscriptionPlanUseCase();
-        this.createSubscriptionUseCase = new CreateSubscriptionUseCase();
         this.jwtService = new JwtService();
     }
 
@@ -117,17 +113,12 @@ export class RegisterUserUseCase extends UseCase<RegisterDto, RegisterResult> {
                 status: 'pending'
             });
 
-            // Assign default plan (Free)
-            const defaultPlan = await this.getSubscriptionPlanUseCase.execute({
-                is_default: true
+            // Every new company starts on the default (free) plan.
+            // Never fail the signup over the plan: entitlements fall back to the default plan and
+            // scripts/backfillFreeSubscriptions.ts repairs missing rows.
+            await subscriptionLifecycle.assignDefaultPlan(newUser.company_id).catch((err) => {
+                logger.error({ err, companyId: newUser.company_id }, 'Failed to assign default subscription plan');
             });
-            
-            if (defaultPlan) {
-                await this.createSubscriptionUseCase.execute({
-                    company_id: newUser.company_id,
-                    plan_id: defaultPlan.id
-                });
-            }
         }
 
         // Send welcome email (fire and forget / fail-safe)

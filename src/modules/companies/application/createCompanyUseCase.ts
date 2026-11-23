@@ -8,6 +8,8 @@ import { CompanyAlreadyExistsError } from "../domain/errors/company.errors";
 import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
 import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
 import { deriveInterestTaxonomy, findSelectedSubcategories } from "./helpers/interestTaxonomy";
+import { subscriptionLifecycle } from '../../subscriptions/application/subscriptionLifecycleService';
+import logger from '../../../shared/infrastructure/logger';
 
 interface CreateCompanyInput {
     trade_name: string;
@@ -84,6 +86,11 @@ export class CreateCompanyUseCase extends UseCase<CreateCompanyInput, CreateComp
         Object.assign(data, deriveInterestTaxonomy(data, { categoryIds: [], subcategories: [] }, selected));
 
         const company = await this.companyRepository.create(data);
+        // Never fail the signup over the plan: entitlements fall back to the default plan and
+        // scripts/backfillFreeSubscriptions.ts repairs missing rows.
+        await subscriptionLifecycle.assignDefaultPlan(company.id!).catch((err) => {
+            logger.error({ err, companyId: company.id }, 'Failed to assign default subscription plan');
+        });
 
         // Associate company with user using the UpdateUserUseCase
         await this.updateUserUseCase.execute({

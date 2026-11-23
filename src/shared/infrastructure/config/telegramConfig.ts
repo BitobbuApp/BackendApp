@@ -1,3 +1,5 @@
+import { settings } from '../../../modules/settings/application/settingsService';
+
 export interface TelegramConfig {
     enabled: boolean;
     botToken?: string;
@@ -6,31 +8,22 @@ export interface TelegramConfig {
     environments: string[];
 }
 
+/** Reads the current Telegram settings (DB -> default). Never throws: a misconfigured alert channel must not break requests. */
 export function parseTelegramConfig(): TelegramConfig {
-    const enabled = process.env.TELEGRAM_ALERTS_ENABLED === 'true';
+    const botToken = settings.get<string>('telegram.bot_token');
+    const chatId = settings.get<string>('telegram.chat_id');
+    const rawEnvs = settings.get<unknown>('telegram.environments');
+    const environments = Array.isArray(rawEnvs) ? rawEnvs.map((e) => String(e).trim()).filter(Boolean) : [];
 
-    if (enabled) {
-        if (!process.env.TELEGRAM_BOT_TOKEN) {
-            throw new Error('TELEGRAM_BOT_TOKEN is required when TELEGRAM_ALERTS_ENABLED is true');
-        }
-        if (!process.env.TELEGRAM_CHAT_ID) {
-            throw new Error('TELEGRAM_CHAT_ID is required when TELEGRAM_ALERTS_ENABLED is true');
-        }
-    }
-
-    const minLevel = (process.env.TELEGRAM_ALERT_MIN_LEVEL === 'critical') ? 'critical' : 'error';
-    const environments = process.env.TELEGRAM_ALERT_ENVIRONMENTS
-        ? process.env.TELEGRAM_ALERT_ENVIRONMENTS.split(',').map(e => e.trim()).filter(Boolean)
-        : [];
+    // Alerts need both credentials; enabling them without a token/chat is treated as disabled.
+    const enabled = settings.isEnabled('telegram.alerts_enabled') && !!botToken && !!chatId;
 
     const config: TelegramConfig = {
         enabled,
-        minLevel,
-        environments
+        minLevel: settings.get<string>('telegram.min_level') === 'critical' ? 'critical' : 'error',
+        environments,
     };
-
-    if (process.env.TELEGRAM_BOT_TOKEN) config.botToken = process.env.TELEGRAM_BOT_TOKEN;
-    if (process.env.TELEGRAM_CHAT_ID) config.chatId = process.env.TELEGRAM_CHAT_ID;
-
+    if (botToken) config.botToken = botToken;
+    if (chatId) config.chatId = chatId;
     return config;
 }

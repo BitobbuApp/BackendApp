@@ -1,4 +1,4 @@
-import logger from '../logger';
+import { settings } from '../../../modules/settings/application/settingsService';
 
 export interface EmailConfig {
     enabled: boolean;
@@ -11,36 +11,32 @@ export interface EmailConfig {
     templates: Record<string, string>;
 }
 
+/** Reads the current email settings (DB -> default). Cheap: backed by the in-memory cache. */
 export function loadEmailConfig(): EmailConfig {
-    const enabled = process.env.EMAIL_ENABLED === 'true';
+    const str = (key: string) => settings.get<string>(key) ?? '';
 
-    const config: EmailConfig = {
-        enabled,
-        fromAddress: process.env.EMAIL_FROM_ADDRESS || 'no-reply@bitobbu.com',
-        fromName: process.env.EMAIL_FROM_NAME || 'Bitobbu',
+    return {
+        enabled: settings.isEnabled('email.enabled'),
+        fromAddress: str('email.from_address'),
+        fromName: str('email.from_name'),
         mailgun: {
-            apiKey: process.env.EMAIL_MAILGUN_API_KEY || process.env.MAILGUN_API_KEY || process.env.EMAIL_MAILGUN_SMTP_PASS || '',
-            domain: process.env.EMAIL_MAILGUN_DOMAIN || process.env.EMAIL_MAILGUN_SMTP_USER?.split('@')[1] || '',
+            apiKey: str('email.mailgun.api_key'),
+            domain: str('email.mailgun.domain'),
         },
         templates: {
-            welcome: process.env.EMAIL_TEMPLATE_WELCOME || '',
-            password_reset: process.env.EMAIL_TEMPLATE_PASSWORD_RESET || '',
-            verification: process.env.EMAIL_TEMPLATE_VERIFICATION || '',
-        }
+            welcome: str('email.template.welcome'),
+            password_reset: str('email.template.password_reset'),
+            verification: str('email.template.verification'),
+        },
     };
+}
 
-    if (enabled) {
-        const missingVars: string[] = [];
-        if (!config.mailgun.apiKey) missingVars.push('EMAIL_MAILGUN_API_KEY');
-        if (!config.mailgun.domain) missingVars.push('EMAIL_MAILGUN_DOMAIN');
-        if (!config.fromAddress) missingVars.push('EMAIL_FROM_ADDRESS');
-
-        if (missingVars.length > 0) {
-            const errorMsg = `Email service is enabled but missing required environment variables: ${missingVars.join(', ')}`;
-            logger.error(errorMsg);
-            throw new Error(errorMsg);
-        }
-    }
-
-    return config;
+/** Names of the settings that are required but empty while email is enabled. */
+export function emailConfigProblems(config: EmailConfig): string[] {
+    if (!config.enabled) return [];
+    const missing: string[] = [];
+    if (!config.mailgun.apiKey) missing.push('email.mailgun.api_key');
+    if (!config.mailgun.domain) missing.push('email.mailgun.domain');
+    if (!config.fromAddress) missing.push('email.from_address');
+    return missing;
 }

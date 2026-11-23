@@ -10,9 +10,10 @@ import { RateLimiter } from '../../../shared/application/services/rateLimiter';
 import { TooManyRequestsError } from '../../auth/domain/errors/auth.errors';
 import crypto from 'crypto';
 import { prisma } from '../../../shared/infrastructure/database';
+import { settings } from '../../settings/application/settingsService';
 
-const LOGIN_MAX_PER_EMAIL_AND_IP = 5;
-const LOGIN_MAX_PER_IP = 30;
+const LOGIN_MAX_PER_EMAIL_AND_IP = () => settings.get<number>('limits.login_max_per_email_ip') ?? 5;
+const LOGIN_MAX_PER_IP = () => settings.get<number>('limits.login_max_per_ip') ?? 30;
 const LOGIN_WINDOW_SECONDS = 15 * 60;
 
 // Pre-computed cost 12 bcrypt hash to equalize response times when user doesn't exist (timing-attack mitigation)
@@ -56,15 +57,15 @@ export class LoginUserUseCase extends UseCase<LoginDto, LoginResult> {
         const comboKey = `rl:login:${emailHash}:${dto.ip ?? 'unknown'}`;
         const ipKey = `rl:login:ip:${dto.ip ?? 'unknown'}`;
         const [comboLimit, ipLimit] = await Promise.all([
-            RateLimiter.check(comboKey, LOGIN_MAX_PER_EMAIL_AND_IP),
-            RateLimiter.check(ipKey, LOGIN_MAX_PER_IP),
+            RateLimiter.check(comboKey, LOGIN_MAX_PER_EMAIL_AND_IP()),
+            RateLimiter.check(ipKey, LOGIN_MAX_PER_IP()),
         ]);
         if (!comboLimit.allowed || !ipLimit.allowed) {
             throw new TooManyRequestsError('Demasiados intentos de inicio de sesión. Espera unos minutos e inténtalo de nuevo.');
         }
         const registerFailure = () => Promise.all([
-            RateLimiter.consume({ key: comboKey, maxAttempts: LOGIN_MAX_PER_EMAIL_AND_IP, windowSeconds: LOGIN_WINDOW_SECONDS }),
-            RateLimiter.consume({ key: ipKey, maxAttempts: LOGIN_MAX_PER_IP, windowSeconds: LOGIN_WINDOW_SECONDS }),
+            RateLimiter.consume({ key: comboKey, maxAttempts: LOGIN_MAX_PER_EMAIL_AND_IP(), windowSeconds: LOGIN_WINDOW_SECONDS }),
+            RateLimiter.consume({ key: ipKey, maxAttempts: LOGIN_MAX_PER_IP(), windowSeconds: LOGIN_WINDOW_SECONDS }),
         ]);
 
         // 1. Find the user by email
