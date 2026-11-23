@@ -22,6 +22,7 @@ import { directRequestFields } from "./helpers/directRequestFields";
 import { SubcategoryRepository } from "../../subcategories/domain/repositories/subcategory.repository";
 import { PrismaSubcategoryRepository } from "../../subcategories/infrastructure/persistence/PrismaSubcategoryRepository";
 import { resolveCategoryAndSubcategory } from "../../subcategories/application/helpers/resolveSubcategory";
+import { settings } from "../../settings/application/settingsService";
 
 interface CreateRequestDto {
     company_id: string;
@@ -112,7 +113,7 @@ export class CreateRequestUseCase extends UseCase<CreateRequestDto, RequestResul
         if (data.rawFiles && data.rawFiles.length > 0) {
             console.log("Uploading files to R2 via UploadDocumentUseCase...");
             const uploadUseCase = new UploadDocumentUseCase(storageService);
-            const publicUrlBase = process.env.S3_PUBLIC_URL || 'https://pub-763f58343d734ddfbcf74e591370f038.r2.dev';
+            const publicUrlBase = settings.get<string>('storage.public_url') || '';
 
             for (const file of data.rawFiles) {
                 try {

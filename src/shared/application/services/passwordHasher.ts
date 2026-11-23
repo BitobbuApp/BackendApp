@@ -1,10 +1,16 @@
+import { settings } from '../../../modules/settings/application/settingsService';
 import bcrypt from 'bcrypt';
 
 export class PasswordHasher {
-    private readonly rounds: number;
+    private readonly fixedRounds?: number;
+
+    // Resolved per call: the module-level singleton is created before settings are loaded.
+    private get rounds(): number {
+        return this.fixedRounds ?? (settings.get<number>("app.bcrypt_cost") ?? 12);
+    }
 
     constructor(rounds?: number) {
-        this.rounds = rounds ?? (Number(process.env.BCRYPT_COST) || 12);
+        if (rounds !== undefined) this.fixedRounds = rounds;
     }
 
     async hash(password: string): Promise<string> {

@@ -1,19 +1,47 @@
 import { S3StorageAdapter } from './S3StorageAdapter';
+import { StorageService } from '../../domain/storage/StorageService';
+import { settings } from '../../../modules/settings/application/settingsService';
+import logger from '../logger';
 
-const region = process.env.S3_REGION || 'auto';
-const endpoint = process.env.S3_ENDPOINT || '';
-const accessKeyId = process.env.S3_ACCESS_KEY_ID || '';
-const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY || '';
-const bucketName = process.env.S3_BUCKET_NAME || '';
+/**
+ * Delegates to an S3 adapter built from the current storage settings.
+ * The adapter is rebuilt only when one of the connection values changes, so credentials
+ * edited from the BackOffice apply without restarting the process.
+ */
+class SettingsBackedStorageService implements StorageService {
+    private adapter: S3StorageAdapter | null = null;
+    private signature = '';
 
-if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName) {
-    console.warn('⚠️ S3 Storage variables are not fully configured in the environment.');
+    private current(): S3StorageAdapter {
+        const region = settings.get<string>('storage.s3.region') || 'auto';
+        const endpoint = settings.get<string>('storage.s3.endpoint') || '';
+        const accessKeyId = settings.get<string>('storage.s3.access_key_id') || '';
+        const secretAccessKey = settings.get<string>('storage.s3.secret_access_key') || '';
+        const bucketName = settings.get<string>('storage.s3.bucket') || '';
+
+        const signature = [region, endpoint, accessKeyId, secretAccessKey, bucketName].join('|');
+        if (!this.adapter || signature !== this.signature) {
+            if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName) {
+                logger.warn('S3 storage settings are not fully configured');
+            }
+            this.adapter = new S3StorageAdapter(region, endpoint, accessKeyId, secretAccessKey, bucketName);
+            this.signature = signature;
+        }
+        return this.adapter;
+    }
+
+    generateUploadPresignedUrl(tenantId: string, rfqId: string, originalFileName: string, mimeType: string) {
+        return this.current().generateUploadPresignedUrl(tenantId, rfqId, originalFileName, mimeType);
+    }
+    generateDownloadPresignedUrl(fileKey: string) {
+        return this.current().generateDownloadPresignedUrl(fileKey);
+    }
+    deleteDocument(fileKey: string) {
+        return this.current().deleteDocument(fileKey);
+    }
+    uploadFile(buffer: Buffer, fileKey: string, mimeType: string) {
+        return this.current().uploadFile(buffer, fileKey, mimeType);
+    }
 }
 
-export const storageService = new S3StorageAdapter(
-    region,
-    endpoint,
-    accessKeyId,
-    secretAccessKey,
-    bucketName
-);
+export const storageService: StorageService = new SettingsBackedStorageService();

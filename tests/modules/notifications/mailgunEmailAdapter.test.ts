@@ -5,18 +5,18 @@ import { MailgunEmailAdapter } from '../../../src/shared/infrastructure/notifica
 import { MAILGUN_SUBJECTS, MAILGUN_TEMPLATES } from '../../../src/shared/constants/email/email.constants';
 import { ProcessPasswordResetJob } from '../../../src/modules/auth/application/processPasswordResetJob';
 import { notifyTwoFactorChange } from '../../../src/modules/auth/application/helpers/notifyTwoFactorChange';
-import { stub, restoreAll, recorder } from '../../helpers/stubs';
+import { stub, stubSettings, restoreAll, recorder } from '../../helpers/stubs';
 
 /** Adapter wired to a fake Mailgun client; env is restored by afterEach. */
 function adapterWith(create: (domain: string, data: any) => Promise<any>) {
-    const saved = { ...process.env };
-    process.env.EMAIL_ENABLED = 'true';
-    process.env.MAILGUN_API_KEY = 'test-key';
-    process.env.EMAIL_MAILGUN_DOMAIN = 'mg.test';
-    process.env.EMAIL_FROM_ADDRESS = 'no-reply@mg.test';
+    stubSettings({
+        'email.enabled': true,
+        'email.mailgun.api_key': 'test-key',
+        'email.mailgun.domain': 'mg.test',
+        'email.from_address': 'no-reply@mg.test',
+    });
     const adapter = new MailgunEmailAdapter();
     (adapter as any).client = { messages: { create } };
-    restores.push(() => { process.env = saved; });
     return adapter;
 }
 const restores: Array<() => void> = [];

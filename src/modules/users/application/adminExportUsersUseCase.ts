@@ -101,8 +101,8 @@ export class AdminExportUsersUseCase extends UseCase<AdminExportUsersInput, any>
                         company_type: user.company?.company_type?.name_es ?? '',
                         company_size: user.company?.company_size?.display_label_es ?? user.company?.company_size?.display_label ?? '',
                         monthly_transactions: user.company?.monthly_transactions?.description_es ?? user.company?.monthly_transactions?.description ?? user.company?.monthly_transactions?.range_name ?? '',
-                        subscription_plan: user.company?.subscriptions?.[0]?.plan?.name ?? '',
-                        subscription_end_date: formatDate(user.company?.subscriptions?.[0]?.end_date),
+                        subscription_plan: user.company?.subscriptions?.[0]?.plan?.name_es || user.company?.subscriptions?.[0]?.plan?.plan_name || '',
+                        subscription_end_date: formatDate(user.company?.subscriptions?.[0]?.current_period_end),
                         locations: joinValues((user.company?.locations ?? []).map((loc: any) => {
                             const main = loc.is_main_headquarters ? ' [principal]' : '';
                             const place = [loc.state?.name, loc.country?.name_es].filter(Boolean).join(', ');

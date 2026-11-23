@@ -1,5 +1,6 @@
 // Lightweight stubbing helpers for node:test (no DB / Redis / socket server needed).
 import { initializeSocket } from '../../src/shared/infrastructure/socket';
+import { settings } from '../../src/modules/settings/application/settingsService';
 
 type Restore = () => void;
 const restores: Restore[] = [];
@@ -43,4 +44,10 @@ export function spyIO(): SocketEmit[] {
         }
     }));
     return emits;
+}
+
+/** Overrides settings.get() for the given keys (others keep their registry default). Undone by restoreAll(). */
+export function stubSettings(values: Record<string, unknown>): void {
+    const original = settings.get.bind(settings);
+    stub(settings, 'get', (key: string) => (key in values ? values[key] : original(key)));
 }

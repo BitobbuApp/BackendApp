@@ -24,6 +24,8 @@ import { adminDashboardRoutes } from "./modules/dashboard/infrastructure/http/ad
 import { adminUserRoutes } from "./modules/users/infrastructure/http/adminUserRoutes";
 import { adminVerificationRoutes } from "./modules/companies/infrastructure/http/adminVerificationRoutes";
 import { adminSubscriptionRoutes } from "./modules/subscriptions/infrastructure/http/adminSubscriptionRoutes";
+import { adminSubscriptionPaymentRoutes } from "./modules/subscriptions/infrastructure/http/adminSubscriptionPaymentRoutes";
+import { subscriptionRoutes } from "./modules/subscriptions/infrastructure/http/subscriptionRoutes";
 import { adminPlanRoutes } from "./modules/plansCatalog/infrastructure/http/adminPlanRoutes";
 import { adminLookupRoutes } from "./modules/lookups/infrastructure/http/adminLookupRoutes";
 import { adminGeographyRoutes } from "./modules/countries/infrastructure/http/adminGeographyRoutes";
@@ -34,6 +36,7 @@ import { adminQuoteResponseRoutes } from "./modules/quote_responses/infrastructu
 import { adminTransactionRoutes } from "./modules/transactions/infrastructure/http/adminTransactionRoutes";
 import { adminDeliveryMethodRoutes } from "./modules/deliveryMethods/infrastructure/http/adminDeliveryMethodRoutes";
 import { adminCurrencyRoutes } from "./modules/currencies/infrastructure/http/adminCurrencyRoutes";
+import { adminSettingsRoutes, publicSettingsRoutes } from './modules/settings/infrastructure/http/adminSettingsRoutes';
 import { adminExchangeRateRoutes } from "./modules/exchangeRates/infrastructure/http/adminExchangeRateRoutes";
 
 export async function routes(app: FastifyInstance) {
@@ -54,6 +57,7 @@ export async function routes(app: FastifyInstance) {
     app.register(deliveryMethodRoutes, { prefix: '/delivery-methods' });
     app.register(reviewRoutes, { prefix: '/reviews' });
     app.register(notificationRoutes, { prefix: '/notifications' });
+    app.register(subscriptionRoutes, { prefix: '/subscriptions' });
     app.register(authRoutes, { prefix: '/auth' });
 
     // Admin Routes
@@ -63,6 +67,7 @@ export async function routes(app: FastifyInstance) {
     app.register(adminUserRoutes, { prefix: '/admin/users' });
     app.register(adminVerificationRoutes, { prefix: '/admin/verifications' });
     app.register(adminSubscriptionRoutes, { prefix: '/admin/subscriptions' });
+    app.register(adminSubscriptionPaymentRoutes, { prefix: '/admin/subscription-payments' });
     app.register(adminPlanRoutes, { prefix: '/admin/plans' });
     app.register(adminLookupRoutes, { prefix: '/admin/lookups' });
     app.register(adminGeographyRoutes, { prefix: '/admin/geography' });
@@ -70,6 +75,8 @@ export async function routes(app: FastifyInstance) {
     app.register(adminSubcategoryRoutes, { prefix: '/admin/subcategories' });
     app.register(adminDeliveryMethodRoutes, { prefix: '/admin/delivery-methods' });
     app.register(adminCurrencyRoutes, { prefix: '/admin/currencies' });
+    app.register(adminSettingsRoutes, { prefix: '/admin/settings' });
+    app.register(publicSettingsRoutes, { prefix: '/metadata/settings' });
     app.register(adminExchangeRateRoutes, { prefix: '/admin/exchange-rates' });
     app.register(adminRfqRoutes, { prefix: '/admin/rfqs' });
     app.register(adminQuoteResponseRoutes, { prefix: '/admin/quote-responses' });
