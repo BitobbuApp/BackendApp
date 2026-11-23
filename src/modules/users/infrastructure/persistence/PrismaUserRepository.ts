@@ -113,7 +113,8 @@ export class PrismaUserRepository implements UserRepository {
                     });
                 }
 
-                await tx.user.update({
+                // Return the row with company_id set: callers rely on it to finish the company setup (plan, verification, JWT).
+                return await tx.user.update({
                     where: { id: newUser.id },
                     data: { company_id: companyCreated.id }
                 });

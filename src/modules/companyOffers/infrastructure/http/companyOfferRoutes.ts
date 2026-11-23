@@ -1,7 +1,6 @@
-import { prisma } from '../../../../shared/infrastructure/database';
-import { SubscriptionGuardService } from '../../../subscriptions/application/subscription-guard.service';
-import { PrismaSubscriptionRepository } from '../../../subscriptions/infrastructure/persistence/PrismaSubscriptionRepository';
 // src/modules/companyOffers/infrastructure/http/companyOfferRoutes.ts
+import { prisma } from '../../../../shared/infrastructure/database';
+import { entitlements } from '../../../subscriptions/application/entitlementsService';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ApiResponse } from '../../../../shared/infrastructure/http/responseFormatter';
 import { authMiddleware } from '../../../../shared/infrastructure/http/middlewares/authMiddleware';
@@ -45,11 +44,7 @@ export async function companyOfferRoutes(app: FastifyInstance) {
             if (!company_id) {
                 return ApiResponse.error(reply, "Company ID not found in session", 403);
             }
-            //const guard = new SubscriptionGuardService(new PrismaSubscriptionRepository());
-            //const activeOffersCount = await prisma.companyOffer.count({
-            //    where: { company_id }
-            //});
-            //await guard.authorize(company_id, 'offer', activeOffersCount);
+            await entitlements.assertCanPerform(company_id, 'offer');
             // The multipart parser might leave pricing_tiers as a JSON string
             if (request.body.pricing_tiers && typeof request.body.pricing_tiers === 'string') {
                 try {
@@ -106,6 +101,14 @@ export async function companyOfferRoutes(app: FastifyInstance) {
         async (request: any, reply: any) => {
             if (!request.user.companyId) {
                 return ApiResponse.error(reply, "Company ID not found in session", 403);
+            }
+            // Reactivating an offer counts against the active-offers limit of the plan.
+            if (request.body?.is_active === true) {
+                const offer = await prisma.companyOffer.findFirst({
+                    where: { id: request.params.id, company_id: request.user.companyId },
+                    select: { is_active: true },
+                });
+                if (offer && !offer.is_active) await entitlements.assertCanPerform(request.user.companyId, 'offer');
             }
             const useCase = new UpdateCompanyOfferUseCase();
             const result = await useCase.execute({

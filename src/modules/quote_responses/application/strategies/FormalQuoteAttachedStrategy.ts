@@ -7,6 +7,7 @@ import { assertTransition } from '../../domain/quoteResponseStateMachine';
 import { PrismaQuoteResponseRepository } from '../../infrastructure/persistence/PrismaQuoteResponseRepository';
 import { UploadDocumentUseCase } from "../../../documents/application/UploadDocumentUseCase";
 import { storageService } from "../../../../shared/infrastructure/storage/storageInstance";
+import { settings } from "../../../settings/application/settingsService";
 
 /**
  * FormalQuoteAttachedStrategy
@@ -31,7 +32,7 @@ export class FormalQuoteAttachedStrategy implements QuoteRevisionStrategy {
                 tenantId: actorCompanyId,
                 buffer: payload.rawFiles[0].buffer
             });
-            const publicUrlBase = process.env.S3_PUBLIC_URL || '';
+            const publicUrlBase = settings.get<string>('storage.public_url') || '';
             formalQuoteUrl = `${publicUrlBase}/${result.fileKey}`;
         }
 

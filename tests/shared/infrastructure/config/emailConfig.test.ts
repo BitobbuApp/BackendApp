@@ -1,39 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadEmailConfig } from '../../../../src/shared/infrastructure/config/emailConfig';
+import { loadEmailConfig, emailConfigProblems } from '../../../../src/shared/infrastructure/config/emailConfig';
+import { stubSettings, restoreAll } from '../../../helpers/stubs';
 
 test('loadEmailConfig', async (t) => {
-    const originalEnv = process.env;
+    t.afterEach(() => restoreAll());
 
-    await t.test('should return default disabled config when EMAIL_ENABLED is not true', () => {
-        process.env = { ...originalEnv, EMAIL_ENABLED: 'false' };
+    await t.test('returns the disabled defaults when email.enabled is not set', () => {
         const config = loadEmailConfig();
         assert.equal(config.enabled, false);
         assert.equal(config.fromAddress, 'no-reply@bitobbu.com');
     });
 
-    await t.test('should fail fast if EMAIL_ENABLED=true but required vars missing', () => {
-        process.env = { ...originalEnv, EMAIL_ENABLED: 'true' };
-        assert.throws(() => loadEmailConfig(), /Email service is enabled but missing required environment variables/);
+    await t.test('reports missing settings (without throwing) when enabled but incomplete', () => {
+        stubSettings({ 'email.enabled': true });
+        assert.deepEqual(emailConfigProblems(loadEmailConfig()), ['email.mailgun.api_key', 'email.mailgun.domain']);
     });
 
-    await t.test('should load correctly when enabled with all vars', () => {
-        process.env = {
-            ...originalEnv,
-            EMAIL_ENABLED: 'true',
-            EMAIL_MAILGUN_SMTP_HOST: 'smtp.test.com',
-            EMAIL_MAILGUN_SMTP_USER: 'user',
-            EMAIL_MAILGUN_SMTP_PASS: 'pass',
-            EMAIL_FROM_ADDRESS: 'test@example.com', EMAIL_MAILGUN_API_KEY: 'test_key', EMAIL_MAILGUN_DOMAIN: 'test_domain'
-        };
+    await t.test('loads the values when enabled with everything set', () => {
+        stubSettings({
+            'email.enabled': true,
+            'email.from_address': 'test@example.com',
+            'email.mailgun.api_key': 'test_key',
+            'email.mailgun.domain': 'test_domain',
+        });
         const config = loadEmailConfig();
         assert.equal(config.enabled, true);
-        // removed smtp.host test
-        // removed smtp.user test
-        // removed smtp.pass test
         assert.equal(config.fromAddress, 'test@example.com');
+        assert.deepEqual(emailConfigProblems(config), []);
     });
-
-    // Cleanup
-    process.env = originalEnv;
 });

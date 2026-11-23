@@ -5,6 +5,7 @@ import { EmailService } from '../../../shared/application/services/email.service
 import logger from '../../../shared/infrastructure/logger';
 import { getFrontendUrl } from '../../../shared/application/services/frontendUrl';
 import { formatEmailDate } from '../../../shared/application/services/formatEmailDate';
+import { settings } from "../../settings/application/settingsService";
 
 export interface ProcessPasswordResetJobData {
     email: string;
@@ -47,7 +48,7 @@ export class ProcessPasswordResetJob {
         }
 
         const now = new Date();
-        const ttlMinutes = Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 20;
+        const ttlMinutes = settings.get<number>('app.password_reset_ttl_minutes') ?? 20;
         const expiresAt = new Date(now.getTime() + ttlMinutes * 60 * 1000);
 
         // 2. Invalidate previous open reset tokens for this user

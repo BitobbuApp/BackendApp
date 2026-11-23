@@ -94,6 +94,7 @@ model Company {
   authored_reviews        Review[]                     @relation("ReviewAuthor")
   received_reviews         Review[]                     @relation("ReviewTarget")
   subscriptions            Subscription[]
+  subscription_payments    SubscriptionPayment[]
   transaction_revisions    TransactionRevision[]        @relation("TransactionRevisionActor")
   purchases                Transaction[]                @relation("BuyerTransactions")
   sales                    Transaction[]                @relation("SupplierTransactions")
@@ -436,14 +437,16 @@ model Subscription {
   created_at           DateTime           @default(now()) @db.Timestamptz(6)
   updated_at           DateTime           @default(now()) @db.Timestamptz(6)
   plan_id              String             @db.Uuid
-  current_period_end   DateTime           @default(now()) @db.Timestamptz(6)
+  current_period_end   DateTime?          @db.Timestamptz(6)
   current_period_start DateTime           @default(now()) @db.Timestamptz(6)
   quotes_count_current Int                @default(0)
   rfq_count_current    Int                @default(0)
   trial_ends_at        DateTime?          @db.Timestamptz(6)
+  status               String             @default("active") @db.VarChar(20)
   company              Company            @relation(fields: [company_id], references: [id])
   payment_method       PaymentMethodDict? @relation(fields: [payment_method_id], references: [id])
   plan                 SubscriptionPlan   @relation(fields: [plan_id], references: [id])
+  payments             SubscriptionPayment[]
 
   @@index([company_id, is_active])
   @@map("subscriptions")
@@ -853,9 +856,43 @@ model SubscriptionPlan {
   name_es              String         @default("") @db.VarChar(50)
   trial_days           Int            @default(0) @db.SmallInt
   is_default           Boolean        @default(false)
+  code                 String         @unique @db.VarChar(30)
+  sort_order           Int            @default(0) @db.SmallInt
   subscriptions        Subscription[]
+  payments             SubscriptionPayment[]
 
   @@map("subscription_plans")
+}
+
+model SubscriptionPayment {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String           @db.Uuid
+  plan_id              String           @db.Uuid
+  subscription_id      String?          @db.Uuid
+  amount_usd           Decimal          @db.Decimal(10, 2)
+  amount_ves           Decimal?         @db.Decimal(18, 2)
+  exchange_rate        Decimal?         @db.Decimal(18, 4)
+  bank_code            String           @db.VarChar(10)
+  payer_phone          String           @db.VarChar(20)
+  payer_document       String           @db.VarChar(20)
+  reference            String           @db.VarChar(50)
+  paid_at              DateTime         @db.Date
+  receipt_file_key     String           @db.VarChar(255)
+  status               String           @default("pending") @db.VarChar(20)
+  rejection_reason     String?          @db.VarChar(255)
+  reported_by_user_id  String?          @db.Uuid
+  reviewed_by_admin_id String?          @db.Uuid
+  reviewed_at          DateTime?        @db.Timestamptz(6)
+  created_at           DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime         @default(now()) @db.Timestamptz(6)
+  company              Company          @relation(fields: [company_id], references: [id])
+  plan                 SubscriptionPlan @relation(fields: [plan_id], references: [id])
+  subscription         Subscription?    @relation(fields: [subscription_id], references: [id])
+
+  @@unique([bank_code, reference])
+  @@index([status, created_at])
+  @@index([company_id, created_at])
+  @@map("subscription_payments")
 }
 
 model Admin {
@@ -883,6 +920,22 @@ model AdminAuditLog {
   created_at  DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("admin_audit_logs")
+}
+
+model SystemSetting {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key                 String   @unique @db.VarChar(120)
+  group               String   @db.VarChar(50)
+  value               Json?
+  value_type          String   @db.VarChar(20)
+  is_secret           Boolean  @default(false)
+  description         String?  @db.VarChar(255)
+  updated_by_admin_id String?  @db.Uuid
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([group])
+  @@map("system_settings")
 }
 
 enum CompanyVolume {

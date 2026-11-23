@@ -1,3 +1,4 @@
+import { settings } from '../../../modules/settings/application/settingsService';
 const DEV_FRONTEND_URL = 'http://localhost:5173';
 
 /**
@@ -5,7 +6,7 @@ const DEV_FRONTEND_URL = 'http://localhost:5173';
  * In production a missing FRONTEND_URL is an error: falling back to localhost would send users links that never open.
  */
 export function getFrontendUrl(): string {
-    const configured = process.env.FRONTEND_URL?.trim();
+    const configured = settings.get<string>('app.frontend_url')?.trim();
     if (configured) return configured.replace(/\/+$/, '');
     if (process.env.NODE_ENV === 'production') {
         throw new Error('FRONTEND_URL is required in production (public URL of the web app, used in emails).');

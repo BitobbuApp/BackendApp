@@ -8,8 +8,9 @@ import crypto from 'crypto';
 import { TwoFactorInvalidError } from '../domain/errors/auth.errors';
 import { ApplicationError } from '../../../shared/domain/error';
 import { RateLimiter } from '../../../shared/application/services/rateLimiter';
+import { settings } from '../../settings/application/settingsService';
 
-const MAX_FAILURES_PER_MFA_TOKEN = 5;
+const MAX_FAILURES_PER_MFA_TOKEN = () => settings.get<number>('limits.max_failures_per_mfa_token') ?? 5;
 
 interface VerifyLoginTwoFactorInput {
     mfa_token: string;
@@ -68,7 +69,7 @@ export class VerifyLoginTwoFactorUseCase extends UseCase<VerifyLoginTwoFactorInp
 
         // 2. Limits: failures per mfa_token (so one challenge cannot be ground down) and per user across the platform
         const tokenKey = `rl:mfa:${crypto.createHash('sha256').update(mfa_token).digest('hex')}`;
-        const tokenLimit = await RateLimiter.check(tokenKey, MAX_FAILURES_PER_MFA_TOKEN, true);
+        const tokenLimit = await RateLimiter.check(tokenKey, MAX_FAILURES_PER_MFA_TOKEN(), true);
         if (!tokenLimit.allowed) {
             throw new ApplicationError(401, 'Demasiados intentos con esta verificación. Inicia sesión nuevamente.', 'MFA_TOKEN_INVALID');
         }
@@ -99,7 +100,7 @@ export class VerifyLoginTwoFactorUseCase extends UseCase<VerifyLoginTwoFactorInp
         if (!committed) {
             await Promise.all([
                 TwoFactorAttemptGuard.registerFailure(user.id),
-                RateLimiter.consume({ key: tokenKey, maxAttempts: MAX_FAILURES_PER_MFA_TOKEN, windowSeconds: 300, failClosed: true }),
+                RateLimiter.consume({ key: tokenKey, maxAttempts: MAX_FAILURES_PER_MFA_TOKEN(), windowSeconds: 300, failClosed: true }),
                 prisma.securityEvent.create({
                     data: {
                         user_id: user.id,

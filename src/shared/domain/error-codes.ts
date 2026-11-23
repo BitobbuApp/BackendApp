@@ -10,6 +10,10 @@ export type ErrorCategory =
 
 export type ErrorCode =
     | "VALIDATION_ERROR"
+    | "PLAN_LIMIT_REACHED"
+    | "PAYMENT_REQUIRED"
+    | "PAYMENT_ALREADY_REPORTED"
+    | "PAYMENTS_DISABLED"
     | "INTERNAL_SERVER_ERROR"
     | "COMPANY_NOT_FOUND"
     | "COMPANY_ALREADY_EXISTS"
