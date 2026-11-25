@@ -5,6 +5,8 @@ import { multipartParserMiddleware } from '../../../../shared/infrastructure/htt
 import { prisma } from '../../../../shared/infrastructure/database';
 import { entitlements } from '../../application/entitlementsService';
 import { subscriptionPayments } from '../../application/subscriptionPaymentService';
+import { analyticsDispatcher } from '../../../analytics/application/analyticsDispatcher';
+import { extractAnalyticsContext } from '../../../analytics/infrastructure/http/analyticsContext';
 
 /** Company-facing subscription API: current plan and usage, catalog, and payment reports. */
 export async function subscriptionRoutes(app: FastifyInstance) {
@@ -53,6 +55,31 @@ export async function subscriptionRoutes(app: FastifyInstance) {
         const payment = await subscriptionPayments.report(
             request.user.companyId, request.user.userId, request.body ?? {}, request.uploadedFiles ?? [],
         );
+
+        const ctx = extractAnalyticsContext(request);
+        await analyticsDispatcher.track({
+            name: 'subscription_payment_reported',
+            eventId: ctx.eventId,
+            sourceUrl: ctx.sourceUrl,
+            user: {
+                userId: request.user.userId,
+                companyId: request.user.companyId,
+                email: request.user.email,
+                phone: request.body?.payer_phone,
+                ip: ctx.ip,
+                userAgent: ctx.userAgent,
+                browserIds: ctx.browserIds,
+            },
+            properties: {
+                value: payment.amount_usd,
+                currency: 'USD',
+                contentType: 'plan',
+                contentIds: payment.plan?.id ? [payment.plan.id] : undefined,
+                contentName: payment.plan?.name_es || payment.plan?.name,
+                planCode: payment.plan?.code,
+            },
+        });
+
         return ApiResponse.success(reply, payment, 'Pago reportado; lo verificaremos en breve', 201);
     });
 }
