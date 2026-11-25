@@ -2,7 +2,7 @@ export type SettingType = 'string' | 'number' | 'boolean' | 'json';
 
 export interface SettingDefinition {
     key: string;
-    group: 'email' | 'telegram' | 'storage' | 'app' | 'limits' | 'features' | 'plans' | 'payments';
+    group: 'email' | 'telegram' | 'storage' | 'app' | 'limits' | 'features' | 'plans' | 'payments' | 'marketing';
     type: SettingType;
     default?: unknown;
     secret?: boolean;
@@ -66,6 +66,13 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     def({ key: 'payments.pago_movil.phone', group: 'payments', type: 'string', default: '', description: 'Teléfono receptor del pago móvil' }),
     def({ key: 'payments.pago_movil.document_id', group: 'payments', type: 'string', default: '', description: 'Cédula o RIF del receptor' }),
     def({ key: 'payments.pago_movil.holder_name', group: 'payments', type: 'string', default: '', description: 'Titular de la cuenta' }),
+    // marketing & analytics (server-side conversion providers, e.g. Meta CAPI)
+    def({ key: 'marketing.enabled', group: 'marketing', type: 'boolean', default: false, description: 'Interruptor maestro: habilita el envío de eventos de conversión desde el backend' }),
+    def({ key: 'marketing.meta.enabled', group: 'marketing', type: 'boolean', default: false, description: 'Habilita el envío de eventos hacia Meta Conversions API (CAPI)' }),
+    def({ key: 'marketing.meta.pixel_id', group: 'marketing', type: 'string', default: '', pattern: /^(\d+)?$/, description: 'ID del Pixel / Dataset de Meta (solo dígitos)' }),
+    def({ key: 'marketing.meta.access_token', group: 'marketing', type: 'string', secret: true, description: 'Access Token de Meta Conversions API' }),
+    def({ key: 'marketing.meta.api_version', group: 'marketing', type: 'string', default: 'v19.0', pattern: /^v\d+\.\d+$/, description: 'Versión de Meta Graph API (ej. v19.0)' }),
+    def({ key: 'marketing.meta.test_event_code', group: 'marketing', type: 'string', default: '', description: 'Código opcional de Test Events de Meta (vacío en producción)' }),
 ];
 
 export const REGISTRY_BY_KEY = new Map(SETTINGS_REGISTRY.map((d) => [d.key, d]));
