@@ -8,7 +8,10 @@ export class ProcessAnalyticsEventUseCase {
 
     async execute(event: AnalyticsEvent): Promise<void> {
         const active = this.providers.filter((p) => p.isEnabled());
-        if (active.length === 0) return;
+        if (active.length === 0) {
+            logger.info({ eventName: event.name, eventId: event.eventId }, '[analytics] No active providers; event skipped');
+            return;
+        }
 
         const results = await Promise.allSettled(active.map((provider) => provider.send(event)));
         const errors: string[] = [];
@@ -20,7 +23,9 @@ export class ProcessAnalyticsEventUseCase {
                 logger.error({ provider: providerName, eventName: event.name, eventId: event.eventId, err: msg }, '[analytics] Provider delivery failed');
                 errors.push(`${providerName}: ${msg}`);
             } else if (res.value.sent) {
-                logger.debug({ provider: providerName, eventName: event.name, eventId: event.eventId }, '[analytics] Event delivered');
+                logger.info({ provider: providerName, eventName: event.name, eventId: event.eventId }, '[analytics] Event delivered');
+            } else {
+                logger.info({ provider: providerName, eventName: event.name, eventId: event.eventId, reason: res.value.skippedReason }, '[analytics] Event skipped');
             }
         });
 
