@@ -10,6 +10,8 @@ import { ListMarketplaceRequestsUseCase } from '../../application/listMarketplac
 
 import { multipartParserMiddleware } from '../../../../shared/infrastructure/http/middlewares/multipartMiddleware';
 import { requireBuyer, requireSeller } from '../../../../shared/infrastructure/http/middlewares/roleMiddleware';
+import { analyticsDispatcher } from '../../../analytics/application/analyticsDispatcher';
+import { extractAnalyticsContext } from '../../../analytics/infrastructure/http/analyticsContext';
 
 export async function requestRoutes(app: FastifyInstance) {
 
@@ -40,13 +42,34 @@ export async function requestRoutes(app: FastifyInstance) {
         async (request: any, reply: any) => {
 
             const useCase = new CreateRequestUseCase();
-            const result = await useCase.execute({
+            const result: any = await useCase.execute({
 
                 ...request.body,
                 rawFiles: request.uploadedFiles || [],
                 company_id: request.user.companyId,
                 user_id: request.user.userId
             });
+
+            const ctx = extractAnalyticsContext(request);
+            await analyticsDispatcher.track({
+                name: 'rfq_created',
+                eventId: ctx.eventId,
+                sourceUrl: ctx.sourceUrl,
+                user: {
+                    userId: request.user.userId,
+                    companyId: request.user.companyId,
+                    email: request.user.email,
+                    ip: ctx.ip,
+                    userAgent: ctx.userAgent,
+                    browserIds: ctx.browserIds,
+                },
+                properties: {
+                    contentIds: result?.id ? [String(result.id)] : undefined,
+                    contentType: 'rfq',
+                    contentName: result?.title || request.body?.title,
+                },
+            });
+
             return ApiResponse.success(reply, result, "Request created", 201);
         }
     );
