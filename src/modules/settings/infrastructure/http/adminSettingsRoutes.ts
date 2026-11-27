@@ -7,8 +7,9 @@ import { MailgunEmailAdapter } from '../../../../shared/infrastructure/notificat
 import { ApplicationError, ValidationError } from '../../../../shared/domain/error';
 import { REGISTRY_BY_KEY } from '../../domain/settingsRegistry';
 import { settings, SettingsValidationError } from '../../application/settingsService';
+import { metaCapiProvider } from '../../../analytics/infrastructure/providers/providerRegistry';
 
-const GROUPS = ['email', 'telegram', 'storage', 'app', 'limits', 'features', 'plans', 'payments'];
+const GROUPS = ['email', 'telegram', 'storage', 'app', 'limits', 'features', 'plans', 'payments', 'marketing'];
 
 async function testTelegram(): Promise<string> {
     const token = settings.get<string>('telegram.bot_token');
@@ -81,6 +82,9 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
             }
             if (group === 'telegram') {
                 return ApiResponse.success(reply, { ok: true }, await testTelegram());
+            }
+            if (group === 'marketing') {
+                return ApiResponse.success(reply, { ok: true }, await metaCapiProvider.sendTestEvent());
             }
         } catch (e: any) {
             throw new ApplicationError(422, `La prueba falló: ${e.message}`, 'VALIDATION_ERROR', 'BUSINESS');

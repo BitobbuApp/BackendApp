@@ -5,6 +5,8 @@ import { RegisterUserUseCase } from '../../application/registerUserUseCase';
 import { LoginUserUseCase } from '../../application/loginUserUseCase';
 import { UpdateUserUseCase } from '../../application/updateUserUseCase';
 import { ChangePasswordUseCase } from '../../application/changePasswordUseCase';
+import { analyticsDispatcher } from '../../../analytics/application/analyticsDispatcher';
+import { extractAnalyticsContext } from '../../../analytics/infrastructure/http/analyticsContext';
 
 
 export async function userRoutes(app: FastifyInstance) {
@@ -14,8 +16,25 @@ export async function userRoutes(app: FastifyInstance) {
     // ==========================================
     app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
         const useCase = new RegisterUserUseCase();
-        console.log(request.body);
-        const outputValue = await useCase.execute(request.body);
+        const body: any = request.body || {};
+        const outputValue: any = await useCase.execute(request.body);
+
+        const ctx = extractAnalyticsContext(request);
+        await analyticsDispatcher.track({
+            name: 'user_registered',
+            eventId: ctx.eventId,
+            sourceUrl: ctx.sourceUrl,
+            user: {
+                userId: outputValue?.user?.id || outputValue?.id,
+                email: outputValue?.user?.email || body.email,
+                firstName: body.first_name || body.firstName,
+                lastName: body.last_name || body.lastName,
+                phone: body.phone,
+                ip: ctx.ip,
+                userAgent: ctx.userAgent,
+                browserIds: ctx.browserIds,
+            },
+        });
 
         return ApiResponse.success(reply, outputValue, "User successfully registered", 201);
     });

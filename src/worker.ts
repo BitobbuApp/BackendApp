@@ -8,7 +8,6 @@ async function startWorker() {
         await loadConfig('worker');
         const { connectDatabase } = await import('./shared/infrastructure/database');
         const { connectRedis } = await import('./shared/infrastructure/redis');
-        await import('./shared/infrastructure/queue/index.worker');
 
         const app = fastify();
         app.register(cors, {
@@ -25,6 +24,8 @@ async function startWorker() {
         await connectRedis();
         const { settings } = await import('./modules/settings/application/settingsService');
         await settings.init();
+        // Start BullMQ workers only after DB, Redis, and settings cache are initialized.
+        await import('./shared/infrastructure/queue/index.worker');
         // Settings must be loaded first: the schedule runs in the business timezone.
         const { scheduleSubscriptionMaintenance } = await import('./shared/infrastructure/queue/subscriptions/subscriptions.queue');
         await scheduleSubscriptionMaintenance(settings.get<string>('plans.usage_timezone') || 'America/Caracas');
