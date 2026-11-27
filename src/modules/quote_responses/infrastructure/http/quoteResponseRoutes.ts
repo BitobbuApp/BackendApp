@@ -13,6 +13,8 @@ import { DeleteQuoteResponseUseCase } from '../../application/deleteQuoteRespons
 import { PerformQuoteActionUseCase } from '../../application/performQuoteActionUseCase';
 import { requireBuyer, requireSeller } from '../../../../shared/infrastructure/http/middlewares/roleMiddleware';
 import { entitlements } from '../../../subscriptions/application/entitlementsService';
+import { analyticsDispatcher } from '../../../analytics/application/analyticsDispatcher';
+import { extractAnalyticsContext } from '../../../analytics/infrastructure/http/analyticsContext';
 
 export async function quoteResponseRoutes(app: FastifyInstance) {
 
@@ -23,10 +25,31 @@ export async function quoteResponseRoutes(app: FastifyInstance) {
             await entitlements.assertCanPerform(request.user.companyId, 'quote');
 
             const useCase = new CreateQuoteResponseUseCase();
-            const result = await useCase.execute({
+            const result: any = await useCase.execute({
                 ...request.body,
                 supplier_id: request.user.companyId
             });
+
+            const ctx = extractAnalyticsContext(request);
+            await analyticsDispatcher.track({
+                name: 'quote_submitted',
+                eventId: ctx.eventId,
+                sourceUrl: ctx.sourceUrl,
+                user: {
+                    userId: request.user.userId,
+                    companyId: request.user.companyId,
+                    email: request.user.email,
+                    ip: ctx.ip,
+                    userAgent: ctx.userAgent,
+                    browserIds: ctx.browserIds,
+                },
+                properties: {
+                    contentIds: result?.id ? [String(result.id)] : undefined,
+                    contentType: 'quote',
+                    value: result?.total_price ? Number(result.total_price) : undefined,
+                },
+            });
+
             return ApiResponse.success(reply, result, "Quote response created", 201);
         }
     );

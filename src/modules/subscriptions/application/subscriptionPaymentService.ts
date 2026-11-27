@@ -7,6 +7,7 @@ import { CreateNotificationUseCase } from '../../notifications/application/creat
 import logger from '../../../shared/infrastructure/logger';
 import { settings } from '../../settings/application/settingsService';
 import { isFreePlan, subscriptionLifecycle } from './subscriptionLifecycleService';
+import { analyticsDispatcher } from '../../analytics/application/analyticsDispatcher';
 
 const GENERAL_NOTIFICATION_TYPE = 6;
 const RECEIPT_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -189,6 +190,25 @@ export class SubscriptionPaymentService {
         await this.notify(result.payment.company_id, paymentId,
             'Pago aprobado',
             `Tu pago fue verificado. Plan ${result.payment.plan.name_es || result.payment.plan.plan_name} activo${end ? ` hasta el ${end.toLocaleDateString('es-VE')}` : ''}.`);
+
+        await analyticsDispatcher.track({
+            name: 'subscription_activated',
+            eventId: `sub-payment-${paymentId}`,
+            user: {
+                userId: result.payment.reported_by_user_id ?? undefined,
+                companyId: result.payment.company_id,
+                phone: result.payment.payer_phone,
+            },
+            properties: {
+                value: Number(result.payment.amount_usd),
+                currency: 'USD',
+                contentType: 'plan',
+                contentIds: [result.payment.plan.id],
+                contentName: result.payment.plan.name_es || result.payment.plan.plan_name,
+                planCode: result.payment.plan.code,
+            },
+        });
+
         return { ...toPublicPayment(result.payment), status: 'approved', subscription_id: result.subscription.id };
     }
 
